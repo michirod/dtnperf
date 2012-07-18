@@ -30,7 +30,7 @@
 								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.option.optimization.level.1871820003" name="Optimization Level" superClass="gnu.c.compiler.option.optimization.level" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.debugging.level.812209788" name="Debug Level" superClass="gnu.c.compiler.option.debugging.level" value="gnu.c.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.include.paths.1174691958" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/michele/Dropbox/workspace/bp_abstraction_layer/src"/>
+									<listOptionValue builtIn="false" value="/home/michele/Dropbox/git/bp-abstraction-api/bp_abstraction_layer/src"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1227882504" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -45,6 +45,7 @@
 								</option>
 								<option id="gnu.c.link.option.paths.1307921970" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="/home/michele/Dropbox/workspace/bp_abstraction_layer/Debug"/>
+									<listOptionValue builtIn="false" value="/home/michele/Dropbox/git/bp-abstraction-api/bp_abstraction_layer/Debug"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.2023265031" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
@@ -89,6 +90,7 @@
 								<option id="gnu.c.compiler.option.debugging.level.1644730630" name="Debug Level" superClass="gnu.c.compiler.option.debugging.level" value="gnu.c.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.include.paths.1856740929" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/home/michele/Dropbox/workspace/bp_abstraction_layer/src"/>
+									<listOptionValue builtIn="false" value="/home/michele/Dropbox/git/bp-abstraction-api/bp_abstraction_layer/src"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1251184720" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -103,6 +105,7 @@
 								</option>
 								<option id="gnu.c.link.option.paths.636670450" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="/home/michele/Dropbox/workspace/bp_abstraction_layer/Release"/>
+									<listOptionValue builtIn="false" value="/home/michele/Dropbox/git/bp-abstraction-api/bp_abstraction_layer/Release"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1443384494" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
