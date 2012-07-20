@@ -6,6 +6,12 @@
  */
 
 #include "dtnperf_server.h"
+#include "../includes.h"
+#include "../definitions.h"
+#include "../bundle_tools.h"
+
+#include <bp_abstraction_api.h>
+
 
 /*  ----------------------------
  *          SERVER CODE
@@ -16,8 +22,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	 * variables
 	 * ------------------------ */
 
-	dtnperf_options_t perf_opt = perf_g_opt->perf_opt;
-	dtnperf_connection_options_t conn_opt = perf_g_opt->conn_opt;
+	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
+	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
 
 	bp_handle_t handle;
 	bp_endpoint_id_t local_eid;
@@ -48,24 +54,24 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 
 
-	boolean_t debug = perf_g_opt->perf_opt.debug;
-	int debug_level =  perf_g_opt->perf_opt.debug_level;
+	boolean_t debug = perf_g_opt->perf_opt->debug;
+	int debug_level =  perf_g_opt->perf_opt->debug_level;
 
 
 	// show requested options (debug)
 	if (debug)
 	{
 		printf("\nOptions;\n");
-		printf("\tendpoint		 : %s\n", perf_opt.endpoint);
-		printf("\tsave bundles to: %s\n", perf_opt.use_file ? "file":"memory");
-		printf("\tdestination dir: %s\n", perf_opt.dest_dir);
-		printf("\tsend acks      : %s\n", perf_opt.no_acks ? "no":"yes");
-		if (!perf_opt.no_acks)
+		printf("\tendpoint		 : %s\n", SERV_EP_STRING);
+		printf("\tsave bundles to: %s\n", perf_opt->use_file ? "file":"memory");
+		printf("\tdestination dir: %s\n", perf_opt->dest_dir);
+		printf("\tsend acks      : %s\n", perf_opt->no_acks ? "no":"yes");
+		if (!perf_opt->no_acks)
 		{
-			printf("\tsend acks to monitor: %s\n", perf_opt.acks_to_mon ? "yes":"no");
-			printf("\tacks expiration time: %d\n", (int) conn_opt.expiration);
+			printf("\tsend acks to monitor: %s\n", perf_opt->acks_to_mon ? "yes":"no");
+			printf("\tacks expiration time: %d\n", (int) conn_opt->expiration);
 			char * prior;
-			switch(conn_opt.priority)
+			switch(conn_opt->priority)
 			{
 			case BP_PRIORITY_BULK:
 				prior = "bulk";
@@ -93,8 +99,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	// command should be: mkdir -p "dest_dir"
 	if(debug && debug_level > 0)
 		printf("[debug] initializing shell command...");
-	command = malloc(sizeof(char) * (10 + strlen(perf_opt.dest_dir)));
-	sprintf(command, "mkdir -p %s", perf_opt.dest_dir);
+	command = malloc(sizeof(char) * (10 + strlen(perf_opt->dest_dir)));
+	sprintf(command, "mkdir -p %s", perf_opt->dest_dir);
 	if(debug && debug_level > 0)
 		printf("done. Shell command = %s\n", command);
 
@@ -113,7 +119,10 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	//open the connection to the bundle protocol router
 	if(debug && debug_level > 0)
 		printf("[debug] opening connection to bundle protocol router...");
-	error = bp_open(&handle);
+	if (perf_opt->use_ip)
+		error = bp_open_with_ip(perf_opt->ip_addr, perf_opt->ip_port, &handle);
+	else
+		error = bp_open(&handle);
 	if (error != BP_SUCCESS)
 	{
 		fflush(stdout);
@@ -126,7 +135,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	//build a local eid
 	if(debug && debug_level > 0)
 		printf("[debug] building a local eid...");
-	bp_build_local_eid(handle, &local_eid, perf_opt.endpoint);
+	bp_build_local_eid(handle, &local_eid, SERV_EP_STRING);
 	if(debug && debug_level > 0)
 		printf("done\n");
 	if (debug)
@@ -155,12 +164,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	// set bundle destination type
 	if ((debug) && (debug_level > 0))
 		printf("[debug] choosing bundle destination type...");
-	if (perf_opt.use_file)
+	if (perf_opt->use_file)
 		pl_location = BP_PAYLOAD_FILE;
 	else
 		pl_location = BP_PAYLOAD_MEM;
 	if ((debug) && (debug_level > 0))
-		printf(" done. Bundles will be saved into %s\n", perf_opt.use_file ? "file" : "memory");
+		printf(" done. Bundles will be saved into %s\n", perf_opt->use_file ? "file" : "memory");
 
 	if ((debug) && (debug_level > 0))
 		printf("[debug] entering infinite loop...\n");
@@ -309,7 +318,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 
 		// get bundle payload filename
-		if(perf_opt.use_file)
+		if(perf_opt->use_file)
 		{
 			if ((debug) && (debug_level > 0))
 				printf("[debug]\tgetting bundle payload filename...");
@@ -332,7 +341,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			printf ("======================================\n");
 			printf (" Bundle received at %s\n", ctime(&current));
 			printf ("  source: %s\n", bundle_source_addr.uri);
-			if (perf_opt.use_file)
+			if (perf_opt->use_file)
 			{
 				printf ("  saved into    : %s\n", pl_filename);
 			}
@@ -340,9 +349,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			printf ("--------------------------------------\n");
 		}
 
-		// getting bundle payload
 
-		if(!perf_opt.no_acks)
+		if(!perf_opt->no_acks)
 		{
 			// create bundle ack to send to client
 			if ((debug) && (debug_level > 0))
@@ -431,7 +439,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			{
 				printf("[debug] setting priority of the bundle ack...");
 			}
-			bp_bundle_set_priority(& bundle_ack_object, conn_opt.priority);
+			bp_bundle_set_priority(& bundle_ack_object, conn_opt->priority);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
@@ -445,7 +453,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			{
 				printf("[debug] setting expiration time of the bundle ack...");
 			}
-			bp_bundle_set_expiration(& bundle_ack_object, conn_opt.expiration);
+			bp_bundle_set_expiration(& bundle_ack_object, conn_opt->expiration);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
@@ -485,7 +493,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf(" bundle ack sent to client\n");
 
 			// send the bundle ack to the monitor
-			if (perf_opt.acks_to_mon)
+			if (perf_opt->acks_to_mon)
 			{
 				bp_bundle_set_dest(& bundle_ack_object, bundle_replyto_addr);
 				if ((debug) && (debug_level > 0))
@@ -501,13 +509,13 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				if ((debug) && (debug_level > 0))
 					printf(" bundle ack sent to monitor\n");
 			}
-			//free memory
+			//free memory for bundle ack
 			bp_bundle_free(&bundle_ack_object);
 			free(pl_buffer);
 			pl_buffer_size = 0;
 		}
 
-		// free memory
+		// free memory for bundle
 		bp_bundle_free(&bundle_object);
 		free(pl_filename);
 		pl_filename_len = 0;
@@ -528,6 +536,8 @@ void print_server_usage(char * progname)
 	fprintf(stderr, "SYNTAX: %s --server [options]\n", progname);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n");
+	fprintf(stderr, "     --ip-addr <addr>\tIp address of the bp daemon api. Default is 127.0.0.1\n");
+	fprintf(stderr, "     --ip-port <port>\tIp port of the bp daemon api. Default is 5010");
 	fprintf(stderr, "     --ddir <dir>\tDestination directory (if using -f), if dir is not indicated assume dir=%s.\n", BUNDLE_DIR_DEFAULT);
 	fprintf(stderr, "     --debug [level]\tDebug messages [0-1], if level is not indicated assume level=0.\n");
 	fprintf(stderr, " -M, --memory\tSave received bundles into memory.\n");
@@ -545,8 +555,8 @@ void print_server_usage(char * progname)
 void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * perf_g_opt)
 {
 	char c, done = 0;
-	dtnperf_options_t * perf_opt = &(perf_g_opt->perf_opt);
-	dtnperf_connection_options_t * conn_opt = &(perf_g_opt->conn_opt);
+	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
+	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
 
 	while (!done)
 	{
@@ -556,11 +566,13 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"verbose", no_argument, 0, 'v'},
 				{"memory", no_argument, 0, 'M'},
 				{"expiration", required_argument, 0, 'e'},
-				{"debug", optional_argument, 0, 33}, 				// 200 because D is for data mode
+				{"debug", optional_argument, 0, 33}, 			// 33 because D is for data mode
 				{"priority", required_argument, 0, 'P'},
-				{"ddir", required_argument, 0, 34}, 			// server only option
-				{"acks-to-mon", no_argument, 0, 35},
+				{"ddir", required_argument, 0, 34},
+				{"acks-to-mon", no_argument, 0, 35},			// server only option
 				{"no-acks", no_argument, 0, 36},				// server only option
+				{"ip-addr", required_argument, 0, 37},
+				{"ip-port", required_argument, 0, 38},
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
 		};
@@ -618,7 +630,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 				perf_opt->debug_level = 2;
 			break;
 
-		case 34: //server destination directory
+		case 34: //incoming bundles destination directory
 			perf_opt->dest_dir = strdup(optarg);
 			break;
 
@@ -628,6 +640,16 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 
 		case 36: //server do not send acks
 			perf_opt->no_acks = TRUE;
+			break;
+
+		case 37:
+			perf_opt->ip_addr = strdup(optarg);
+			perf_opt->use_ip = TRUE;
+			break;
+
+		case 38:
+			perf_opt->ip_port = atoi(optarg);
+			perf_opt->use_ip = TRUE;
 			break;
 
 		case '?':
@@ -645,24 +667,3 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 	}
 }
 
-/**
- *
- */
-bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** payload, size_t * payload_size)
-{
-	FILE * buf_stream;
-	char * buf;
-	char null = '\0';
-	size_t buf_size;
-	buf_stream = open_memstream(& buf, &buf_size);
-	fwrite(ack.header, 1, strlen(DSA_STRING), buf_stream);
-	fwrite(&null, 1, 1, buf_stream);
-	fwrite(&(ack.bundle_source), 1, sizeof(ack.bundle_source), buf_stream);
-	fwrite(&(ack.bundle_creation_ts), 1, sizeof(ack.bundle_creation_ts), buf_stream);
-	fclose(buf_stream);
-	*payload = (char*)malloc(buf_size);
-	memcpy(*payload, buf, buf_size);
-	*payload_size = buf_size;
-	free(buf);
-	return BP_SUCCESS;
-}

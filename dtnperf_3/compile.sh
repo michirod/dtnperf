@@ -10,4 +10,4 @@ if [ $# -ne 2 ]; then
 	exit
 fi
 
-gcc -o dtnperf -I$1 -O3 -Wall src/*.c src/dtnperf_modes/*.c -O3 -Wall -fmessage-length=0 -L$2 -ldtnapi -lbp_abstraction_layer
+gcc -o dtnperf -I$1 -O3 -Wall src/*.c src/dtnperf_modes/*.c -O3 -Wall -fmessage-length=0 -L$2 -ldtnapi -lbp_abstraction_layer -lpthread

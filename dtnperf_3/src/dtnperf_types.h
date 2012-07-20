@@ -26,6 +26,9 @@ typedef enum {
 	DTNPERF_CLIENT_MONITOR
 } dtnperf_mode_t;
 
+/**
+ * To change default values go to init_dtnperf_options()
+ */
 typedef struct dtnperf_options
 {
 	//general options
@@ -33,9 +36,12 @@ typedef struct dtnperf_options
 	boolean_t debug;		// if true, debug messages are shown [FALSE]
 	int debug_level;		// set the debug level 0|1|2 [0]
 	int use_file;			// if set to 1, a file is used instead of memory [1]
+	boolean_t use_ip;		// set different values of ip address and port [FALSE]
+	char * ip_addr;			// daemon ip address [127.0.0.1]
+	short ip_port;			// daemon port [5010]
 	//client options
-	char * dest_eid;		// destination eid
-	char * mon_eid;			// monitor eid
+	char dest_eid[BP_MAX_ENDPOINT_ID];	// destination eid
+	char mon_eid[BP_MAX_ENDPOINT_ID];	// monitor eid
 	char op_mode;    		// operative mode (T = time_mode, D = data_mode, F = file_mode) [D]
 	long data_qty;			// data to be transmitted (bytes) [0]
 	char * D_arg;			// arguments of -D option
@@ -51,14 +57,18 @@ typedef struct dtnperf_options
 	int wait_before_exit;	// additional interval before exit [0]
 	long bundle_payload;  	// quantity of data (in bytes) to send (-p option) [DEFAULT_PAYLOAD]
 	bp_bundle_payload_location_t payload_type;	// the type of data source for the bundle [DTN_PAYLOAD_FILE]
+	boolean_t create_log;	// create log file [FALSE]
+	char * log_filename;	// log filename [LOG_FILENAME]
 	//server options
-	char * endpoint;			// server endpoint ["/dtnperf:/dest"]
 	char * dest_dir;		// destination dir of bundles [dtnperf]
 	boolean_t acks_to_mon;	// send ACKs to both source and monitor (if monitor is not the source) [FALSE]
 	boolean_t no_acks;		// do not send ACKs (for retro-compatibility purpose)
 
 } dtnperf_options_t;
 
+/**
+ * To change default values go to init_dtnperf_connection_options()
+ */
 typedef struct dtnperf_connection_options
 	{
 		bp_timeval_t expiration;			// bundle expiration time (sec)
@@ -75,8 +85,8 @@ typedef struct dtnperf_connection_options
 typedef struct dtnperf_global_options
 {
 	dtnperf_mode_t mode;
-	dtnperf_options_t perf_opt;
-	dtnperf_connection_options_t conn_opt;
+	dtnperf_options_t * perf_opt;
+	dtnperf_connection_options_t * conn_opt;
 } dtnperf_global_options_t;
 
 typedef struct dtnperf_server_ack_payload

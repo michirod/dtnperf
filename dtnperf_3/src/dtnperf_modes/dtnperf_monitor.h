@@ -8,7 +8,7 @@
 #ifndef DTNPERF_MONITOR_H_
 #define DTNPERF_MONITOR_H_
 
-#include "../dtnperf_modes.h"
+#include "../dtnperf_types.h"
 
 void run_dtnperf_monitor(dtnperf_global_options_t * global_options);
 void print_monitor_usage(char* progname);

@@ -7,9 +7,11 @@
 
 #include "includes.h"
 #include "utils.h"
-#include "dtnperf_modes.h"
 #include "dtnperf_types.h"
 #include "definitions.h"
+#include "dtnperf_modes/dtnperf_client.h"
+#include "dtnperf_modes/dtnperf_server.h"
+#include "dtnperf_modes/dtnperf_monitor.h"
 
 /* ---------------------------
  * Global variables and options
@@ -25,7 +27,7 @@ int pid;
 
 void parse_options(int argc, char** argv, dtnperf_global_options_t * global_opt);
 void print_usage(char* progname);
-void init_dtnperf_global_options(dtnperf_global_options_t *);
+void init_dtnperf_global_options(dtnperf_global_options_t *, dtnperf_options_t *, dtnperf_connection_options_t *);
 void init_dtnperf_options(dtnperf_options_t *);
 void init_dtnperf_connection_options(dtnperf_connection_options_t*);
 void check_options(dtnperf_global_options_t * global_options);
@@ -42,9 +44,12 @@ int main(int argc, char ** argv)
 {
 	// variable declarations
 	int status;
+	dtnperf_global_options_t global_options;
+	dtnperf_options_t perf_opt;
+	dtnperf_connection_options_t conn_opt;
 
 	// init options
-	init_dtnperf_global_options(&global_options);
+	init_dtnperf_global_options(&global_options, &perf_opt, &conn_opt);
 
 	// parse command line options
 	parse_options(argc, argv, &global_options);
@@ -188,20 +193,25 @@ void parse_options(int argc, char**argv, dtnperf_global_options_t * global_opt)
 } // end parse_options
 
 
-void init_dtnperf_global_options(dtnperf_global_options_t *opt)
+void init_dtnperf_global_options(dtnperf_global_options_t *opt, dtnperf_options_t * perf_opt, dtnperf_connection_options_t * conn_opt)
 {
-	init_dtnperf_options(&(opt->perf_opt));
-	init_dtnperf_connection_options(&(opt->conn_opt));
+	opt->perf_opt = perf_opt;
+	opt->conn_opt = conn_opt;
+	init_dtnperf_options(opt->perf_opt);
+	init_dtnperf_connection_options(opt->conn_opt);
 	opt->mode = 0;
 }
 
 void init_dtnperf_options(dtnperf_options_t *opt)
 {
 	opt->verbose = FALSE;
-	opt->dest_eid = NULL;
-	opt->mon_eid =  NULL;
 	opt->debug = FALSE;
 	opt->debug_level = 0;
+	opt->use_ip = FALSE;
+	opt->ip_addr = "127.0.0.1";
+	opt->ip_port = 5010;
+	memset(opt->dest_eid, 0, BP_MAX_ENDPOINT_ID);
+	memset(opt->mon_eid, 0, BP_MAX_ENDPOINT_ID);
 	opt->op_mode = 'D';
 	opt->data_qty = 0;
 	opt->D_arg = NULL;
@@ -219,7 +229,8 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->bundle_payload = DEFAULT_PAYLOAD;
 	opt->payload_type = BP_PAYLOAD_FILE;
 	opt->dest_dir = BUNDLE_DIR_DEFAULT;
-	opt->endpoint = "/dtnperf:/dest";
+	opt->create_log = FALSE;
+	opt->log_filename = LOG_FILENAME;
 	opt->acks_to_mon = FALSE;
 	opt->no_acks = FALSE;
 }
@@ -228,13 +239,13 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 
 void init_dtnperf_connection_options(dtnperf_connection_options_t* opt)
 {
-	opt->expiration = 3600; // expiration time (sec) [3600]
-	opt->delivery_receipts = TRUE;    // request delivery receipts [1]
-	opt->forwarding_receipts = FALSE;    // request per hop departure [0]
-	opt->custody_transfer = FALSE;    // request custody transfer [0]
-	opt->custody_receipts = FALSE;    // request per custodian receipts [0]
-	opt->receive_receipts = FALSE;    // request per hop arrival receipt [0]
-	opt->wait_for_report = TRUE;    // wait for bundle status reports [1]
+	opt->expiration = 3600;				// expiration time (sec) [3600]
+	opt->delivery_receipts = TRUE;		// request delivery receipts [1]
+	opt->forwarding_receipts = FALSE;   // request per hop departure [0]
+	opt->custody_transfer = FALSE;   	// request custody transfer [0]
+	opt->custody_receipts = FALSE;   	// request per custodian receipts [0]
+	opt->receive_receipts = FALSE;   	// request per hop arrival receipt [0]
+	opt->wait_for_report = TRUE;   		// wait for bundle status reports [1]
 	opt->disable_fragmentation = FALSE; //disable bundle fragmentation[0]
 	opt->priority = BP_PRIORITY_NORMAL; // bundle priority [BP_PRIORITY_NORMAL]
 }
@@ -245,7 +256,7 @@ void init_dtnperf_connection_options(dtnperf_connection_options_t* opt)
 void check_options(dtnperf_global_options_t * global_options)
 {
 
-	dtnperf_options_t * perf_opt = &(global_options->perf_opt);
+	dtnperf_options_t * perf_opt = global_options->perf_opt;
 
 	// checks on values
 	if ((perf_opt->op_mode == 'D') && (perf_opt->data_qty <= 0))
@@ -336,5 +347,5 @@ void main_handler(int signo)
 	{
 		kill(pid, SIGINT);
 	}
-	kill(getpid(), SIGINT);
+	kill(getpid(), SIGUSR1);
 }

@@ -8,10 +8,9 @@
 #ifndef DTNPERF_SERVER_H_
 #define DTNPERF_SERVER_H_
 
-#include <bp_abstraction_api.h>
-#include "../dtnperf_modes.h"
-#include "../includes.h"
-#include "../definitions.h"
+#include "../dtnperf_types.h"
+#include <bp_errno.h>
+#include <stddef.h>
 
 void run_dtnperf_server(dtnperf_global_options_t * global_options );
 void print_server_usage(char* progname);
