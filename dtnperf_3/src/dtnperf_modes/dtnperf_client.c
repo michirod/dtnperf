@@ -709,7 +709,31 @@ void * receive_acks(void * opt)
 
 void print_client_usage(char* progname)
 {
-
+	fprintf(stderr, "\n");
+	fprintf(stderr, "DtnPerf3 client mode\n");
+	fprintf(stderr, "SYNTAX: %s --client -d <dest_eid> <[-T <sec> | -D <num>]> [options]\n", progname);
+	fprintf(stderr, "\n");
+	fprintf(stderr, "options:\n"
+			" -d, --destination <eid>   Destination eid (required).\n"
+			" -m, --monitor <eid>       Monitor eid. Default is same as local eid.\n"
+			" -T, --time <sec>          Time-mode: seconds of transmission.\n"
+			" -D, --data <num[BKM]>     Data-mode: bytes to transmit, data unit default 'M' (Mbytes).\n"
+			" -w, --window <size>       Size of transmission window, i.e. max number of bundles \"in flight\" (not still ACKed by a server ack); default =1.\n"
+			" -C, --custody             Enable both custody transfer and \"custody accepted\" status reports.\n"
+			" -i, --exitinterval <sec>  Additional interval before exit.\n"
+			" -p, --payload <size[BKM]> Size of bundle payloads; data unit default= 'K' (Kbytes).\n"
+			" -u, --nofragment          Disable bundle fragmentation.\n"
+			" -M, --memory              Store the bundle into memory instead of file (if payload < 50KB).\n"
+			" -L, --log <log_filename>  Create a log file.\n"
+			"     --ip-addr <addr>      Ip address of the bp daemon api. Default is 127.0.0.1\n"
+			"     --ip-port <port>      Ip port of the bp daemon api. Default is 5010\n"
+			"     --debug[=level]       Debug messages [0-1], if level is not indicated assume level=2.\n"
+			" -e, --expiration <time>   Bundle acks expiration time. Default is 3600\n"
+			" -P, --priority <val>      Bundle acks priority [bulk|normal|expedited|reserved]. Default is normal\n"
+			" -v, --verbose             Print some information messages during the execution.\n"
+			" -h, --help                This help.\n");
+	fprintf(stderr, "\n");
+	exit(1);
 }
 
 void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * perf_g_opt)
@@ -731,7 +755,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"window", required_argument, 0, 'w'},
 				{"destination", required_argument, 0, 'd'},
 				{"monitor", required_argument, 0, 'm'},
-				{"exit", required_argument, 0, 'i'},			// interval before exit
+				{"exitinterval", required_argument, 0, 'i'},			// interval before exit
 				{"time", required_argument, 0, 'T'},			// time mode
 				{"data", required_argument, 0, 'D'},			// data mode
 				{"file", required_argument, 0, 'F'},			// file mode
@@ -741,7 +765,6 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"debug", optional_argument, 0, 33}, 				// 33 because D is for data mode
 				{"priority", required_argument, 0, 'P'},
 				{"log", optional_argument, 0, 'L'},				// create log file
-				{"ddir", required_argument, 0, 34},
 				{"ip-addr", required_argument, 0, 37},
 				{"ip-port", required_argument, 0, 38},
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
@@ -878,7 +901,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 
 				case 33: // debug
 					perf_opt->debug = TRUE;
-					if (optarg != NULL){
+					if (optarg){
 						int debug_level = atoi(optarg);
 						if (debug_level >= 0 && debug_level <= 2)
 							perf_opt->debug_level = atoi(optarg);

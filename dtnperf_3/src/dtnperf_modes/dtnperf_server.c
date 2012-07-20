@@ -535,19 +535,19 @@ void print_server_usage(char * progname)
 	fprintf(stderr, "DtnPerf3 server mode\n");
 	fprintf(stderr, "SYNTAX: %s --server [options]\n", progname);
 	fprintf(stderr, "\n");
-	fprintf(stderr, "options:\n");
-	fprintf(stderr, "     --ip-addr <addr>\tIp address of the bp daemon api. Default is 127.0.0.1\n");
-	fprintf(stderr, "     --ip-port <port>\tIp port of the bp daemon api. Default is 5010");
-	fprintf(stderr, "     --ddir <dir>\tDestination directory (if using -f), if dir is not indicated assume dir=%s.\n", BUNDLE_DIR_DEFAULT);
-	fprintf(stderr, "     --debug [level]\tDebug messages [0-1], if level is not indicated assume level=0.\n");
-	fprintf(stderr, " -M, --memory\tSave received bundles into memory.\n");
-	fprintf(stderr, " -e, --expiration <time>\tBundle acks expiration time. Default is 3600\n");
-	fprintf(stderr, " -P, --priority <bulk | normal | expedited | reserved>\tBundle acks priority. Default is normal\n");
-	fprintf(stderr, "     --acks-to-mon\tSend bundle acks to the monitor too\n");
-	fprintf(stderr, "     --no-acks\tDo not send acks (for using with dtnperf2)\n");
-	fprintf(stderr, " -v, --verbose\tSame as -D 0.\n");
-	// fprintf(stderr, " -a, --aggregate <n>\tPrint message every n arrivals.\n");
-	fprintf(stderr, " -h, --help\tHelp.\n");
+	fprintf(stderr, "options:\n"
+			"     --ip-addr <addr>   Ip address of the bp daemon api. Default is 127.0.0.1\n"
+			"     --ip-port <port>   Ip port of the bp daemon api. Default is 5010\n"
+			"     --ddir <dir>       Destination directory (if not using -M), if dir is not indicated assume %s.\n"
+			"     --debug[=level]    Debug messages [0-1], if level is not indicated assume level=0.\n"
+			" -M, --memory           Save bundles into memory.\n"
+			" -e, --expiration <sec> Bundle acks expiration time. Default is 3600\n"
+			" -P, --priority <val>   Bundle acks priority [bulk|normal|expedited|reserved]. Default is normal\n"
+			"     --acks-to-mon      Send bundle acks to the monitor too\n"
+			"     --no-acks          Do not send acks (for using with dtnperf2)\n"
+			" -v, --verbose          Print some information message during the execution.\n"
+			" -h, --help             This help.\n",
+			BUNDLE_DIR_DEFAULT);
 	fprintf(stderr, "\n");
 	exit(1);
 }
