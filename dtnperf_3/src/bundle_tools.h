@@ -35,13 +35,9 @@ bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** 
  */
 bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_timestamp_t * report_timestamp);
 
-boolean_t is_file_mode_bundle(bp_bundle_object_t * bundle);
-boolean_t is_data_mode_bundle(bp_bundle_object_t * bundle);
-boolean_t is_time_mode_bundle(bp_bundle_object_t * bundle);
-boolean_t is_file_mode_first_bundle(bp_bundle_object_t * bundle);
 
-boolean_t is_window_congestion_ctrl(bp_bundle_object_t * bundle);
-boolean_t is_rate_congestion_ctrl(bp_bundle_object_t * bundle);
+boolean_t is_header(bp_bundle_object_t * bundle, const char * header_string);
+boolean_t is_congestion_ctrl(bp_bundle_object_t * bundle, char mode);
 
 
 #endif /*BUNDLE_TOOLS_H_*/
