@@ -52,7 +52,7 @@ typedef struct dtnperf_options
 	char congestion_ctrl;	// w = window based, r = rate based [w]
 	int window;				// transmission window (bundles) [1]
 	char * rate_arg;		// argument of -r option
-	int rate;				// transmission rate [0]
+	long rate;				// transmission rate [0]
 	char rate_unit;			// b = bit/sec; B = bundle/sec [b]
 	int wait_before_exit;	// additional interval before exit [0]
 	long bundle_payload;  	// quantity of data (in bytes) to send (-p option) [DEFAULT_PAYLOAD]

@@ -12,6 +12,8 @@ void pattern(char *outBuf, int inBytes);
 
 long mega2byte(long n);
 long kilo2byte(long n);
+double byte2mega(long n);
+double byte2kilo(long n);
 char find_data_unit(const char *inarg);
 char find_rate_unit(const char *inarg);
 

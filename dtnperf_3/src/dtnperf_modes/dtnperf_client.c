@@ -11,6 +11,7 @@
 #include "../definitions.h"
 #include "../bundle_tools.h"
 #include "../utils.h"
+#include <semaphore.h>
 #include <bp_abstraction_api.h>
 
 /* pthread_yield() is not standard,
@@ -28,15 +29,16 @@ pthread_t ack_receiver;
 pthread_mutex_t mutexdata;
 pthread_cond_t cond_sender;
 pthread_cond_t cond_ackreceiver;
+sem_t window;						// semaphore for congestion control
 
 // client threads variables
 int current_window; 				// for window based congestion control
 send_information_t * send_info;		// array info of sent bundles
 int tot_bundles;					// for data mode
-unsigned int sent_data;				// for time mode
 struct timeval start, end, now;			// time variables
 struct timeval bundle_sent, ack_recvd;	// time variables
 int sent_bundles = 0;					// sent bundles counter
+unsigned int sent_data = 0;				// sent byte counter
 int close_ack_receiver = 0;			// to signal the ack receiver to close
 unsigned int data_written = 0;			// num of bytes written on the source file
 
@@ -343,7 +345,12 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			printf(" done\n");
 	}
 
-	current_window = perf_opt->window;
+	// Setting send window for congestion control modes
+	if (perf_opt->congestion_ctrl == 'w')
+		current_window = perf_opt->window;
+	else
+		current_window = 0;
+
 
 	// Create the array for the bundle send info
 	if ((debug) && (debug_level > 0))
@@ -408,7 +415,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 
 	pthread_create(&sender, NULL, send_bundles, (void*)perf_g_opt);
-	pthread_create(&ack_receiver, NULL, receive_acks, (void*)perf_g_opt);
+	pthread_create(&ack_receiver, NULL, congestion_control, (void*)perf_g_opt);
 
 	pthread_join(ack_receiver, (void**)&pthread_status);
 	pthread_join(sender, (void**)&pthread_status);
@@ -429,6 +436,10 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if ((debug) && (debug_level > 0))
 		printf(" end.tv_sec = %u sec\n", (u_int)end.tv_sec);
 
+	// Print final report
+	print_final_report(NULL);
+	if(perf_opt->create_log)
+		print_final_report(log_file);
 
 	// Close the BP handle --
 	if ((debug) && (debug_level > 0))
@@ -507,8 +518,7 @@ void * send_bundles(void * opt)
 			fprintf(log_file, " end.tv_sec = %d sec\n", (u_int)end.tv_sec);
 	}
 	else						// DATA MODE
-	{							// setting counters
-		sent_bundles = 0;
+	{
 	}
 
 	if ((debug) && (debug_level > 0))
@@ -561,14 +571,16 @@ void * send_bundles(void * opt)
 		if (create_log)
 			fprintf(log_file, "\t bundle sent %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
 
-		// put bundle id in send_info
-		gettimeofday(&bundle_sent, NULL);
-		--current_window;
-		add_info(send_info, *bundle_id, bundle_sent, perf_opt->window);
+		// put bundle id in send_info (only windowed congestion control)
+		if (perf_opt->congestion_ctrl == 'w') {
+			gettimeofday(&bundle_sent, NULL);
+			--current_window;
+			add_info(send_info, *bundle_id, bundle_sent, perf_opt->window);
 
-		if ((debug) && (debug_level > 1))
-			printf("\t[debug send thread] sent bundle timestamp:%lu %lu\n", bundle_id->creation_ts.secs, bundle_id->creation_ts.seqno);
+			if ((debug) && (debug_level > 1))
+				printf("\t[debug send thread] sent bundle timestamp:%lu %lu\n", bundle_id->creation_ts.secs, bundle_id->creation_ts.seqno);
 
+		}
 
 		// Increment sent_bundles
 		++sent_bundles;
@@ -582,7 +594,9 @@ void * send_bundles(void * opt)
 		// Increment data_qty
 		sent_data += perf_opt->bundle_payload;
 
-		pthread_cond_signal(&cond_ackreceiver);
+		if (perf_opt->congestion_ctrl =='w') {
+			pthread_cond_signal(&cond_ackreceiver);
+		}
 		pthread_mutex_unlock(&mutexdata);
 
 		if (perf_opt->op_mode == 'T')	// TIME MODE
@@ -609,7 +623,7 @@ void * send_bundles(void * opt)
 
 }
 
-void * receive_acks(void * opt)
+void * congestion_control(void * opt)
 {
 	dtnperf_options_t *perf_opt = ((dtnperf_global_options_t *)(opt))->perf_opt;
 	boolean_t debug = perf_opt->debug;
@@ -623,87 +637,151 @@ void * receive_acks(void * opt)
 
 	int position = -1;
 
-	bp_bundle_create(&ack);
+	if (debug && debug_level > 0)
+		printf("[debug cong crtl] congestion control = %c\n", perf_opt->congestion_ctrl);
 
-	while ((close_ack_receiver == 0) || (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit))
+	if (perf_opt->congestion_ctrl == 'w') // window based congestion control
 	{
-		// if there are no bundles without ack, wait
-		pthread_mutex_lock(&mutexdata);
-		if (close_ack_receiver == 0 && current_window == perf_opt->window)
+				bp_bundle_create(&ack);
+
+		while ((close_ack_receiver == 0) || (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit))
 		{
-			pthread_cond_wait(&cond_ackreceiver, &mutexdata);
+			// if there are no bundles without ack, wait
+			pthread_mutex_lock(&mutexdata);
+			if (close_ack_receiver == 0 && current_window == perf_opt->window)
+			{
+				pthread_cond_wait(&cond_ackreceiver, &mutexdata);
+				pthread_mutex_unlock(&mutexdata);
+				// pthread_yield();
+				sched_yield();
+				continue;
+			}
+
+			// Wait for the reply
+			if ((debug) && (debug_level > 0))
+				printf("\t[debug cong crtl] waiting for the reply...\n");
+
+			if ((error = bp_bundle_receive(handle, ack, BP_PAYLOAD_MEM, current_window == perf_opt->window ? perf_opt->wait_before_exit : -1)) != BP_SUCCESS)
+			{
+				if(current_window == perf_opt->window && close_ack_receiver == 1)
+					// send_bundles is terminated
+					break;
+				fprintf(stderr, "error getting server ack: %d (%s)\n", error, bp_strerror(bp_errno(handle)));
+				if (create_log)
+					fprintf(log_file, "error getting server ack: %d (%s)\n", error, bp_strerror(bp_errno(handle)));
+				exit(1);
+			}
+			gettimeofday(&ack_recvd, NULL);
+			if ((debug) && (debug_level > 0))
+				printf("\t[debug cong crtl] ack received\n");
+
+			// Get ack infos
+			error = get_info_from_ack(&ack, &reported_timestamp);
+			if (error != BP_SUCCESS)
+			{
+				fprintf(stderr, "error getting info from ack: %s\n", bp_strerror(error));
+				if (create_log)
+					fprintf(log_file, "error getting info from ack: %s\n", bp_strerror(error));
+				exit(1);
+			}
+			if ((debug) && (debug_level > 1))
+				printf("\t[debug cong crtl] ack received timestamp: %lu %lu\n", reported_timestamp.secs, reported_timestamp.seqno);
+			position = is_in_info(send_info, reported_timestamp, perf_opt->window);
+			if (position < 0)
+			{
+				fprintf(stderr, "error removing bundle info\n");
+				if (create_log)
+					fprintf(log_file, "error removing bundle info\n");
+				exit(1);
+			}
+			remove_from_info(send_info, position);
+			if ((debug) && (debug_level > 0))
+				printf("\t[debug cong crtl] ack validated\n");
+			current_window++;
+
+			pthread_cond_signal(&cond_sender);
 			pthread_mutex_unlock(&mutexdata);
-			// pthread_yield();
+			//pthread_yield();
 			sched_yield();
-			continue;
-		}
+		} // end while(n_bundles)
 
-		// Wait for the reply
-		if ((debug) && (debug_level > 0))
-			printf("\t[debug ack thread] waiting for the reply...\n");
-
-		if ((error = bp_bundle_receive(handle, ack, BP_PAYLOAD_MEM, current_window == perf_opt->window ? perf_opt->wait_before_exit : -1)) != BP_SUCCESS)
-		{
-			if(current_window == perf_opt->window && close_ack_receiver == 1)
-				// send_bundles is terminated
-				break;
-			fprintf(stderr, "error getting server ack: %d (%s)\n", error, bp_strerror(bp_errno(handle)));
-			if (create_log)
-				fprintf(log_file, "error getting server ack: %d (%s)\n", error, bp_strerror(bp_errno(handle)));
-			exit(1);
-		}
-		gettimeofday(&ack_recvd, NULL);
-		if ((debug) && (debug_level > 0))
-			printf("\t[debug ack thread] ack received\n");
-
-		// Get ack infos
-		error = get_info_from_ack(&ack, &reported_timestamp);
-		if (error != BP_SUCCESS)
-		{
-			fprintf(stderr, "error getting info from ack: %s\n", bp_strerror(error));
-			if (create_log)
-				fprintf(log_file, "error getting info from ack: %s\n", bp_strerror(error));
-			exit(1);
-		}
-		if ((debug) && (debug_level > 1))
-			printf("\t[debug ack thread] ack received timestamp: %lu %lu\n", reported_timestamp.secs, reported_timestamp.seqno);
-		position = is_in_info(send_info, reported_timestamp, perf_opt->window);
-		if (position < 0)
-		{
-			fprintf(stderr, "error removing bundle info\n");
-			if (create_log)
-				fprintf(log_file, "error removing bundle info\n");
-			exit(1);
-		}
-		remove_from_info(send_info, position);
-		if ((debug) && (debug_level > 0))
-			printf("\t[debug ack thread] ack validated\n");
-		current_window++;
-
-
-		pthread_cond_signal(&cond_sender);
-		pthread_mutex_unlock(&mutexdata);
-		//pthread_yield();
-		sched_yield();
-	} // end while(n_bundles)
-
-	bp_bundle_free(&ack);
-
-	if (perf_opt->op_mode != 't')
-	{
-		// Data Mode
-		// Calculate TOTAL end time
-		if ((debug) && (debug_level > 0))
-			printf("[debug ack thread] calculating TOTAL end time...");
-
-		gettimeofday(&end, NULL);
-
-		if ((debug) && (debug_level > 0))
-			printf(" end.tv_sec = %u sec\n", (u_int)end.tv_sec);
-
+		bp_bundle_free(&ack);
 	}
+	else if (perf_opt->congestion_ctrl == 'r') // Rate based congestion control
+	{
+		double interval_secs;
+		struct timespec interval, remaining;
+
+		if (perf_opt->rate_unit == 'b') // rate is bundles per second
+		{
+			interval_secs = 1.0 / perf_opt->rate;
+		}
+		else 							// rate is Bytes or KBytes per second
+		{
+			if (perf_opt->rate_unit == 'K') // Rate is KBytes per second
+			{
+				perf_opt->rate = kilo2byte(perf_opt->rate);
+			}
+			interval_secs = (double)perf_opt->bundle_payload / perf_opt->rate;
+		}
+
+		interval.tv_sec = (long) interval_secs;
+		interval.tv_nsec = (long) ((interval_secs - interval.tv_sec) * 1000 * 1000 * 1000);
+
+		if (debug && debug_level > 0)
+				printf("[debug cong crtl] wait time for each bundle: %.4f sec\n", interval_secs);
+
+		while(close_ack_receiver == 0)
+		{
+			pthread_mutex_lock(&mutexdata);
+
+			current_window++;
+
+			pthread_cond_signal(&cond_sender);
+			pthread_mutex_unlock(&mutexdata);
+			//pthread_yield();
+			sched_yield();
+			if (debug && debug_level > 0)
+					printf("[debug cong crtl] increased window size\n");
+			nanosleep(&interval, &remaining);
+		}
+	}
+	else // wrong char for congestion control
+	{
+		exit(1);
+	}
+
 	pthread_exit(NULL);
 	return NULL;
+}
+
+void print_final_report(FILE * f)
+{
+	double goodput;
+	struct timeval total;
+	double total_secs;
+	char * gput_unit;
+	if (f == NULL)
+		f = stdout;
+	timersub(&end, &start, &total);
+	total_secs = (((double)total.tv_sec * 1000 *1000) + (double)total.tv_usec) / (1000 * 1000);
+	goodput = sent_data * 8 / total_secs;
+	if (goodput / (1024 * 1024) >= 1)
+	{
+		goodput /= 1024 * 1024;
+		gput_unit = "Mbit/sec";
+	}
+	else if (goodput / 1024 >= 1)
+	{
+		goodput /= 1024;
+		gput_unit = "Kbit/sec";
+	}
+	else
+		gput_unit = "bit/sec";
+
+	fprintf(f, "Sent %d bundles, total sent data = %u bytes\n", sent_bundles, sent_data);
+	fprintf(f, "Total execution time = %.1f\n", total_secs);
+	fprintf(f, "Goodput = %.3f %s\n", goodput, gput_unit);
 }
 
 
@@ -840,105 +918,105 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			}
 			break;
 
-			case 'F':
-				perf_opt->op_mode = 'F';
-				perf_opt->F_arg = strdup(optarg);
+		case 'F':
+			perf_opt->op_mode = 'F';
+			perf_opt->F_arg = strdup(optarg);
+			break;
+
+		case 'p':
+			perf_opt->p_arg = optarg;
+			perf_opt->data_unit = find_data_unit(perf_opt->p_arg);
+			switch (perf_opt->data_unit)
+			{
+			case 'B':
+				perf_opt->bundle_payload = atol(perf_opt->p_arg);
 				break;
-
-			case 'p':
-				perf_opt->p_arg = optarg;
-				perf_opt->data_unit = find_data_unit(perf_opt->p_arg);
-				switch (perf_opt->data_unit)
-				{
-				case 'B':
-					perf_opt->bundle_payload = atol(perf_opt->p_arg);
-					break;
-				case 'K':
-					perf_opt->bundle_payload = kilo2byte(atol(perf_opt->p_arg));
-					break;
-				case 'M':
-					perf_opt->bundle_payload = mega2byte(atol(perf_opt->p_arg));
-
-					break;
-				default:
-					printf("\nWARNING: (-p option) invalid data unit, assuming 'K' (KBytes)\n\n");
-					perf_opt->bundle_payload = kilo2byte(atol(perf_opt->p_arg));
-					break;
-				}
+			case 'K':
+				perf_opt->bundle_payload = kilo2byte(atol(perf_opt->p_arg));
 				break;
+			case 'M':
+				perf_opt->bundle_payload = mega2byte(atol(perf_opt->p_arg));
 
-				case 'e':
-					conn_opt->expiration = atoi(optarg);
-					break;
-
-				case 'r':
-					perf_opt->rate_arg = strdup(optarg);
-					perf_opt->rate_unit = find_rate_unit(perf_opt->rate_arg);
-					perf_opt->rate = atoi(perf_opt->rate_arg);
-					perf_opt->congestion_ctrl = 'r';
-					break;
-
-				case 'P':
-					if (!strcasecmp(optarg, "bulk"))   {
-						conn_opt->priority = BP_PRIORITY_BULK;
-					} else if (!strcasecmp(optarg, "normal")) {
-						conn_opt->priority = BP_PRIORITY_NORMAL;
-					} else if (!strcasecmp(optarg, "expedited")) {
-						conn_opt->priority = BP_PRIORITY_EXPEDITED;
-					} else if (!strcasecmp(optarg, "reserved")) {
-						conn_opt->priority = BP_PRIORITY_RESERVED;
-					} else {
-						fprintf(stderr, "Invalid priority value %s\n", optarg);
-						exit(1);
-					}
-					break;
-
-				case 'L':
-					perf_opt->create_log = TRUE;
-					if (optarg != NULL)
-						perf_opt->log_filename = strdup(optarg);
-					break;
-
-				case 33: // debug
-					perf_opt->debug = TRUE;
-					if (optarg){
-						int debug_level = atoi(optarg);
-						if (debug_level >= 0 && debug_level <= 2)
-							perf_opt->debug_level = atoi(optarg);
-						else {
-							fprintf(stderr, "wrong --debug argument\n");
-							exit(1);
-							return;
-						}
-					}
-					else
-						perf_opt->debug_level = 2;
-					break;
-
-				case 34: // incoming bundle destination directory
-					perf_opt->dest_dir = strdup(optarg);
-					break;
-
-				case 37:
-					perf_opt->ip_addr = strdup(optarg);
-					perf_opt->use_ip = TRUE;
-					break;
-
-				case 38:
-					perf_opt->ip_port = atoi(optarg);
-					perf_opt->use_ip = TRUE;
-					break;
-				case '?':
-					break;
-
-				case (char)(-1):
-													done = 1;
 				break;
+			default:
+				printf("\nWARNING: (-p option) invalid data unit, assuming 'K' (KBytes)\n\n");
+				perf_opt->bundle_payload = kilo2byte(atol(perf_opt->p_arg));
+				break;
+			}
+			break;
 
-				default:
-					// getopt already prints an error message for unknown option characters
-					print_client_usage(argv[0]);
+		case 'e':
+			conn_opt->expiration = atoi(optarg);
+			break;
+
+		case 'r':
+			perf_opt->rate_arg = strdup(optarg);
+			perf_opt->rate_unit = find_rate_unit(perf_opt->rate_arg);
+			perf_opt->rate = atoi(perf_opt->rate_arg);
+			perf_opt->congestion_ctrl = 'r';
+			break;
+
+		case 'P':
+			if (!strcasecmp(optarg, "bulk"))   {
+				conn_opt->priority = BP_PRIORITY_BULK;
+			} else if (!strcasecmp(optarg, "normal")) {
+				conn_opt->priority = BP_PRIORITY_NORMAL;
+			} else if (!strcasecmp(optarg, "expedited")) {
+				conn_opt->priority = BP_PRIORITY_EXPEDITED;
+			} else if (!strcasecmp(optarg, "reserved")) {
+				conn_opt->priority = BP_PRIORITY_RESERVED;
+			} else {
+				fprintf(stderr, "Invalid priority value %s\n", optarg);
+				exit(1);
+			}
+			break;
+
+		case 'L':
+			perf_opt->create_log = TRUE;
+			if (optarg != NULL)
+				perf_opt->log_filename = strdup(optarg);
+			break;
+
+		case 33: // debug
+			perf_opt->debug = TRUE;
+			if (optarg){
+				int debug_level = atoi(optarg);
+				if (debug_level >= 0 && debug_level <= 2)
+					perf_opt->debug_level = atoi(optarg);
+				else {
+					fprintf(stderr, "wrong --debug argument\n");
 					exit(1);
+					return;
+				}
+			}
+			else
+				perf_opt->debug_level = 2;
+			break;
+
+		case 34: // incoming bundle destination directory
+			perf_opt->dest_dir = strdup(optarg);
+			break;
+
+		case 37:
+			perf_opt->ip_addr = strdup(optarg);
+			perf_opt->use_ip = TRUE;
+			break;
+
+		case 38:
+			perf_opt->ip_port = atoi(optarg);
+			perf_opt->use_ip = TRUE;
+			break;
+		case '?':
+			break;
+
+		case (char)(-1):
+																									done = 1;
+		break;
+
+		default:
+			// getopt already prints an error message for unknown option characters
+			print_client_usage(argv[0]);
+			exit(1);
 		} // --switch
 	} // -- while
 
