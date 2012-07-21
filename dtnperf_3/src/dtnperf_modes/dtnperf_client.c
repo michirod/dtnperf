@@ -46,7 +46,7 @@ char * source_file_abs;				// absolute path of file SOURCE_FILE
 
 // buffer settings
 char* buffer = NULL;            // buffer containing data to be transmitted
-int bufferLen;                  // lenght of buffer
+size_t bufferLen;                  // lenght of buffer
 
 
 // BP variables
@@ -77,6 +77,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	char * client_demux_string;
 	int pthread_status;
 
+	FILE * stream; // stream for preparing payolad
+
 
 	/* ------------------------
 	 * initialize variables
@@ -85,6 +87,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	int debug_level =  perf_opt->debug_level;
 	boolean_t verbose = perf_opt->verbose;
 	boolean_t create_log = perf_opt->create_log;
+	stream = NULL;
 
 	// Create a new log file
 	if (create_log)
@@ -256,12 +259,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			fprintf(log_file, "requested transmission of %ld%c data\n", perf_opt->data_qty, perf_opt->data_unit);
 	}
 
-	if ((debug) && (debug_level > 0))
-		printf("[debug] bundle_payload %s %d bytes\n", perf_opt->use_file ? ">=" : "<", MAX_MEM_PAYLOAD);
-
-	if (create_log)
-		fprintf(log_file, " bundle_payload %s %d bytes\n", perf_opt->use_file ? ">=" : "<", MAX_MEM_PAYLOAD);
-
 	if (debug)
 		printf(" transmitting data %s\n", perf_opt->use_file ? "using a file" : "using memory");
 
@@ -269,20 +266,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		fprintf(log_file, " transmitting data %s\n", perf_opt->use_file ? "using a file" : "using memory");
 
 
-	int fd; 				// file descriptor for source file
 	sent_bundles = 0;
-
-	// Init buffer
-	buffer = malloc(perf_opt->bundle_payload * sizeof(char));
-
-	if ((debug) && (debug_level > 0))
-		printf("[debug] initialize the buffer with a pattern... ");
-
-	pattern(buffer, perf_opt->bundle_payload);
-	bufferLen = perf_opt->bundle_payload;
-
-	if ((debug) && (debug_level > 0))
-		printf("done\n[debug] bufferLen = %d\n", bufferLen);
 
 	if (perf_opt->op_mode == 'D') // Data mode
 	{
@@ -297,20 +281,21 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 
 
+	// Init generic payload
 	if (perf_opt->use_file)
 	{
 		// create the file
 		if ((debug) && (debug_level > 0))
 			printf("[debug] creating file %s...", SOURCE_FILE);
 
-		fd = open(SOURCE_FILE, O_CREAT | O_TRUNC | O_WRONLY | O_APPEND, 0666);
+		stream = fopen(SOURCE_FILE,	"wb");
 
-		if (fd < 0)
+		if (stream == NULL)
 		{
-			fprintf(stderr, "ERROR: couldn't create file %s [fd = %d].\n \b Maybe you don't have permissions\n", SOURCE_FILE, fd);
+			fprintf(stderr, "ERROR: couldn't create file %s.\n \b Maybe you don't have permissions\n", SOURCE_FILE);
 
 			if (create_log)
-				fprintf(log_file, "ERROR: couldn't create file %s [fd = %d].\n \b Maybe you don't have permissions\n", SOURCE_FILE, fd);
+				fprintf(log_file, "ERROR: couldn't create file %s.\n \b Maybe you don't have permissions\n", SOURCE_FILE);
 
 			exit(2);
 		}
@@ -325,28 +310,27 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		strcat(buf, SOURCE_FILE);
 		source_file_abs = malloc(strlen(buf) + 1);
 		strncpy(source_file_abs, buf, strlen(buf) + 1);
-
-
-		// Fill in the file with a pattern
-		if ((debug) && (debug_level > 0))
-			printf("[debug] filling the file (%s) with the pattern...", source_file_abs);
-
-		data_written += write(fd, buffer, bufferLen);
-
-		if ((debug) && (debug_level > 0))
-			printf(" done. Written %d bytes\n", data_written);
-
-		// Close the file
-		if ((debug) && (debug_level > 0))
-			printf("[debug] closing file (%s)...", source_file_abs);
-
-		close(fd);
-
-		if ((debug) && (debug_level > 0))
-			printf(" done\n");
+	}
+	else  // use memory
+	{
+		stream = open_memstream(& buffer, & bufferLen);
 	}
 
+	// prepare the payload
+	error = prepare_generic_payload(perf_opt, stream);
+	if (error != BP_SUCCESS)
+	{
+		fprintf(stderr, "error preparing payload: %s\n", bp_strerror(error));
+		if (create_log)
+			fprintf(log_file, "error preparing payload: %s\n", bp_strerror(error));
+		exit(1);
+	}
 
+	// close file or buffer
+	fclose(stream);
+
+	if(debug)
+		printf("[debug] payload prepared");
 
 	// Create the array for the bundle send info (only for sliding window congestion control)
 	if (perf_opt->congestion_ctrl == 'w') {
@@ -805,7 +789,8 @@ void print_client_usage(char* progname)
 			" -m, --monitor <eid>       Monitor eid. Default is same as local eid.\n"
 			" -T, --time <sec>          Time-mode: seconds of transmission.\n"
 			" -D, --data <num[BKM]>     Data-mode: bytes to transmit, data unit default 'M' (Mbytes).\n"
-			" -w, --window <size>       Size of transmission window, i.e. max number of bundles \"in flight\" (not still ACKed by a server ack); default =1.\n"
+			" -w, --window <size[BKb]>  Size of transmission window, i.e. max number of bundles \"in flight\" (not still ACKed by a server ack); default =1.\n"
+			" -r, --rate <rate>         Bitrate of transmission. Bytes/sec, KBytes/sec, bundles/sec. Default is B\n"
 			" -C, --custody             Enable both custody transfer and \"custody accepted\" status reports.\n"
 			" -i, --exitinterval <sec>  Additional interval before exit.\n"
 			" -p, --payload <size[BKM]> Size of bundle payloads; data unit default= 'K' (Kbytes).\n"

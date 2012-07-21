@@ -166,6 +166,42 @@ void set_bp_options(bp_bundle_object_t *bundle, dtnperf_connection_options_t *op
 
 } // end set_bp_options
 
+bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
+{
+	if (f == NULL)
+		return BP_ENULLPNTR;
+
+	char header[HEADER_SIZE];
+	char * pattern = PL_PATTERN;
+	long remaining;
+	int i;
+	char congestion_control = opt->congestion_ctrl;
+	switch(opt->op_mode)
+	{
+	case 'T':
+		strncpy(header, TIME_HEADER, HEADER_SIZE);
+		break;
+	case 'D':
+		strncpy(header, DATA_HEADER, HEADER_SIZE);
+		break;
+	default:
+		return BP_EINVAL;
+	}
+	// remaining = bundle_payload - HEADER_SIZE - congestion control char
+	remaining = opt->bundle_payload - HEADER_SIZE - 1;
+	fwrite(header, HEADER_SIZE, 1, f);
+	fwrite(&congestion_control, 1, 1, f);
+
+	// fill remainig payload with a pattern
+	for (i = remaining; i > strlen(pattern); i -= strlen(pattern))
+	{
+		fwrite(pattern, strlen(pattern), 1, f);
+	}
+	fwrite(pattern, remaining % strlen(pattern), 1, f);
+
+	return BP_SUCCESS;
+}
+
 /**
  *
  */
@@ -173,11 +209,9 @@ bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** 
 {
 	FILE * buf_stream;
 	char * buf;
-	char null = '\0';
 	size_t buf_size;
 	buf_stream = open_memstream(& buf, &buf_size);
-	fwrite(ack.header, 1, strlen(DSA_STRING), buf_stream);
-	fwrite(&null, 1, 1, buf_stream);
+	fwrite(ack.header, 1, HEADER_SIZE, buf_stream);
 	fwrite(&(ack.bundle_source), 1, sizeof(ack.bundle_source), buf_stream);
 	fwrite(&(ack.bundle_creation_ts), 1, sizeof(ack.bundle_creation_ts), buf_stream);
 	fclose(buf_stream);
@@ -203,9 +237,9 @@ bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_timestamp_t * reported
 	error = bp_bundle_get_payload_mem(*ack, &buf, &buf_len);
 	if (error != BP_SUCCESS)
 		return error;
-	if (strcmp(DSA_STRING, buf) == 0)
+	if (strncmp(DSA_HEADER, buf, HEADER_SIZE) == 0)
 	{
-		buf += strlen(buf) + 1;
+		buf += HEADER_SIZE;
 		memcpy(&reported_eid, buf, sizeof(reported_eid));
 		if (strcmp(reported_eid.uri, ack_dest.uri) == 0)
 		{
@@ -217,3 +251,54 @@ bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_timestamp_t * reported
 	return BP_ERRBASE;
 }
 
+boolean_t is_header(bp_bundle_object_t * bundle, const char * header_string)
+{
+	if (bundle == NULL)
+		return FALSE;
+	bp_bundle_payload_location_t pl_loc;
+	char header[HEADER_SIZE];
+	char * buf;
+	size_t buf_len;
+	bp_bundle_get_payload_location(*bundle, &pl_loc);
+	if (pl_loc == BP_PAYLOAD_FILE)
+	{
+		bp_bundle_get_payload_file(*bundle, &buf, &buf_len);
+		int fd = open(buf, O_RDONLY);
+		read(fd, &header, HEADER_SIZE);
+		close(fd);
+	}
+	else
+	{
+		bp_bundle_get_payload_mem(*bundle, &buf, &buf_len);
+		memcpy(&header, buf, HEADER_SIZE);
+	}
+	if (strncmp(buf, header_string, HEADER_SIZE) == 0)
+		return TRUE;
+	return FALSE;
+}
+
+boolean_t is_congestion_ctrl(bp_bundle_object_t * bundle, char mode)
+{
+	if (bundle == NULL)
+			return FALSE;
+		bp_bundle_payload_location_t pl_loc;
+		char header[HEADER_SIZE + 1];
+		char * buf;
+		size_t buf_len;
+		bp_bundle_get_payload_location(*bundle, &pl_loc);
+		if (pl_loc == BP_PAYLOAD_FILE)
+		{
+			bp_bundle_get_payload_file(*bundle, &buf, &buf_len);
+			int fd = open(buf, O_RDONLY);
+			read(fd, &header, HEADER_SIZE);
+			close(fd);
+		}
+		else
+		{
+			bp_bundle_get_payload_mem(*bundle, &buf, &buf_len);
+			memcpy(&header, buf, HEADER_SIZE);
+		}
+		if (buf[HEADER_SIZE] == mode)
+			return TRUE;
+		return FALSE;
+}

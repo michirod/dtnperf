@@ -8,16 +8,8 @@
 #ifndef DTNPERF_TYPES_H_
 #define DTNPERF_TYPES_H_
 
+#include "definitions.h"
 #include <bp_types.h>
-
-// max payload (in bytes) if bundles are stored into memory
-#define MAX_MEM_PAYLOAD 50000
-
-// illegal number of bytes for the bundle payload
-#define ILLEGAL_PAYLOAD 0
-
-// default value (in bytes) for bundle payload
-#define DEFAULT_PAYLOAD 50000
 
 typedef enum {
 	DTNPERF_SERVER = 1,
@@ -91,7 +83,7 @@ typedef struct dtnperf_global_options
 
 typedef struct dtnperf_server_ack_payload
 {
-	char* header;
+	char header[HEADER_SIZE];
 	bp_endpoint_id_t bundle_source;
 	bp_timestamp_t bundle_creation_ts;
 } dtnperf_server_ack_payload_t;

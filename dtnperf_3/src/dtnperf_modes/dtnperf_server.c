@@ -192,9 +192,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		if(debug && debug_level > 0)
 			printf("done\n");
 
-		// initiate server ack payload
-		server_ack_payload.header = DSA_STRING;
-
 		// wait until receive a bundle
 		if ((debug) && (debug_level > 0))
 			printf("[debug] waiting for bundles...\n");
@@ -255,8 +252,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			printf("\tbundle_source_addr = %s\n", bundle_source_addr.uri);
 			printf("\n");
 		}
-		// set server ack payload source
-		server_ack_payload.bundle_source = bundle_source_addr;
 
 		// get DEST eid
 		if ((debug) && (debug_level > 0))
@@ -350,7 +345,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		}
 
 
-		if(!perf_opt->no_acks)
+		// send acks only if client use sliding window and no acks option is not set
+		if(!perf_opt->no_acks && is_congestion_ctrl(&bundle_object, 'w'))
 		{
 			// create bundle ack to send to client
 			if ((debug) && (debug_level > 0))
@@ -365,6 +361,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			if(debug && debug_level > 0)
 				printf("done\n");
 
+
+			// initiate server ack payload
+			strncpy(server_ack_payload.header, DSA_HEADER, HEADER_SIZE);
+			// set server ack payload source
+			server_ack_payload.bundle_source = bundle_source_addr;
 
 			// preparing the bundle ack payload
 			if ((debug) && (debug_level > 0))
