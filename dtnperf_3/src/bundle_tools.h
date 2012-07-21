@@ -23,6 +23,7 @@ void print_eid(char * label, bp_endpoint_id_t *eid);
 void init_info(send_information_t *send_info, int window);
 long add_info(send_information_t* send_info, bp_bundle_id_t bundle_id, struct timeval p_start, int window);
 int is_in_info(send_information_t* send_info, bp_timestamp_t timestamp, int window);
+int count_info(send_information_t* send_info, int window);
 void remove_from_info(send_information_t* send_info, int position);
 void set_bp_options(bp_bundle_object_t *bundle, dtnperf_connection_options_t *opt);
 

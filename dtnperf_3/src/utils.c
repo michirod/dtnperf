@@ -83,7 +83,7 @@ char find_rate_unit(const char *inarg)
     if ((ptr = strpbrk(inarg, unitArray)) == NULL)
     {
     	printf("\nWARNING: (-r option) invalid rate unit, assuming 'B' (Bytes/sec)\n\n");
-    	unit = 'B';
+    	return 'B';
     }
     unit = ptr[0];
     return unit;

@@ -105,6 +105,18 @@ int is_in_info(send_information_t* send_info, bp_timestamp_t bundle_timestamp, i
     return -1;
 } // end is_in_info
 
+int count_info(send_information_t* send_info, int window)
+{
+	int i, count = 0;
+	for (i = 0; i < window; i++)
+	{
+		if (send_info[i].bundle_id.creation_ts.secs != 0)
+		{
+			count++;
+		}
+	}
+	return count;
+}
 
 void remove_from_info(send_information_t* send_info, int position)
 {

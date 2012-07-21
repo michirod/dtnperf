@@ -25,14 +25,12 @@
 
 // pthread variables
 pthread_t sender;
-pthread_t ack_receiver;
+pthread_t cong_ctrl;
 pthread_mutex_t mutexdata;
-pthread_cond_t cond_sender;
 pthread_cond_t cond_ackreceiver;
 sem_t window;						// semaphore for congestion control
 
 // client threads variables
-int current_window; 				// for window based congestion control
 send_information_t * send_info;		// array info of sent bundles
 int tot_bundles;					// for data mode
 struct timeval start, end, now;			// time variables
@@ -63,6 +61,8 @@ bp_endpoint_id_t mon_eid;
 bp_bundle_object_t bundle;
 bp_bundle_object_t ack;
 
+void usr(int signo)
+{}
 
 /*  ----------------------------
  *          CLIENT CODE
@@ -118,6 +118,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	// Ctrl+C handler
 	signal(SIGUSR1, &handler);
+	signal(SIGUSR2, &usr);
 
 	/* -----------------------------------------------------
 	 *   initialize and parse bundle src/dest/replyto EIDs
@@ -345,22 +346,19 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			printf(" done\n");
 	}
 
-	// Setting send window for congestion control modes
-	if (perf_opt->congestion_ctrl == 'w')
-		current_window = perf_opt->window;
-	else
-		current_window = 0;
 
 
-	// Create the array for the bundle send info
-	if ((debug) && (debug_level > 0))
-		printf("[debug] creating structure for sending information...");
+	// Create the array for the bundle send info (only for sliding window congestion control)
+	if (perf_opt->congestion_ctrl == 'w') {
+		if ((debug) && (debug_level > 0))
+			printf("[debug] creating structure for sending information...");
 
-	send_info = (send_information_t*) malloc(perf_opt->window * sizeof(send_information_t));
-	init_info(send_info, perf_opt->window);
+		send_info = (send_information_t*) malloc(perf_opt->window * sizeof(send_information_t));
+		init_info(send_info, perf_opt->window);
 
-	if ((debug) && (debug_level > 0))
-		printf(" done\n");
+		if ((debug) && (debug_level > 0))
+			printf(" done\n");
+	}
 
 	// Create the bundle object
 	if ((debug) && (debug_level > 0))
@@ -409,18 +407,24 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		printf("[debug] entering in loop\n");
 
 	// Run threads
-	pthread_cond_init(&cond_sender, NULL);
+	if (perf_opt->congestion_ctrl == 'w') // sliding window congestion control
+		sem_init(&window, 0, perf_opt->window);
+	else								// rate based congestion control
+		sem_init(&window, 0, 0);
+
 	pthread_cond_init(&cond_ackreceiver, NULL);
 	pthread_mutex_init (&mutexdata, NULL);
 
 
 	pthread_create(&sender, NULL, send_bundles, (void*)perf_g_opt);
-	pthread_create(&ack_receiver, NULL, congestion_control, (void*)perf_g_opt);
+	pthread_create(&cong_ctrl, NULL, congestion_control, (void*)perf_g_opt);
 
-	pthread_join(ack_receiver, (void**)&pthread_status);
+	pthread_join(cong_ctrl, (void**)&pthread_status);
 	pthread_join(sender, (void**)&pthread_status);
 
 	pthread_mutex_destroy(&mutexdata);
+	sem_destroy(&window);
+	pthread_cond_destroy(&cond_ackreceiver);
 
 	if ((debug) && (debug_level > 0))
 		printf("[debug] out from loop\n");
@@ -537,18 +541,21 @@ void * send_bundles(void * opt)
 	}
 	while (condition)				//LOOP
 	{
-		pthread_mutex_lock(&mutexdata);
-
-		if (current_window == 0)
+		if ((debug) && (debug_level > 1))
 		{
-			pthread_cond_wait(&cond_sender, &mutexdata);
-			pthread_mutex_unlock(&mutexdata);
-			continue;
+			int cur;
+			sem_getvalue(&window, &cur);
+			printf("\t[debug send thread] window is %d\n", cur);
 		}
+		// wait for the semaphore
+		sem_wait(&window);
 
 		// Send the bundle
 		if (debug)
-			printf("\t sending the bundle...");
+			printf("sending the bundle...");
+
+		if (perf_opt->congestion_ctrl == 'w')
+			pthread_mutex_lock(&mutexdata);
 
 		if ((error = bp_bundle_send(handle, regid, &bundle)) != 0)
 		{
@@ -567,19 +574,18 @@ void * send_bundles(void * opt)
 		if (debug)
 			printf(" bundle sent\n");
 		if ((debug) && (debug_level > 0))
-			printf("\t[debug send thread] bundle sent: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
+			printf("\t[debug send thread] bundle sent timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
 		if (create_log)
-			fprintf(log_file, "\t bundle sent %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
+			fprintf(log_file, "\t bundle sent timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
 
 		// put bundle id in send_info (only windowed congestion control)
 		if (perf_opt->congestion_ctrl == 'w') {
 			gettimeofday(&bundle_sent, NULL);
-			--current_window;
 			add_info(send_info, *bundle_id, bundle_sent, perf_opt->window);
-
 			if ((debug) && (debug_level > 1))
-				printf("\t[debug send thread] sent bundle timestamp:%lu %lu\n", bundle_id->creation_ts.secs, bundle_id->creation_ts.seqno);
-
+				printf("\t[debug send thread] added info for sent bundle\n");
+			pthread_cond_signal(&cond_ackreceiver);
+			pthread_mutex_unlock(&mutexdata);
 		}
 
 		// Increment sent_bundles
@@ -589,15 +595,8 @@ void * send_bundles(void * opt)
 			printf("\t[debug send thread] now bundles_sent is %d\n", sent_bundles);
 		if (create_log)
 			fprintf(log_file, "\t now bundles_sent is %d\n", sent_bundles);
-
-
 		// Increment data_qty
 		sent_data += perf_opt->bundle_payload;
-
-		if (perf_opt->congestion_ctrl =='w') {
-			pthread_cond_signal(&cond_ackreceiver);
-		}
-		pthread_mutex_unlock(&mutexdata);
 
 		if (perf_opt->op_mode == 'T')	// TIME MODE
 		{								// update time and condition
@@ -608,7 +607,7 @@ void * send_bundles(void * opt)
 		{								// update condition
 			condition = sent_bundles < tot_bundles;
 		}
-	}
+	} // while
 
 	if ((debug) && (debug_level > 0))
 		printf("[debug send thread] ...out from loop\n");
@@ -617,7 +616,14 @@ void * send_bundles(void * opt)
 
 	pthread_mutex_lock(&mutexdata);
 	close_ack_receiver = 1;
-	pthread_cond_signal(&cond_ackreceiver);
+	if (perf_opt->congestion_ctrl == 'r')
+	{
+		pthread_kill(cong_ctrl, SIGUSR2);
+	}
+	else
+	{
+		pthread_cond_signal(&cond_ackreceiver);
+	}
 	pthread_mutex_unlock(&mutexdata);
 	pthread_exit(NULL);
 
@@ -642,13 +648,13 @@ void * congestion_control(void * opt)
 
 	if (perf_opt->congestion_ctrl == 'w') // window based congestion control
 	{
-				bp_bundle_create(&ack);
+		bp_bundle_create(&ack);
 
 		while ((close_ack_receiver == 0) || (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit))
 		{
 			// if there are no bundles without ack, wait
 			pthread_mutex_lock(&mutexdata);
-			if (close_ack_receiver == 0 && current_window == perf_opt->window)
+			if (close_ack_receiver == 0 && count_info(send_info, perf_opt->window) == 0)
 			{
 				pthread_cond_wait(&cond_ackreceiver, &mutexdata);
 				pthread_mutex_unlock(&mutexdata);
@@ -661,9 +667,9 @@ void * congestion_control(void * opt)
 			if ((debug) && (debug_level > 0))
 				printf("\t[debug cong crtl] waiting for the reply...\n");
 
-			if ((error = bp_bundle_receive(handle, ack, BP_PAYLOAD_MEM, current_window == perf_opt->window ? perf_opt->wait_before_exit : -1)) != BP_SUCCESS)
+			if ((error = bp_bundle_receive(handle, ack, BP_PAYLOAD_MEM, count_info(send_info, perf_opt->window) == 0 ? perf_opt->wait_before_exit : -1)) != BP_SUCCESS)
 			{
-				if(current_window == perf_opt->window && close_ack_receiver == 1)
+				if(count_info(send_info, perf_opt->window) == 0 && close_ack_receiver == 1)
 					// send_bundles is terminated
 					break;
 				fprintf(stderr, "error getting server ack: %d (%s)\n", error, bp_strerror(bp_errno(handle)));
@@ -697,9 +703,14 @@ void * congestion_control(void * opt)
 			remove_from_info(send_info, position);
 			if ((debug) && (debug_level > 0))
 				printf("\t[debug cong crtl] ack validated\n");
-			current_window++;
+			sem_post(&window);
+			if ((debug) && (debug_level > 1))
+			{
+				int cur;
+				sem_getvalue(&window, &cur);
+				printf("\t[debug cong crtl] window is %d\n", cur);
+			}
 
-			pthread_cond_signal(&cond_sender);
 			pthread_mutex_unlock(&mutexdata);
 			//pthread_yield();
 			sched_yield();
@@ -731,19 +742,17 @@ void * congestion_control(void * opt)
 		if (debug && debug_level > 0)
 				printf("[debug cong crtl] wait time for each bundle: %.4f sec\n", interval_secs);
 
+		pthread_mutex_lock(&mutexdata);
 		while(close_ack_receiver == 0)
 		{
-			pthread_mutex_lock(&mutexdata);
-
-			current_window++;
-
-			pthread_cond_signal(&cond_sender);
 			pthread_mutex_unlock(&mutexdata);
+			sem_post(&window);
 			//pthread_yield();
 			sched_yield();
 			if (debug && debug_level > 0)
 					printf("[debug cong crtl] increased window size\n");
 			nanosleep(&interval, &remaining);
+			pthread_mutex_lock(&mutexdata);
 		}
 	}
 	else // wrong char for congestion control
@@ -912,7 +921,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				perf_opt->data_qty = mega2byte(atol(perf_opt->D_arg));
 				break;
 			default:
-				printf("\nWARNING: (-n option) invalid data unit, assuming 'M' (MBytes)\n\n");
+				printf("\nWARNING: (-D option) invalid data unit, assuming 'M' (MBytes)\n\n");
 				perf_opt->data_qty = mega2byte(atol(perf_opt->D_arg));
 				break;
 			}
