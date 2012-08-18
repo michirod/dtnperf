@@ -26,6 +26,7 @@ void add_time(struct timeval *tot_time, struct timeval part_time);
 struct timeval set(double sec);
 struct timeval add(double sec);
 
-int file_exists(const char * filename);
+boolean_t file_exists(const char * filename);
 
+char * correct_dirname(char * dir);
 #endif /*UTILS_H_*/

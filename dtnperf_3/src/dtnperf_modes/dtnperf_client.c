@@ -10,9 +10,13 @@
 #include "../includes.h"
 #include "../definitions.h"
 #include "../bundle_tools.h"
+#include "../file_transfer_tools.h"
 #include "../utils.h"
 #include <semaphore.h>
+#include <libgen.h>
+#include <sys/stat.h>
 #include <bp_abstraction_api.h>
+
 
 /* pthread_yield() is not standard,
    so use sched_yield if necessary */
@@ -43,6 +47,9 @@ unsigned int data_written = 0;			// num of bytes written on the source file
 
 FILE * log_file = NULL;
 char * source_file_abs;				// absolute path of file SOURCE_FILE
+char * transfer_filename;			// basename of the file to transfer
+u32_t transfer_filedim;				// size of the file to transfer
+int transfer_fd;					// file descriptor
 
 // buffer settings
 char* buffer = NULL;            // buffer containing data to be transmitted
@@ -77,6 +84,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	char * client_demux_string;
 	int pthread_status;
 
+	char temp1[256]; // buffer for different purpose
+	char temp2[256];
 	FILE * stream; // stream for preparing payolad
 
 
@@ -88,6 +97,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	boolean_t verbose = perf_opt->verbose;
 	boolean_t create_log = perf_opt->create_log;
 	stream = NULL;
+	tot_bundles = 0;
 
 	// Create a new log file
 	if (create_log)
@@ -229,7 +239,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 
 	/* ------------------------------------------------------------------------------
-	 * select the operative-mode (between Time_Mode and Data_Mode)
+	 * select the operative-mode (between Time_Mode, Data_Mode and File_Mode)
 	 * ------------------------------------------------------------------------------ */
 
 	if (perf_opt->op_mode == 'T')	// Time mode
@@ -258,6 +268,18 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		if (create_log)
 			fprintf(log_file, "requested transmission of %ld%c data\n", perf_opt->data_qty, perf_opt->data_unit);
 	}
+	else if (perf_opt->op_mode == 'F') // File mode
+	{
+		if (debug)
+			printf("Working in File_Mode\n");
+		if (create_log)
+			fprintf(log_file, "Working in File_Mode\n");
+		if (debug)
+			printf("requested transmission of file %s\n", perf_opt->F_arg);
+		if (create_log)
+			fprintf(log_file, "requested transmission of file %s\n", perf_opt->F_arg);
+
+	}
 
 	if (debug)
 		printf(" transmitting data %s\n", perf_opt->use_file ? "using a file" : "using memory");
@@ -268,12 +290,27 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	sent_bundles = 0;
 
-	if (perf_opt->op_mode == 'D') // Data mode
+	if (perf_opt->op_mode == 'D' || perf_opt->op_mode == 'F') // Data or File mode
 	{
 		if ((debug) && (debug_level > 0))
 			printf("[debug] calculating how many bundles are needed...");
 
-		tot_bundles = bundles_needed(perf_opt->data_qty, perf_opt->bundle_payload);
+		if (perf_opt->op_mode == 'F') // File mode
+		{
+			struct stat file;
+			if (stat(perf_opt->F_arg, &file) < 0)
+			{
+				fprintf(stderr, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
+				if (create_log)
+					fprintf(log_file, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
+				exit(1);
+			}
+			transfer_filedim = file.st_size;
+			tot_bundles += 1; // first file transfer bundle
+			tot_bundles += bundles_needed(transfer_filedim, get_file_fragment_size(perf_opt->bundle_payload));
+		}
+		else // Data mode
+			tot_bundles += bundles_needed(perf_opt->data_qty, perf_opt->bundle_payload);
 
 		if ((debug) && (debug_level > 0))
 			printf(" n_bundles = %d\n", tot_bundles);
@@ -281,7 +318,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 
 
-	// Init generic payload
+	// Create the file
 	if (perf_opt->use_file)
 	{
 		// create the file
@@ -300,6 +337,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			exit(2);
 		}
 
+		fclose(stream);
+
 		if ((debug) && (debug_level > 0))
 			printf(" done\n");
 
@@ -310,38 +349,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		strcat(buf, SOURCE_FILE);
 		source_file_abs = malloc(strlen(buf) + 1);
 		strncpy(source_file_abs, buf, strlen(buf) + 1);
-	}
-	else  // use memory
-	{
-		stream = open_memstream(& buffer, & bufferLen);
-	}
-
-	// prepare the payload
-	error = prepare_generic_payload(perf_opt, stream);
-	if (error != BP_SUCCESS)
-	{
-		fprintf(stderr, "error preparing payload: %s\n", bp_strerror(error));
-		if (create_log)
-			fprintf(log_file, "error preparing payload: %s\n", bp_strerror(error));
-		exit(1);
-	}
-
-	// close file or buffer
-	fclose(stream);
-
-	if(debug)
-		printf("[debug] payload prepared");
-
-	// Create the array for the bundle send info (only for sliding window congestion control)
-	if (perf_opt->congestion_ctrl == 'w') {
-		if ((debug) && (debug_level > 0))
-			printf("[debug] creating structure for sending information...");
-
-		send_info = (send_information_t*) malloc(perf_opt->window * sizeof(send_information_t));
-		init_info(send_info, perf_opt->window);
-
-		if ((debug) && (debug_level > 0))
-			printf(" done\n");
 	}
 
 	// Create the bundle object
@@ -359,16 +366,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
 
-	// Setting the bundle options
-	bp_bundle_set_source(&bundle, local_eid);
-	bp_bundle_set_dest(&bundle, dest_eid);
-	bp_bundle_set_replyto(&bundle, mon_eid);
-	set_bp_options(&bundle, conn_opt);
-
-
-
 	// Fill the payload
-
 	if ((debug) && (debug_level > 0))
 		printf("[debug] filling payload...");
 
@@ -386,6 +384,84 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
+
+
+	// open payload stream in write mode
+	if (open_payload_stream_write(bundle, &stream) < 0)
+	{
+		fprintf(stderr, "ERROR: couldn't open payload stream in write mode");
+
+		if (create_log)
+			fprintf(log_file, "ERROR: couldn't open payload stream in write mode");
+
+		exit(2);
+	}
+
+	// prepare the payload
+	if(perf_opt->op_mode == 'F') // File mode
+	{
+		// get transfer file basename
+		strcpy(temp1, perf_opt->F_arg);
+		strcpy(temp2, basename(temp1));
+		transfer_filename = malloc(strlen(temp2) + 1);
+		strcpy(transfer_filename, temp2);
+
+		// open file to transfer in read mode
+		if ((transfer_fd = open(perf_opt->F_arg, O_RDONLY)) < 0)
+		{
+			fprintf(stderr, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
+			if (create_log)
+				fprintf(log_file, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
+			exit(2);
+		}
+
+		// prepare payload for first bundle of file transfer
+		error = prepare_file_transfer_first_payload(perf_opt, stream, transfer_fd, transfer_filename, transfer_filedim);
+		if(error != BP_SUCCESS)
+		{
+			fprintf(stderr, "error preparing payload: %s\n", bp_strerror(error));
+			if (create_log)
+				fprintf(log_file, "error preparing payload: %s\n", bp_strerror(error));
+			exit(1);
+		}
+
+	}
+	else // Time and Data mode
+	{
+		error = prepare_generic_payload(perf_opt, stream);
+		if (error != BP_SUCCESS)
+		{
+			fprintf(stderr, "error preparing payload: %s\n", bp_strerror(error));
+			if (create_log)
+				fprintf(log_file, "error preparing payload: %s\n", bp_strerror(error));
+			exit(1);
+		}
+	}
+
+	// close the stream
+	close_payload_stream_write(&bundle, stream);
+
+	if(debug)
+		printf("[debug] payload prepared");
+
+	// Create the array for the bundle send info (only for sliding window congestion control)
+	if (perf_opt->congestion_ctrl == 'w') {
+		if ((debug) && (debug_level > 0))
+			printf("[debug] creating structure for sending information...");
+
+		send_info = (send_information_t*) malloc(perf_opt->window * sizeof(send_information_t));
+		init_info(send_info, perf_opt->window);
+
+		if ((debug) && (debug_level > 0))
+			printf(" done\n");
+	}
+
+
+	// Setting the bundle options
+	bp_bundle_set_source(&bundle, local_eid);
+	bp_bundle_set_dest(&bundle, dest_eid);
+	bp_bundle_set_replyto(&bundle, mon_eid);
+	set_bp_options(&bundle, conn_opt);
 
 	if ((debug) && (debug_level > 0))
 		printf("[debug] entering in loop\n");
@@ -412,8 +488,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	if ((debug) && (debug_level > 0))
 		printf("[debug] out from loop\n");
-
-	free((void*)buffer);
 
 	// Get the TOTAL end time
 	if ((debug) && (debug_level > 0))
@@ -447,8 +521,13 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if (create_log)
 		fclose(log_file);
 
-
+	// deallocate memory
+	free((void*)buffer);
+	free(client_demux_string);
+	free(source_file_abs);
+	free(transfer_filename);
 	free(send_info);
+	bp_bundle_free(&bundle);
 
 	pthread_exit(NULL);
 
@@ -474,6 +553,10 @@ void * send_bundles(void * opt)
 	int debug_level = perf_opt->debug_level;
 	boolean_t create_log = perf_opt->create_log;
 	boolean_t condition;
+	boolean_t first_file_transfer_bundle = FALSE;
+	boolean_t eof_reached;
+	u32_t actual_payload;
+	FILE * stream;
 
 	// Initialize timer
 	if ((debug) && (debug_level > 0))
@@ -505,8 +588,10 @@ void * send_bundles(void * opt)
 		if (create_log)
 			fprintf(log_file, " end.tv_sec = %d sec\n", (u_int)end.tv_sec);
 	}
-	else						// DATA MODE
+	else if (perf_opt->op_mode == 'F')	// FILE MODE
 	{
+		// set first file transfer bundle var
+		first_file_transfer_bundle = TRUE;
 	}
 
 	if ((debug) && (debug_level > 0))
@@ -519,12 +604,22 @@ void * send_bundles(void * opt)
 		now.tv_sec = start.tv_sec;
 		condition = now.tv_sec <= end.tv_sec;
 	}
-	else							// DATA MODE
+	else							// DATA and FILE MODE
 	{								// setting condition for loop
 		condition = sent_bundles < tot_bundles;
 	}
 	while (condition)				//LOOP
 	{
+		// prepare payload if FILE MODE
+		if (perf_opt->op_mode == 'F' && ! first_file_transfer_bundle)
+		{
+			open_payload_stream_write(bundle, &stream);
+			error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd, &eof_reached);
+			close_payload_stream_write(&bundle, stream);
+		}
+		first_file_transfer_bundle = FALSE;
+
+		// window debug
 		if ((debug) && (debug_level > 1))
 		{
 			int cur;
@@ -580,7 +675,8 @@ void * send_bundles(void * opt)
 		if (create_log)
 			fprintf(log_file, "\t now bundles_sent is %d\n", sent_bundles);
 		// Increment data_qty
-		sent_data += perf_opt->bundle_payload;
+		bp_bundle_get_payload_size(bundle, &actual_payload);
+		sent_data += actual_payload;
 
 		if (perf_opt->op_mode == 'T')	// TIME MODE
 		{								// update time and condition
@@ -810,8 +906,6 @@ void print_client_usage(char* progname)
 
 void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * perf_g_opt)
 {
-	printf("WARNING: dtnperf3 client operative mode under heavy development\n");
-
 	char c, done = 0;
 	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
 	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
@@ -915,6 +1009,12 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 'F':
 			perf_opt->op_mode = 'F';
 			perf_opt->F_arg = strdup(optarg);
+			if(!file_exists(perf_opt->F_arg))
+			{
+				fprintf(stderr, "Unable to open file %s: ", perf_opt->F_arg);
+				perror("");
+				exit(1);
+			}
 			break;
 
 		case 'p':
@@ -1019,6 +1119,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	{
 		perf_g_opt->mode = DTNPERF_CLIENT_MONITOR;
 	}
+
 
 #define CHECK_SET(_arg, _what)                                          	\
 		if (_arg == 0) {                                                    	\

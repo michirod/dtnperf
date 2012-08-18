@@ -35,7 +35,7 @@ typedef struct dtnperf_options
 	char dest_eid[BP_MAX_ENDPOINT_ID];	// destination eid
 	char mon_eid[BP_MAX_ENDPOINT_ID];	// monitor eid
 	char op_mode;    		// operative mode (T = time_mode, D = data_mode, F = file_mode) [D]
-	long data_qty;			// data to be transmitted (bytes) [0]
+	unsigned long data_qty;	// data to be transmitted (bytes) [0]
 	char * D_arg;			// arguments of -D option
 	char * F_arg;			// argument of -F option (filename)
 	char * p_arg;			// arguments of -p option
@@ -52,7 +52,8 @@ typedef struct dtnperf_options
 	boolean_t create_log;	// create log file [FALSE]
 	char * log_filename;	// log filename [LOG_FILENAME]
 	//server options
-	char * dest_dir;		// destination dir of bundles [dtnperf]
+	char * dest_dir;		// destination dir of bundles [~/dtnperf/bundles]
+	char * file_dir;		// destination dir of transfered files [~/dtnperf/files]
 	boolean_t acks_to_mon;	// send ACKs to both source and monitor (if monitor is not the source) [FALSE]
 	boolean_t no_acks;		// do not send ACKs (for retro-compatibility purpose)
 

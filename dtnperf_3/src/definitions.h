@@ -11,6 +11,9 @@
 // dir where are saved incoming bundles
 #define BUNDLE_DIR_DEFAULT "~/dtnperf/bundles/"
 
+// dir where are saved transfered files
+#define FILE_DIR_DEFAULT "~/dtnperf/files/"
+
 // source file for bundle in client with use_file option
 #define SOURCE_FILE "dtnperfbuf.src"
 

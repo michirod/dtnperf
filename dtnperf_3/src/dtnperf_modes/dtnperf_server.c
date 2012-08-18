@@ -9,8 +9,16 @@
 #include "../includes.h"
 #include "../definitions.h"
 #include "../bundle_tools.h"
+#include "../file_transfer_tools.h"
+#include "../utils.h"
 
 #include <bp_abstraction_api.h>
+
+/*
+ * Global variables
+ */
+file_transfer_info_list_t file_transfer_info_list;
+pending_bundle_list_t pending_bundle_list;
 
 
 /*  ----------------------------
@@ -21,6 +29,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	/* ------------------------
 	 * variables
 	 * ------------------------ */
+
+	file_transfer_info_list_t * info_list = &file_transfer_info_list;
 
 	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
 	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
@@ -46,17 +56,24 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	size_t pl_filename_len = 0;
 	char* pl_buffer = NULL;
 	size_t pl_buffer_size = 0;
+	boolean_t is_file_transfer_bundle;
+	boolean_t is_file_transfer_bundle_first;
+	boolean_t bundle_inserted_in_pending_list;
+	int indicator; // for file transfer functions purposes
 
 
 	/* ------------------------
 	 * initialize variables
 	 * ------------------------ */
-
-
-
 	boolean_t debug = perf_g_opt->perf_opt->debug;
 	int debug_level =  perf_g_opt->perf_opt->debug_level;
 
+	perf_opt->dest_dir = correct_dirname(perf_opt->dest_dir);
+	perf_opt->file_dir = correct_dirname(perf_opt->file_dir);
+
+	// initialize structures for file transfers
+	file_transfer_info_list = file_transfer_info_list_create();
+	pending_bundle_list = pending_bundle_list_create();
 
 	// show requested options (debug)
 	if (debug)
@@ -110,6 +127,27 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	if (system(command) < 0)
 	{
 		perror("Error opening bundle destination dir");
+		exit(-1);
+	}
+	free(command);
+	if(debug && debug_level > 0)
+		printf("done\n");
+
+	// create dir where dtnperf server will save incoming files
+	// command should be: mkdir -p "file_dir"
+	if(debug && debug_level > 0)
+		printf("[debug] initializing shell command...");
+	command = malloc(sizeof(char) * (10 + strlen(perf_opt->file_dir)));
+	sprintf(command, "mkdir -p %s", perf_opt->file_dir);
+	if(debug && debug_level > 0)
+		printf("done. Shell command = %s\n", command);
+
+	// execute shell command
+	if(debug && debug_level > 0)
+		printf("[debug] executing shell command...");
+	if (system(command) < 0)
+	{
+		perror("Error opening transfered files destination dir");
 		exit(-1);
 	}
 	free(command);
@@ -191,6 +229,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		}
 		if(debug && debug_level > 0)
 			printf("done\n");
+
+		// reset file transfer indicators
+		is_file_transfer_bundle = FALSE;
+		is_file_transfer_bundle_first = FALSE;
+		bundle_inserted_in_pending_list = FALSE;
 
 		// wait until receive a bundle
 		if ((debug) && (debug_level > 0))
@@ -308,8 +351,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 					(int)bundle_creation_timestamp.secs, (int)bundle_creation_timestamp.seqno);
 			printf("\n");
 		}
-		// set server ack payload timestamp
-		server_ack_payload.bundle_creation_ts = bundle_creation_timestamp;
 
 
 		// get bundle payload filename
@@ -344,10 +385,58 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			printf ("--------------------------------------\n");
 		}
 
+		// check if is file transfer bundle
+		if ((debug) && (debug_level > 0))
+			printf("[debug]\tchecking if this is a file transfer bundle...");
+		if (is_header(&bundle_object, FILE_HEADER))
+		{
+			is_file_transfer_bundle = TRUE;
+		}
+		else if (is_header(&bundle_object, FILE_FIRST_HEADER))
+		{
+			is_file_transfer_bundle = TRUE;
+			is_file_transfer_bundle_first = TRUE;
+		}
+		if ((debug) && (debug_level > 0))
+		{
+			printf(" done.\n");
+			printf("\tbundle is%sa file transfer bundle%s\n",
+					is_file_transfer_bundle ? " " : " not ",
+					is_file_transfer_bundle_first ? " first" : "");
+			printf("\n");
+		}
+
+		// process file transfer bundle
+		if(is_file_transfer_bundle)
+		{
+			if ((debug) && (debug_level > 0))
+				printf("[debug]\tprocessing file transfer bundle...");
+			if(is_file_transfer_bundle_first)
+			{
+				indicator = process_incoming_file_transfer_bundle_first(&file_transfer_info_list,
+						&pending_bundle_list, bundle_object, perf_opt->file_dir);
+			}
+			else // not first
+			{
+				indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
+						&pending_bundle_list, &bundle_object, perf_opt->file_dir);
+				if (indicator == 1)
+				{
+					bundle_inserted_in_pending_list = TRUE;
+				}
+			}
+			if (indicator < 0) // error in processing bundle
+			{
+				fprintf(stderr, "Error in processing file transfer bundle\n");
+			}
+			if ((debug) && (debug_level > 0))
+				printf("done.");
+		}
 
 		// send acks only if client use sliding window and no acks option is not set
 		if(!perf_opt->no_acks && is_congestion_ctrl(&bundle_object, 'w'))
 		{
+
 			// create bundle ack to send to client
 			if ((debug) && (debug_level > 0))
 				printf("[debug] initiating memory for bundle ack...");
@@ -366,6 +455,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			strncpy(server_ack_payload.header, DSA_HEADER, HEADER_SIZE);
 			// set server ack payload source
 			server_ack_payload.bundle_source = bundle_source_addr;
+			// set server ack payload timestamp
+			server_ack_payload.bundle_creation_ts = bundle_creation_timestamp;
 
 			// preparing the bundle ack payload
 			if ((debug) && (debug_level > 0))
@@ -517,7 +608,10 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		}
 
 		// free memory for bundle
-		bp_bundle_free(&bundle_object);
+		if (! bundle_inserted_in_pending_list)
+		{
+			bp_bundle_free(&bundle_object);
+		}
 		free(pl_filename);
 		pl_filename_len = 0;
 
@@ -539,7 +633,8 @@ void print_server_usage(char * progname)
 	fprintf(stderr, "options:\n"
 			"     --ip-addr <addr>   Ip address of the bp daemon api. Default is 127.0.0.1\n"
 			"     --ip-port <port>   Ip port of the bp daemon api. Default is 5010\n"
-			"     --ddir <dir>       Destination directory (if not using -M), if dir is not indicated assume %s.\n"
+			"     --ddir <dir>       Destination directory of bundles (if not using -M), if dir is not indicated assume %s.\n"
+			"     --fdir <dir>       Destination directory of transfered files\n"
 			"     --debug[=level]    Debug messages [0-1], if level is not indicated assume level=0.\n"
 			" -M, --memory           Save bundles into memory.\n"
 			" -e, --expiration <sec> Bundle acks expiration time. Default is 3600\n"
@@ -570,6 +665,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"debug", optional_argument, 0, 33}, 			// 33 because D is for data mode
 				{"priority", required_argument, 0, 'P'},
 				{"ddir", required_argument, 0, 34},
+				{"fdir", required_argument, 0, 39},
 				{"acks-to-mon", no_argument, 0, 35},			// server only option
 				{"no-acks", no_argument, 0, 36},				// server only option
 				{"ip-addr", required_argument, 0, 37},
@@ -651,6 +747,10 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 38:
 			perf_opt->ip_port = atoi(optarg);
 			perf_opt->use_ip = TRUE;
+			break;
+
+		case 39:
+			perf_opt->file_dir = strdup(optarg);
 			break;
 
 		case '?':

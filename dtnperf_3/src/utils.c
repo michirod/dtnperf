@@ -272,16 +272,29 @@ char* get_filename(char* s)
 
 /* --------------------------------------------------
  * file_exists
- * returns 0 if file exists, 1 otherwise
+ * returns TRUE if file exists, FALSE otherwise
  * -------------------------------------------------- */
-int file_exists(const char * filename)
+boolean_t file_exists(const char * filename)
 {
     FILE * file;
     if ((file = fopen(filename, "r")) != NULL)
     {
         fclose(file);
-        return 0;
+        return TRUE;
     }
-    return 1;
+    return FALSE;
 } // end file_exists
 
+char * correct_dirname(char * dir)
+{
+	if (dir[0] == '~')
+	{
+		char * result, buffer[100];
+		char * home = getenv("HOME");
+		strcpy(buffer, home);
+		strcat(buffer, dir + 1);
+		result = strdup(buffer);
+		return result;
+	}
+	else return dir;
+}
