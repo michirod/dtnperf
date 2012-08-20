@@ -33,7 +33,7 @@ int close_payload_stream_read(FILE * f);
 int open_payload_stream_write(bp_bundle_object_t bundle, FILE ** f);
 int close_payload_stream_write(bp_bundle_object_t * bundle, FILE * f);
 
-bp_error_t prepare_payload_header(dtnperf_options_t *opt, FILE * f, boolean_t file_transfer_first);
+bp_error_t prepare_payload_header(dtnperf_options_t *opt, FILE * f);
 bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f);
 bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** payload, size_t * payload_size);
 

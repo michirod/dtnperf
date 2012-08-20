@@ -34,9 +34,6 @@
 // header of bundles sent in file mode (HEADER_SIZE chars)
 #define FILE_HEADER "DTNERF3_FILE_MODE__"
 
-//header of the first bundle of a file mode transimssion (HEADER_SIZE chars)
-#define FILE_FIRST_HEADER "DTNPERF3_FILE_FIRST_"
-
 // max payload (in bytes) if bundles are stored into memory
 #define MAX_MEM_PAYLOAD 50000
 

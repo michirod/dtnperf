@@ -191,9 +191,11 @@ int open_payload_stream_read(bp_bundle_object_t bundle, FILE ** f)
 	{
 		bp_bundle_get_payload_file(bundle, &buffer, &buffer_len);
 		*f = fopen(buffer, "rb");
-		perror("open");
 		if (*f == NULL)
+		{
+			perror("open");
 			return -1;
+		}
 	}
 	return 0;
 }
@@ -244,7 +246,7 @@ int close_payload_stream_write(bp_bundle_object_t * bundle, FILE *f)
 	return 0;
 }
 
-bp_error_t prepare_payload_header(dtnperf_options_t *opt, FILE * f, boolean_t file_transfer_first)
+bp_error_t prepare_payload_header(dtnperf_options_t *opt, FILE * f)
 {
 	if (f == NULL)
 		return BP_ENULLPNTR;
@@ -260,10 +262,7 @@ bp_error_t prepare_payload_header(dtnperf_options_t *opt, FILE * f, boolean_t fi
 		strncpy(header, DATA_HEADER, HEADER_SIZE);
 		break;
 	case 'F':
-		if(file_transfer_first)
-			strncpy(header, FILE_FIRST_HEADER, HEADER_SIZE);
-		else
-			strncpy(header, FILE_HEADER, HEADER_SIZE);
+		strncpy(header, FILE_HEADER, HEADER_SIZE);
 		break;
 	default:
 		return BP_EINVAL;
@@ -285,7 +284,7 @@ bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 	bp_error_t result;
 
 	// prepare header and congestion control
-	result = prepare_payload_header(opt, f, FALSE);
+	result = prepare_payload_header(opt, f);
 
 	// remaining = bundle_payload - HEADER_SIZE - congestion control char
 	remaining = opt->bundle_payload - HEADER_SIZE - 1;

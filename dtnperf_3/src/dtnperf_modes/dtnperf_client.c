@@ -36,7 +36,7 @@ sem_t window;						// semaphore for congestion control
 
 // client threads variables
 send_information_t * send_info;		// array info of sent bundles
-int tot_bundles;					// for data mode
+long tot_bundles;					// for data mode
 struct timeval start, end, now;			// time variables
 struct timeval bundle_sent, ack_recvd;	// time variables
 int sent_bundles = 0;					// sent bundles counter
@@ -305,15 +305,21 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 					fprintf(log_file, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
 				exit(1);
 			}
+
+			// get transfer file basename
+			strcpy(temp1, perf_opt->F_arg);
+			strcpy(temp2, basename(temp1));
+			transfer_filename = malloc(strlen(temp2) + 1);
+			strcpy(transfer_filename, temp2);
+
 			transfer_filedim = file.st_size;
-			tot_bundles += 1; // first file transfer bundle
-			tot_bundles += bundles_needed(transfer_filedim, get_file_fragment_size(perf_opt->bundle_payload));
+			tot_bundles += bundles_needed(transfer_filedim, get_file_fragment_size(perf_opt->bundle_payload, strlen(transfer_filename)));
 		}
 		else // Data mode
 			tot_bundles += bundles_needed(perf_opt->data_qty, perf_opt->bundle_payload);
 
 		if ((debug) && (debug_level > 0))
-			printf(" n_bundles = %d\n", tot_bundles);
+			printf(" n_bundles = %ld\n", tot_bundles);
 
 	}
 
@@ -400,11 +406,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	// prepare the payload
 	if(perf_opt->op_mode == 'F') // File mode
 	{
-		// get transfer file basename
-		strcpy(temp1, perf_opt->F_arg);
-		strcpy(temp2, basename(temp1));
-		transfer_filename = malloc(strlen(temp2) + 1);
-		strcpy(transfer_filename, temp2);
+		// payload will be prepared into send_bundles() cycle
 
 		// open file to transfer in read mode
 		if ((transfer_fd = open(perf_opt->F_arg, O_RDONLY)) < 0)
@@ -414,17 +416,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 				fprintf(log_file, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
 			exit(2);
 		}
-
-		// prepare payload for first bundle of file transfer
-		error = prepare_file_transfer_first_payload(perf_opt, stream, transfer_fd, transfer_filename, transfer_filedim);
-		if(error != BP_SUCCESS)
-		{
-			fprintf(stderr, "error preparing payload: %s\n", bp_strerror(error));
-			if (create_log)
-				fprintf(log_file, "error preparing payload: %s\n", bp_strerror(error));
-			exit(1);
-		}
-
 	}
 	else // Time and Data mode
 	{
@@ -522,6 +513,10 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		fclose(log_file);
 
 	// deallocate memory
+	if (perf_opt->op_mode == 'F')
+	{
+		close(transfer_fd);
+	}
 	free((void*)buffer);
 	free(client_demux_string);
 	free(source_file_abs);
@@ -553,7 +548,6 @@ void * send_bundles(void * opt)
 	int debug_level = perf_opt->debug_level;
 	boolean_t create_log = perf_opt->create_log;
 	boolean_t condition;
-	boolean_t first_file_transfer_bundle = FALSE;
 	boolean_t eof_reached;
 	u32_t actual_payload;
 	FILE * stream;
@@ -588,11 +582,6 @@ void * send_bundles(void * opt)
 		if (create_log)
 			fprintf(log_file, " end.tv_sec = %d sec\n", (u_int)end.tv_sec);
 	}
-	else if (perf_opt->op_mode == 'F')	// FILE MODE
-	{
-		// set first file transfer bundle var
-		first_file_transfer_bundle = TRUE;
-	}
 
 	if ((debug) && (debug_level > 0))
 		printf("[debug send thread] entering loop...\n");
@@ -611,13 +600,13 @@ void * send_bundles(void * opt)
 	while (condition)				//LOOP
 	{
 		// prepare payload if FILE MODE
-		if (perf_opt->op_mode == 'F' && ! first_file_transfer_bundle)
+		if (perf_opt->op_mode == 'F')
 		{
 			open_payload_stream_write(bundle, &stream);
-			error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd, &eof_reached);
+			error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd,
+					transfer_filename, transfer_filedim, &eof_reached);
 			close_payload_stream_write(&bundle, stream);
 		}
-		first_file_transfer_bundle = FALSE;
 
 		// window debug
 		if ((debug) && (debug_level > 1))

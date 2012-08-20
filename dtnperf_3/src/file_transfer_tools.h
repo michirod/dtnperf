@@ -16,8 +16,10 @@ typedef struct file_transfer_info
 	bp_endpoint_id_t client_eid;
 	int filename_len;
 	char * filename;
+	char * full_dir;
 	u32_t file_dim;
 	u32_t bytes_recvd;
+	u32_t first_bundle_time; //timestamp secs
 	u32_t last_bundle_time; //timestamp secs
 	u32_t expiration; //secs
 }
@@ -64,8 +66,9 @@ void file_transfer_info_list_destroy(file_transfer_info_list_t * list);
 file_transfer_info_t * file_transfer_info_create(bp_endpoint_id_t client_eid,
 		int filename_len,
 		char * filename,
+		char * full_dir,
 		u32_t file_dim,
-		u32_t last_bundle_time,
+		u32_t bundle_time,
 		u32_t expiration);
 
 void file_transfer_info_destroy(file_transfer_info_t * info);
@@ -78,45 +81,24 @@ file_transfer_info_t *  file_transfer_info_get(file_transfer_info_list_t * list,
 
 void file_transfer_info_del(file_transfer_info_list_t * list, bp_endpoint_id_t client);
 
-
-pending_bundle_list_t pending_bundle_list_create();
-
-void pending_bundle_list_destroy(pending_bundle_list_t * list);
-
-pending_bundle_t pending_bundle_create(bp_bundle_object_t * bundle);
-
-void pending_bundle_destroy(pending_bundle_t * pending_bundle);
-
-void pending_bundle_put(pending_bundle_list_t * list, pending_bundle_t * pending_bundle);
-
-int pending_bundle_get_list_item(pending_bundle_list_t * list, bp_endpoint_id_t client, pending_bundle_list_item_t ** result);
-
-int pending_bundle_get(pending_bundle_list_t * list, bp_endpoint_id_t client, pending_bundle_t ** result);
-
-void pending_bundle_del(pending_bundle_list_t * list, bp_endpoint_id_t client);
-
 /*
  * assemble_file() writes the file fragment contained in bundle to the file
  * indicated by info. Returns -1 if an error occurs, 0 if the fragment is written
  * succesfully, 1 if the written fragment is the last fragment of the file.
  */
-int assemble_file(file_transfer_info_t * info, bp_bundle_object_t bundle, char * dir);
+int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
+		u32_t pl_size, u32_t timestamp_secs, u32_t expiration);
 
 int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		pending_bundle_list_t * pending_list,
 		bp_bundle_object_t * bundle,
 		char * dir);
-int process_incoming_file_transfer_bundle_first(file_transfer_info_list_t *info_list,
-		pending_bundle_list_t * pending_list,
-		bp_bundle_object_t bundle,
-		char * dir);
 
-u32_t get_file_fragment_size(long payload_size);
+u32_t get_file_fragment_size(long payload_size, int filename_len);
 
-bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, int fd, boolean_t * eof);
+bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, int fd,
+		char * filename, u32_t file_dim, boolean_t * eof);
 
-bp_error_t prepare_file_transfer_first_payload(dtnperf_options_t *opt, FILE * f, int fd,
-		char * filename, u32_t file_dim);
 
 
 

@@ -57,8 +57,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	char* pl_buffer = NULL;
 	size_t pl_buffer_size = 0;
 	boolean_t is_file_transfer_bundle;
-	boolean_t is_file_transfer_bundle_first;
-	boolean_t bundle_inserted_in_pending_list;
 	int indicator; // for file transfer functions purposes
 
 
@@ -73,7 +71,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 	// initialize structures for file transfers
 	file_transfer_info_list = file_transfer_info_list_create();
-	pending_bundle_list = pending_bundle_list_create();
 
 	// show requested options (debug)
 	if (debug)
@@ -232,8 +229,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 		// reset file transfer indicators
 		is_file_transfer_bundle = FALSE;
-		is_file_transfer_bundle_first = FALSE;
-		bundle_inserted_in_pending_list = FALSE;
 
 		// wait until receive a bundle
 		if ((debug) && (debug_level > 0))
@@ -392,17 +387,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		{
 			is_file_transfer_bundle = TRUE;
 		}
-		else if (is_header(&bundle_object, FILE_FIRST_HEADER))
-		{
-			is_file_transfer_bundle = TRUE;
-			is_file_transfer_bundle_first = TRUE;
-		}
 		if ((debug) && (debug_level > 0))
 		{
 			printf(" done.\n");
-			printf("\tbundle is%sa file transfer bundle%s\n",
-					is_file_transfer_bundle ? " " : " not ",
-					is_file_transfer_bundle_first ? " first" : "");
+			printf("\tbundle is%sa file transfer bundle\n",
+					is_file_transfer_bundle ? " " : " not ");
 			printf("\n");
 		}
 
@@ -411,26 +400,20 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		{
 			if ((debug) && (debug_level > 0))
 				printf("[debug]\tprocessing file transfer bundle...");
-			if(is_file_transfer_bundle_first)
-			{
-				indicator = process_incoming_file_transfer_bundle_first(&file_transfer_info_list,
-						&pending_bundle_list, bundle_object, perf_opt->file_dir);
-			}
-			else // not first
-			{
-				indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
-						&pending_bundle_list, &bundle_object, perf_opt->file_dir);
-				if (indicator == 1)
-				{
-					bundle_inserted_in_pending_list = TRUE;
-				}
-			}
+
+			indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
+					&pending_bundle_list, &bundle_object, perf_opt->file_dir);
+
 			if (indicator < 0) // error in processing bundle
 			{
-				fprintf(stderr, "Error in processing file transfer bundle\n");
+				fprintf(stderr, "Error in processing file transfer bundle: %s\n", strerror(errno));
 			}
 			if ((debug) && (debug_level > 0))
+			{
 				printf("done.");
+				if (indicator == 1)
+					printf("Transfer Completed\n");
+			}
 		}
 
 		// send acks only if client use sliding window and no acks option is not set
@@ -608,10 +591,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		}
 
 		// free memory for bundle
-		if (! bundle_inserted_in_pending_list)
-		{
-			bp_bundle_free(&bundle_object);
-		}
+		bp_bundle_free(&bundle_object);
 		free(pl_filename);
 		pl_filename_len = 0;
 
