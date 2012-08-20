@@ -98,6 +98,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	boolean_t create_log = perf_opt->create_log;
 	stream = NULL;
 	tot_bundles = 0;
+	perf_opt->log_filename = correct_dirname(perf_opt->log_filename);
 
 	// Create a new log file
 	if (create_log)
@@ -867,13 +868,14 @@ void print_client_usage(char* progname)
 {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "DtnPerf3 client mode\n");
-	fprintf(stderr, "SYNTAX: %s --client -d <dest_eid> <[-T <sec> | -D <num>]> [options]\n", progname);
+	fprintf(stderr, "SYNTAX: %s --client -d <dest_eid> <[-T <sec> | -D <num> | -F <filename]> [options]\n", progname);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
 			" -d, --destination <eid>   Destination eid (required).\n"
 			" -m, --monitor <eid>       Monitor eid. Default is same as local eid.\n"
 			" -T, --time <sec>          Time-mode: seconds of transmission.\n"
 			" -D, --data <num[BKM]>     Data-mode: bytes to transmit, data unit default 'M' (Mbytes).\n"
+			" -F, --file <filename>     File-mode: file to transfer"
 			" -w, --window <size[BKb]>  Size of transmission window, i.e. max number of bundles \"in flight\" (not still ACKed by a server ack); default =1.\n"
 			" -r, --rate <rate>         Bitrate of transmission. Bytes/sec, KBytes/sec, bundles/sec. Default is B\n"
 			" -C, --custody             Enable both custody transfer and \"custody accepted\" status reports.\n"
@@ -881,7 +883,7 @@ void print_client_usage(char* progname)
 			" -p, --payload <size[BKM]> Size of bundle payloads; data unit default= 'K' (Kbytes).\n"
 			" -u, --nofragment          Disable bundle fragmentation.\n"
 			" -M, --memory              Store the bundle into memory instead of file (if payload < 50KB).\n"
-			" -L, --log <log_filename>  Create a log file.\n"
+			" -L, --log[=log_filename]  Create a log file. Default log filename is LOG_FILENAME\n"
 			"     --ip-addr <addr>      Ip address of the bp daemon api. Default is 127.0.0.1\n"
 			"     --ip-port <port>      Ip port of the bp daemon api. Default is 5010\n"
 			"     --debug[=level]       Debug messages [0-1], if level is not indicated assume level=2.\n"
