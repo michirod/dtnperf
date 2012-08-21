@@ -846,17 +846,17 @@ void print_final_report(FILE * f)
 	total_secs = (((double)total.tv_sec * 1000 *1000) + (double)total.tv_usec) / (1000 * 1000);
 
 	if (sent_data / (1024 * 1024) >= 1)
-		{
-			sent = sent_data / (1024 * 1024);
-			gput_unit = "Mbytes";
-		}
-		else if (sent_data / 1024 >= 1)
-		{
-			sent = sent_data / 1024;
-			sent_unit = "Kbytes";
-		}
-		else
-			sent_unit = "bytes";
+	{
+		sent = sent_data / (1024 * 1024);
+		sent_unit = "Mbytes";
+	}
+	else if (sent_data / 1024 >= 1)
+	{
+		sent = sent_data / 1024;
+		sent_unit = "Kbytes";
+	}
+	else
+		sent_unit = "bytes";
 
 	goodput = sent_data * 8 / total_secs;
 	if (goodput / (1024 * 1024) >= 1)
