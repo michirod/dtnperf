@@ -847,12 +847,12 @@ void print_final_report(FILE * f)
 
 	if (sent_data / (1024 * 1024) >= 1)
 	{
-		sent = sent_data / (1024 * 1024);
+		sent = (double) sent_data / (1024 * 1024);
 		sent_unit = "Mbytes";
 	}
 	else if (sent_data / 1024 >= 1)
 	{
-		sent = sent_data / 1024;
+		sent = (double) sent_data / 1024;
 		sent_unit = "Kbytes";
 	}
 	else
