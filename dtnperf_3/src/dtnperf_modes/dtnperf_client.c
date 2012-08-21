@@ -893,7 +893,7 @@ void print_client_usage(char* progname)
 			" -m, --monitor <eid>         Monitor eid. Default is same as local eid.\n"
 			" -T, --time <seconds>        Time-mode: seconds of transmission.\n"
 			" -D, --data <num[B|k|M]>     Data-mode: bytes to transmit; B = Bytes, k = kBytes, M = MBytes. Default 'M' (MB).\n"
-			" -F, --file <filename>       File-mode: file to transfer"
+			" -F, --file <filename>       File-mode: file to transfer\n"
 			" -w, --window <size>         Size of transmission window, i.e. max number of bundles \"in flight\" (not still ACKed by a server ack); default =1.\n"
 			" -r, --rate <rate[k|M|b]>    Bitrate of transmission. k = kbit/s, M = Mbit/s, b = bundles/s. Default is kb/s\n"
 			" -C, --custody               Enable both custody transfer and \"custody accepted\" status reports.\n"
@@ -901,14 +901,15 @@ void print_client_usage(char* progname)
 			" -p, --payload <size[B|k|M]> Size of bundle payloads; B = Bytes, k = kBytes, M = MBytes. Default= 'k' (kB).\n"
 			" -u, --nofragment            Disable bundle fragmentation.\n"
 			" -M, --memory                Store the bundle into memory instead of file (if payload < 50KB).\n"
-			" -L, --log[=log_filename]    Create a log file. Default log filename is LOG_FILENAME\n"
+			" -L, --log[=log_filename]    Create a log file. Default log filename is %s\n"
 			"     --ip-addr <addr>        Ip address of the bp daemon api. Default is 127.0.0.1\n"
 			"     --ip-port <port>        Ip port of the bp daemon api. Default is 5010\n"
 			"     --debug[=level]         Debug messages [0-1], if level is not indicated assume level=2.\n"
 			" -e, --expiration <time>     Bundle acks expiration time. Default is 3600\n"
 			" -P, --priority <val>        Bundle acks priority [bulk|normal|expedited|reserved]. Default is normal\n"
 			" -v, --verbose               Print some information messages during the execution.\n"
-			" -h, --help                  This help.\n");
+			" -h, --help                  This help.\n",
+			LOG_FILENAME);
 	fprintf(stderr, "\n");
 	exit(1);
 }
