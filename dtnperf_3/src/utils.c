@@ -8,7 +8,7 @@
  * ------------------------------------------ */
 long mega2byte(long n)
 {
-    return (n * 1024 *1024);
+    return (n * 1000 *1000);
 } // end mega2byte
 
 /* ------------------------------------------
@@ -18,7 +18,7 @@ long mega2byte(long n)
  * ------------------------------------------ */
 long kilo2byte(long n)
 {
-    return (n * 1024);
+    return (n * 1000);
 } // end kilo2byte
 
 /**
@@ -28,7 +28,7 @@ long kilo2byte(long n)
 double byte2mega(long n)
 {
 	double result;
-	result = (double) n / (1024 * 1024);
+	result = (double) n / (1000 * 1000);
 	return result;
 }
 
@@ -39,7 +39,7 @@ double byte2mega(long n)
 double byte2kilo(long n)
 {
 	double result;
-	result = (double) n / (1024);
+	result = (double) n / (1000);
 	return result;
 }
 
@@ -54,7 +54,7 @@ char find_data_unit(const char *inarg)
 {
     // units are B (Bytes), K (KBytes) and M (MBytes)
     const char unitArray[] =
-        {'B', 'K', 'M'
+        {'B', 'k', 'M'
         };
     char * unit = malloc(sizeof(char));
 
@@ -75,15 +75,15 @@ char find_rate_unit(const char *inarg)
 {
     // units are b (bundles/sec), B (Bytes/sec) and K (KBytes/sec)
     const char unitArray[] =
-        {'b', 'B', 'K'
+        {'k', 'M', 'b'
         };
     char * ptr;
     char unit;
 
     if ((ptr = strpbrk(inarg, unitArray)) == NULL)
     {
-    	printf("\nWARNING: (-r option) invalid rate unit, assuming 'B' (Bytes/sec)\n\n");
-    	return 'B';
+    	printf("\nWARNING: (-r option) invalid rate unit, assuming 'k' (kb/s)\n\n");
+    	return 'k';
     }
     unit = ptr[0];
     return unit;

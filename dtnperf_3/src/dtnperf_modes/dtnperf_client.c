@@ -265,9 +265,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		if (create_log)
 			fprintf(log_file, "Working in Data_Mode\n");
 		if (debug)
-			printf("requested transmission of %ld%c data\n", perf_opt->data_qty, perf_opt->data_unit);
+			printf("requested transmission of %ld bytes of data\n", perf_opt->data_qty);
 		if (create_log)
-			fprintf(log_file, "requested transmission of %ld%c data\n", perf_opt->data_qty, perf_opt->data_unit);
+			fprintf(log_file, "requested transmission of %ld bytes of data\n", perf_opt->data_qty);
 	}
 	else if (perf_opt->op_mode == 'F') // File mode
 	{
@@ -797,13 +797,17 @@ void * congestion_control(void * opt)
 		{
 			interval_secs = 1.0 / perf_opt->rate;
 		}
-		else 							// rate is Bytes or KBytes per second
+		else 							// rate is bit or kbit per second
 		{
-			if (perf_opt->rate_unit == 'K') // Rate is KBytes per second
+			if (perf_opt->rate_unit == 'k') // Rate is kbit per second
 			{
 				perf_opt->rate = kilo2byte(perf_opt->rate);
 			}
-			interval_secs = (double)perf_opt->bundle_payload / perf_opt->rate;
+			else // rate is Mbit per second
+			{
+				perf_opt->rate = mega2byte(perf_opt->rate);
+			}
+			interval_secs = (double)perf_opt->bundle_payload * 8 / perf_opt->rate;
 		}
 
 		interval.tv_sec = (long) interval_secs;
@@ -845,28 +849,28 @@ void print_final_report(FILE * f)
 	timersub(&end, &start, &total);
 	total_secs = (((double)total.tv_sec * 1000 *1000) + (double)total.tv_usec) / (1000 * 1000);
 
-	if (sent_data / (1024 * 1024) >= 1)
+	if (sent_data / (1000 * 1000) >= 1)
 	{
-		sent = (double) sent_data / (1024 * 1024);
+		sent = (double) sent_data / (1000 * 1000);
 		sent_unit = "Mbytes";
 	}
-	else if (sent_data / 1024 >= 1)
+	else if (sent_data / 1000 >= 1)
 	{
-		sent = (double) sent_data / 1024;
+		sent = (double) sent_data / 1000;
 		sent_unit = "Kbytes";
 	}
 	else
 		sent_unit = "bytes";
 
 	goodput = sent_data * 8 / total_secs;
-	if (goodput / (1024 * 1024) >= 1)
+	if (goodput / (1000 * 1000) >= 1)
 	{
-		goodput /= 1024 * 1024;
+		goodput /= 1000 * 1000;
 		gput_unit = "Mbit/sec";
 	}
-	else if (goodput / 1024 >= 1)
+	else if (goodput / 1000 >= 1)
 	{
-		goodput /= 1024;
+		goodput /= 1000;
 		gput_unit = "Kbit/sec";
 	}
 	else
@@ -882,29 +886,29 @@ void print_client_usage(char* progname)
 {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "DtnPerf3 client mode\n");
-	fprintf(stderr, "SYNTAX: %s --client -d <dest_eid> <[-T <sec> | -D <num> | -F <filename]> [options]\n", progname);
+	fprintf(stderr, "SYNTAX: %s --client -d <dest_eid> <[-T <sec> | -D <num> | -F <filename]> [-w <size> | -r <rate>] [options]\n", progname);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
-			" -d, --destination <eid>   Destination eid (required).\n"
-			" -m, --monitor <eid>       Monitor eid. Default is same as local eid.\n"
-			" -T, --time <sec>          Time-mode: seconds of transmission.\n"
-			" -D, --data <num[BKM]>     Data-mode: bytes to transmit, data unit default 'M' (Mbytes).\n"
-			" -F, --file <filename>     File-mode: file to transfer"
-			" -w, --window <size[BKb]>  Size of transmission window, i.e. max number of bundles \"in flight\" (not still ACKed by a server ack); default =1.\n"
-			" -r, --rate <rate>         Bitrate of transmission. Bytes/sec, KBytes/sec, bundles/sec. Default is B\n"
-			" -C, --custody             Enable both custody transfer and \"custody accepted\" status reports.\n"
-			" -i, --exitinterval <sec>  Additional interval before exit.\n"
-			" -p, --payload <size[BKM]> Size of bundle payloads; data unit default= 'K' (Kbytes).\n"
-			" -u, --nofragment          Disable bundle fragmentation.\n"
-			" -M, --memory              Store the bundle into memory instead of file (if payload < 50KB).\n"
-			" -L, --log[=log_filename]  Create a log file. Default log filename is LOG_FILENAME\n"
-			"     --ip-addr <addr>      Ip address of the bp daemon api. Default is 127.0.0.1\n"
-			"     --ip-port <port>      Ip port of the bp daemon api. Default is 5010\n"
-			"     --debug[=level]       Debug messages [0-1], if level is not indicated assume level=2.\n"
-			" -e, --expiration <time>   Bundle acks expiration time. Default is 3600\n"
-			" -P, --priority <val>      Bundle acks priority [bulk|normal|expedited|reserved]. Default is normal\n"
-			" -v, --verbose             Print some information messages during the execution.\n"
-			" -h, --help                This help.\n");
+			" -d, --destination <eid>     Destination eid (required).\n"
+			" -m, --monitor <eid>         Monitor eid. Default is same as local eid.\n"
+			" -T, --time <seconds>        Time-mode: seconds of transmission.\n"
+			" -D, --data <num[B|k|M]>     Data-mode: bytes to transmit; B = Bytes, k = kBytes, M = MBytes. Default 'M' (MB).\n"
+			" -F, --file <filename>       File-mode: file to transfer"
+			" -w, --window <size>         Size of transmission window, i.e. max number of bundles \"in flight\" (not still ACKed by a server ack); default =1.\n"
+			" -r, --rate <rate[k|M|b]>    Bitrate of transmission. k = kbit/s, M = Mbit/s, b = bundles/s. Default is kb/s\n"
+			" -C, --custody               Enable both custody transfer and \"custody accepted\" status reports.\n"
+			" -i, --exitinterval <sec>    Additional interval before exit.\n"
+			" -p, --payload <size[B|k|M]> Size of bundle payloads; B = Bytes, k = kBytes, M = MBytes. Default= 'k' (kB).\n"
+			" -u, --nofragment            Disable bundle fragmentation.\n"
+			" -M, --memory                Store the bundle into memory instead of file (if payload < 50KB).\n"
+			" -L, --log[=log_filename]    Create a log file. Default log filename is LOG_FILENAME\n"
+			"     --ip-addr <addr>        Ip address of the bp daemon api. Default is 127.0.0.1\n"
+			"     --ip-port <port>        Ip port of the bp daemon api. Default is 5010\n"
+			"     --debug[=level]         Debug messages [0-1], if level is not indicated assume level=2.\n"
+			" -e, --expiration <time>     Bundle acks expiration time. Default is 3600\n"
+			" -P, --priority <val>        Bundle acks priority [bulk|normal|expedited|reserved]. Default is normal\n"
+			" -v, --verbose               Print some information messages during the execution.\n"
+			" -h, --help                  This help.\n");
 	fprintf(stderr, "\n");
 	exit(1);
 }
@@ -914,6 +918,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	char c, done = 0;
 	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
 	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
+	boolean_t w = FALSE, r = FALSE;
 
 	while (!done)
 	{
@@ -969,6 +974,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 'w':
 			perf_opt->congestion_ctrl = 'w';
 			perf_opt->window = atoi(optarg);
+			w = TRUE;
 			break;
 
 		case 'd':
@@ -998,7 +1004,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			case 'B':
 				perf_opt->data_qty = atol(perf_opt->D_arg);
 				break;
-			case 'K':
+			case 'k':
 				perf_opt->data_qty = kilo2byte(atol(perf_opt->D_arg));
 				break;
 			case 'M':
@@ -1030,7 +1036,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			case 'B':
 				perf_opt->bundle_payload = atol(perf_opt->p_arg);
 				break;
-			case 'K':
+			case 'k':
 				perf_opt->bundle_payload = kilo2byte(atol(perf_opt->p_arg));
 				break;
 			case 'M':
@@ -1053,6 +1059,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			perf_opt->rate_unit = find_rate_unit(perf_opt->rate_arg);
 			perf_opt->rate = atoi(perf_opt->rate_arg);
 			perf_opt->congestion_ctrl = 'r';
+			r = TRUE;
 			break;
 
 		case 'P':
@@ -1135,6 +1142,13 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 
 	CHECK_SET(perf_opt->dest_eid[0], "destination eid");
 	CHECK_SET(perf_opt->op_mode, "-T or -D or -F");
+
+	if (w && r)
+	{
+		fprintf(stderr, "\nSYNTAX ERROR: -w and -r options are mutually exclusive\n");   \
+		print_client_usage(argv[0]);                                               \
+		exit(1);
+	}
 
 }
 
