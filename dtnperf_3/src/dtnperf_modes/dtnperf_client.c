@@ -836,14 +836,28 @@ void * congestion_control(void * opt)
 
 void print_final_report(FILE * f)
 {
-	double goodput;
+	double goodput, sent;
 	struct timeval total;
 	double total_secs;
-	char * gput_unit;
+	char * gput_unit, * sent_unit;
 	if (f == NULL)
 		f = stdout;
 	timersub(&end, &start, &total);
 	total_secs = (((double)total.tv_sec * 1000 *1000) + (double)total.tv_usec) / (1000 * 1000);
+
+	if (sent_data / (1024 * 1024) >= 1)
+		{
+			sent = sent_data / (1024 * 1024);
+			gput_unit = "Mbytes";
+		}
+		else if (sent_data / 1024 >= 1)
+		{
+			sent = sent_data / 1024;
+			sent_unit = "Kbytes";
+		}
+		else
+			sent_unit = "bytes";
+
 	goodput = sent_data * 8 / total_secs;
 	if (goodput / (1024 * 1024) >= 1)
 	{
@@ -858,7 +872,7 @@ void print_final_report(FILE * f)
 	else
 		gput_unit = "bit/sec";
 
-	fprintf(f, "Sent %d bundles, total sent data = %u bytes\n", sent_bundles, sent_data);
+	fprintf(f, "Sent %d bundles, total sent data = %.3f %s\n", sent_bundles, sent, sent_unit);
 	fprintf(f, "Total execution time = %.1f\n", total_secs);
 	fprintf(f, "Goodput = %.3f %s\n", goodput, gput_unit);
 }
