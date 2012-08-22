@@ -47,6 +47,7 @@ unsigned int data_written = 0;			// num of bytes written on the source file
 
 FILE * log_file = NULL;
 char * source_file_abs;				// absolute path of file SOURCE_FILE
+char * source_file;					// complete name of source file: SOURCE_FILE_pid
 char * transfer_filename;			// basename of the file to transfer
 u32_t transfer_filedim;				// size of the file to transfer
 int transfer_fd;					// file descriptor
@@ -68,6 +69,9 @@ bp_endpoint_id_t mon_eid;
 bp_bundle_object_t bundle;
 bp_bundle_object_t ack;
 
+dtnperf_options_t * perf_opt;
+dtnperf_connection_options_t * conn_opt;
+
 void usr(int signo)
 {}
 
@@ -79,8 +83,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	/* ------------------------
 	 * variables
 	 * ------------------------ */
-	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
-	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
 	char * client_demux_string;
 	int pthread_status;
 
@@ -92,6 +94,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	/* ------------------------
 	 * initialize variables
 	 * ------------------------ */
+	perf_opt = perf_g_opt->perf_opt;
+	conn_opt = perf_g_opt->conn_opt;
 	boolean_t debug = perf_opt->debug;
 	int debug_level =  perf_opt->debug_level;
 	boolean_t verbose = perf_opt->verbose;
@@ -99,6 +103,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	stream = NULL;
 	tot_bundles = 0;
 	perf_opt->log_filename = correct_dirname(perf_opt->log_filename);
+	source_file = (char*) malloc(strlen(SOURCE_FILE) + 7);
+	sprintf(source_file, "%s_%d", SOURCE_FILE, getpid());
 
 	// Create a new log file
 	if (create_log)
@@ -114,7 +120,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if ((debug) && (debug_level > 0))
 		printf("[debug] opening connection to local BP daemon...");
 
-	if (perf_opt->use_file)
+	if (perf_opt->use_ip)
 		error = bp_open_with_ip(perf_opt->ip_addr,perf_opt->ip_port,&handle);
 	else
 		error = bp_open(&handle);
@@ -330,16 +336,16 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	{
 		// create the file
 		if ((debug) && (debug_level > 0))
-			printf("[debug] creating file %s...", SOURCE_FILE);
+			printf("[debug] creating file %s...", source_file);
 
-		stream = fopen(SOURCE_FILE,	"wb");
+		stream = fopen(source_file,	"wb");
 
 		if (stream == NULL)
 		{
-			fprintf(stderr, "ERROR: couldn't create file %s.\n \b Maybe you don't have permissions\n", SOURCE_FILE);
+			fprintf(stderr, "ERROR: couldn't create file %s.\n \b Maybe you don't have permissions\n", source_file);
 
 			if (create_log)
-				fprintf(log_file, "ERROR: couldn't create file %s.\n \b Maybe you don't have permissions\n", SOURCE_FILE);
+				fprintf(log_file, "ERROR: couldn't create file %s.\n \b Maybe you don't have permissions\n", source_file);
 
 			exit(2);
 		}
@@ -353,7 +359,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		char buf[256];
 		getcwd(buf, 256);
 		strcat(buf, "/");
-		strcat(buf, SOURCE_FILE);
+		strcat(buf, source_file);
 		source_file_abs = malloc(strlen(buf) + 1);
 		strncpy(source_file_abs, buf, strlen(buf) + 1);
 	}
@@ -518,12 +524,16 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	{
 		close(transfer_fd);
 	}
+	if (perf_opt->use_file)
+		remove(source_file);
 	free((void*)buffer);
 	free(client_demux_string);
 	free(source_file_abs);
+	free(source_file);
 	free(transfer_filename);
 	free(send_info);
 	bp_bundle_free(&bundle);
+
 
 	pthread_exit(NULL);
 
@@ -1023,8 +1033,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			perf_opt->F_arg = strdup(optarg);
 			if(!file_exists(perf_opt->F_arg))
 			{
-				fprintf(stderr, "Unable to open file %s: ", perf_opt->F_arg);
-				perror("");
+				fprintf(stderr, "ERROR: Unable to open file %s: %s\n", perf_opt->F_arg, strerror(errno));
 				exit(1);
 			}
 			break;
@@ -1151,7 +1160,90 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		exit(1);
 	}
 
+
+	// check command line options
+	check_options(perf_g_opt);
+
 }
+
+/* ----------------------------
+ * check_options
+ * ---------------------------- */
+void check_options(dtnperf_global_options_t * global_options)
+{
+
+	dtnperf_options_t * perf_opt = global_options->perf_opt;
+
+	// checks on values
+	if ((perf_opt->op_mode == 'D') && (perf_opt->data_qty <= 0))
+	{
+		fprintf(stderr, "\nSYNTAX ERROR: (-D option) you should send a positive number of MBytes (%ld)\n\n",
+				perf_opt->data_qty);
+		exit(2);
+	}
+	if ((perf_opt->op_mode == 'T') && (perf_opt->transmission_time <= 0))
+	{
+		fprintf(stderr, "\nSYNTAX ERROR: (-T option) you should specify a positive time\n\n");
+		exit(2);
+	}
+	// checks on options combination
+	if ((perf_opt->use_file) && (perf_opt->op_mode == 'T'))
+	{
+		if (perf_opt->bundle_payload <= ILLEGAL_PAYLOAD)
+		{
+			perf_opt->bundle_payload = DEFAULT_PAYLOAD;
+			fprintf(stderr, "\nWARNING (a): bundle payload set to %ld bytes\n", perf_opt->bundle_payload);
+			fprintf(stderr, "(use_file && op_mode=='T' + payload <= %d)\n\n", ILLEGAL_PAYLOAD);
+		}
+	}
+	if ((perf_opt->use_file) && (perf_opt->op_mode == 'D'))
+	{
+		if ((perf_opt->bundle_payload <= ILLEGAL_PAYLOAD)
+				|| ((perf_opt->bundle_payload > perf_opt->data_qty)	&& (perf_opt->data_qty > 0)))
+		{
+			perf_opt->bundle_payload = perf_opt->data_qty;
+			fprintf(stderr, "\nWARNING (b): bundle payload set to %ld bytes\n", perf_opt->bundle_payload);
+			fprintf(stderr, "(use_file && op_mode=='D' + payload <= %d or > %ld)\n\n", ILLEGAL_PAYLOAD, perf_opt->data_qty);
+		}
+	}
+
+	if (perf_opt->bundle_payload <= ILLEGAL_PAYLOAD)
+	{
+		perf_opt->bundle_payload = DEFAULT_PAYLOAD;
+		fprintf(stderr, "\nWARNING: bundle payload set to %ld bytes\n\n", perf_opt->bundle_payload);
+
+	}
+	if ((!perf_opt->use_file) && (perf_opt->bundle_payload > MAX_MEM_PAYLOAD))
+	{
+		perf_opt->bundle_payload = MAX_MEM_PAYLOAD;
+		fprintf(stderr, "\nWARNING: MAX_MEM_PAYLOAD = %d\nbundle payload set to max: %ld bytes\n", MAX_MEM_PAYLOAD, perf_opt->bundle_payload);
+	}
+
+	if ((!perf_opt->use_file) && (perf_opt->op_mode == 'D'))
+	{
+		if (perf_opt->data_qty <= MAX_MEM_PAYLOAD)
+		{
+			perf_opt->bundle_payload = perf_opt->data_qty;
+			fprintf(stderr, "\nWARNING (c1): bundle payload set to %ld bytes\n", perf_opt->bundle_payload);
+			fprintf(stderr, "(!use_file + payload <= %d + data_qty <= %d + op_mode=='D')\n\n",
+					ILLEGAL_PAYLOAD, MAX_MEM_PAYLOAD);
+		}
+		if (perf_opt->data_qty > MAX_MEM_PAYLOAD)
+		{
+			perf_opt->bundle_payload = MAX_MEM_PAYLOAD;
+			fprintf(stderr, "(!use_file + payload <= %d + data_qty > %d + op_mode=='D')\n",
+					ILLEGAL_PAYLOAD, MAX_MEM_PAYLOAD);
+			fprintf(stderr, "\nWARNING (c2): bundle payload set to %ld bytes\n\n", perf_opt->bundle_payload);
+		}
+	}
+
+	if (perf_opt->window <= 0)
+	{
+		fprintf(stderr, "\nSYNTAX ERROR: (-w option) you should specify a positive value of window\n\n");
+		exit(2);
+	}
+
+} // end check_options
 
 void handler(int sig)
 {
@@ -1159,6 +1251,8 @@ void handler(int sig)
 	bp_close(handle);
 	if(log_file != NULL)
 		fclose(log_file);
+	if(perf_opt->use_file)
+		remove(source_file);
 
 
 	exit(0);

@@ -30,7 +30,6 @@ void print_usage(char* progname);
 void init_dtnperf_global_options(dtnperf_global_options_t *, dtnperf_options_t *, dtnperf_connection_options_t *);
 void init_dtnperf_options(dtnperf_options_t *);
 void init_dtnperf_connection_options(dtnperf_connection_options_t*);
-void check_options(dtnperf_global_options_t * global_options);
 
 // CTRL+C handler
 void main_handler(int signo);
@@ -53,9 +52,6 @@ int main(int argc, char ** argv)
 
 	// parse command line options
 	parse_options(argc, argv, &global_options);
-
-	// check command line options SOLO CLIENT
-	// check_options(&global_options);
 
 	// sigint handler
 	signal(SIGINT, main_handler);
@@ -251,94 +247,7 @@ void init_dtnperf_connection_options(dtnperf_connection_options_t* opt)
 	opt->priority = BP_PRIORITY_NORMAL; // bundle priority [BP_PRIORITY_NORMAL]
 }
 
-/* ----------------------------
- * check_options
- * ---------------------------- */
-void check_options(dtnperf_global_options_t * global_options)
-{
 
-	dtnperf_options_t * perf_opt = global_options->perf_opt;
-
-	// checks on values
-	if ((perf_opt->op_mode == 'D') && (perf_opt->data_qty <= 0))
-	{
-		fprintf(stderr, "\nSYNTAX ERROR: (-D option) you should send a positive number of MBytes (%ld)\n\n",
-		        perf_opt->data_qty);
-		exit(2);
-	}
-	if ((perf_opt->op_mode == 'T') && (perf_opt->transmission_time <= 0))
-	{
-		fprintf(stderr, "\nSYNTAX ERROR: (-T option) you should specify a positive time\n\n");
-		exit(2);
-	}
-	// checks on options combination
-	if ((perf_opt->use_file) && (perf_opt->op_mode == 'T'))
-	{
-		if (perf_opt->bundle_payload <= ILLEGAL_PAYLOAD)
-		{
-			perf_opt->bundle_payload = DEFAULT_PAYLOAD;
-			fprintf(stderr, "\nWARNING (a): bundle payload set to %ld bytes\n", perf_opt->bundle_payload);
-			fprintf(stderr, "(use_file && op_mode=='T' + payload <= %d)\n\n", ILLEGAL_PAYLOAD);
-		}
-	}
-	if ((perf_opt->use_file) && (perf_opt->op_mode == 'D'))
-	{
-		if ((perf_opt->bundle_payload <= ILLEGAL_PAYLOAD)
-		        || ((perf_opt->bundle_payload > perf_opt->data_qty)	&& (perf_opt->data_qty > 0)))
-		{
-			perf_opt->bundle_payload = perf_opt->data_qty;
-			fprintf(stderr, "\nWARNING (b): bundle payload set to %ld bytes\n", perf_opt->bundle_payload);
-			fprintf(stderr, "(use_file && op_mode=='D' + payload <= %d or > %ld)\n\n", ILLEGAL_PAYLOAD, perf_opt->data_qty);
-		}
-	}
-	if ((!perf_opt->use_file)
-	        && (perf_opt->bundle_payload <= ILLEGAL_PAYLOAD)
-	        && (perf_opt->op_mode == 'D'))
-	{
-		if (perf_opt->data_qty <= MAX_MEM_PAYLOAD)
-		{
-			perf_opt->bundle_payload = perf_opt->data_qty;
-			fprintf(stderr, "\nWARNING (c1): bundle payload set to %ld bytes\n", perf_opt->bundle_payload);
-			fprintf(stderr, "(!use_file + payload <= %d + data_qty <= %d + op_mode=='D')\n\n",
-			        ILLEGAL_PAYLOAD, MAX_MEM_PAYLOAD);
-		}
-		if (perf_opt->data_qty > MAX_MEM_PAYLOAD)
-		{
-			perf_opt->bundle_payload = MAX_MEM_PAYLOAD;
-			fprintf(stderr, "(!use_file + payload <= %d + data_qty > %d + op_mode=='D')\n",
-			        ILLEGAL_PAYLOAD, MAX_MEM_PAYLOAD);
-			fprintf(stderr, "\nWARNING (c2): bundle payload set to %ld bytes\n\n", perf_opt->bundle_payload);
-		}
-	}
-	if ((!perf_opt->use_file) && (perf_opt->op_mode == 'T'))
-	{
-		if (perf_opt->bundle_payload <= ILLEGAL_PAYLOAD)
-		{
-			perf_opt->bundle_payload = DEFAULT_PAYLOAD;
-			fprintf(stderr, "\nWARNING (d1): bundle payload set to %ld bytes\n\n", perf_opt->bundle_payload);
-			fprintf(stderr, "(!use_file + payload <= %d + op_mode=='T')\n\n", ILLEGAL_PAYLOAD);
-		}
-		if (perf_opt->bundle_payload > MAX_MEM_PAYLOAD)
-		{
-			fprintf(stderr, "\nWARNING (d2): bundle payload was set to %ld bytes, now set to %ld bytes\n",
-			        perf_opt->bundle_payload, (long)DEFAULT_PAYLOAD);
-			perf_opt->bundle_payload = DEFAULT_PAYLOAD;
-			fprintf(stderr, "(!use_file + payload > %d)\n\n", MAX_MEM_PAYLOAD);
-		}
-	}
-
-	if (perf_opt->window <= 0)
-	{
-		fprintf(stderr, "\nSYNTAX ERROR: (-w option) you should specify a positive value of window\n\n");
-		exit(2);
-	}
-
-	if (!file_exists(perf_opt->F_arg))
-	{
-		fprintf(stderr, "\nERROR: (-F option) the file specified does not exist: %s\n\n", perf_opt->F_arg);
-			exit(2);
-	}
-} // end check_options
 
 // CTRL + C handler
 void main_handler(int signo)

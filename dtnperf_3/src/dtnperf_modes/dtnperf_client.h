@@ -14,6 +14,7 @@
 void run_dtnperf_client(dtnperf_global_options_t * global_options);
 void print_client_usage(char* progname);
 void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * perf_g_opt);
+void check_options(dtnperf_global_options_t * global_options);
 void print_final_report(FILE * f);
 void handler(int sig);
 
