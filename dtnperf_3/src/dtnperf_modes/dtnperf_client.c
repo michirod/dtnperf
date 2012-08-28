@@ -252,13 +252,13 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if (perf_opt->op_mode == 'T')	// Time mode
 	{
 
-		if (debug)
+		if (verbose)
 			printf("Working in Time_Mode\n");
 
 		if (create_log)
 			fprintf(log_file, "Working in Time_Mode\n");
 
-		if (debug)
+		if (verbose)
 			printf("requested %d second(s) of transmission\n", perf_opt->transmission_time);
 
 		if (create_log)
@@ -266,33 +266,55 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	else if (perf_opt->op_mode == 'D') // Data mode
 	{
-		if (debug)
+		if (verbose)
 			printf("Working in Data_Mode\n");
 		if (create_log)
 			fprintf(log_file, "Working in Data_Mode\n");
-		if (debug)
+		if (verbose)
 			printf("requested transmission of %ld bytes of data\n", perf_opt->data_qty);
 		if (create_log)
 			fprintf(log_file, "requested transmission of %ld bytes of data\n", perf_opt->data_qty);
 	}
 	else if (perf_opt->op_mode == 'F') // File mode
 	{
-		if (debug)
+		if (verbose)
 			printf("Working in File_Mode\n");
 		if (create_log)
 			fprintf(log_file, "Working in File_Mode\n");
-		if (debug)
+		if (verbose)
 			printf("requested transmission of file %s\n", perf_opt->F_arg);
 		if (create_log)
 			fprintf(log_file, "requested transmission of file %s\n", perf_opt->F_arg);
 
 	}
 
-	if (debug)
+	if (verbose)
 		printf(" transmitting data %s\n", perf_opt->use_file ? "using a file" : "using memory");
-
 	if (create_log)
 		fprintf(log_file, " transmitting data %s\n", perf_opt->use_file ? "using a file" : "using memory");
+
+	if (verbose)
+		printf("%s based congestion control:\n", perf_opt->congestion_ctrl == 'w' ? "sliding window" : "rate");
+	if (create_log)
+		fprintf(log_file, "%s based congestion control:\n", perf_opt->congestion_ctrl == 'w' ? "sliding window" : "rate");
+	if(perf_opt->congestion_ctrl == 'w')
+	{
+		if (verbose)
+			printf("\twindow is %d bundles\n", perf_opt->window);
+		if (create_log)
+			fprintf(log_file, "\twindow is %d bundles\n", perf_opt->window);
+	}
+	else
+	{
+		if (verbose)
+			printf("\trate is %ld %c\n", perf_opt->rate, perf_opt->rate_unit);
+		if (create_log)
+			fprintf(log_file, "\trate is %ld %c\n", perf_opt->rate, perf_opt->rate_unit);
+	}
+	if (verbose)
+		printf("payload is %ld bytes\n", perf_opt->bundle_payload);
+	if (create_log)
+		fprintf(log_file, "payload is %ld bytes\n", perf_opt->bundle_payload);
 
 
 	sent_bundles = 0;
@@ -653,7 +675,8 @@ void * send_bundles(void * opt)
 		if (debug)
 			printf(" bundle sent\n");
 		if ((debug) && (debug_level > 0))
-			printf("\t[debug send thread] bundle sent timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
+			printf("\t[debug send thread] ");
+		printf("bundle sent timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
 		if (create_log)
 			fprintf(log_file, "\t bundle sent timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
 
@@ -915,8 +938,8 @@ void print_client_usage(char* progname)
 			"     --ip-addr <addr>        Ip address of the bp daemon api. Default is 127.0.0.1\n"
 			"     --ip-port <port>        Ip port of the bp daemon api. Default is 5010\n"
 			"     --debug[=level]         Debug messages [0-1], if level is not indicated assume level=2.\n"
-			" -e, --expiration <time>     Bundle acks expiration time. Default is 3600\n"
-			" -P, --priority <val>        Bundle acks priority [bulk|normal|expedited|reserved]. Default is normal\n"
+			" -e, --expiration <time>     Bundles expiration time (seconds). Default is 3600\n"
+			" -P, --priority <val>        Bundles priority [bulk|normal|expedited|reserved]. Default is normal\n"
 			" -v, --verbose               Print some information messages during the execution.\n"
 			" -h, --help                  This help.\n",
 			LOG_FILENAME);

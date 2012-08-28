@@ -176,6 +176,21 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	if (debug)
 		printf("local_eid = %s\n", local_eid.uri);
 
+	// checking if there is already a registration
+	if(debug && debug_level > 0)
+		printf("[debug] checking for existing registration...");
+	error = bp_find_registration(handle, &local_eid, &regid);
+	if (error == BP_SUCCESS)
+	{
+		fflush(stdout);
+		fprintf(stderr, "error: there is a registration with the same eid.\n");
+		fprintf(stderr, "regid 0x%x\n", (unsigned int) regid);
+		bp_close(handle);
+		exit(1);
+	}
+	if ((debug) && (debug_level > 0))
+		printf(" done\n");
+
 	//create a new registration to the local router based on this eid
 	if(debug && debug_level > 0)
 		printf("[debug] registering to local daemon...");

@@ -54,7 +54,7 @@ char find_data_unit(const char *inarg)
 {
     // units are B (Bytes), K (KBytes) and M (MBytes)
     const char unitArray[] =
-        {'B', 'k', 'M'
+        {'B', 'k', 'K', 'M'
         };
     char * unit = malloc(sizeof(char));
 
@@ -62,6 +62,10 @@ char find_data_unit(const char *inarg)
     {
         unit = "Z";
     }
+
+    if (unit[0] == 'K')
+    	return 'k';
+
     return unit[0];
 } // end find_data_unit
 
@@ -69,13 +73,13 @@ char find_data_unit(const char *inarg)
  * findRateUnit
  *
  * Extracts the rate unit from the given string.
- * If no unit is specified, returns bytes/sec.
+ * If no unit is specified, returns kbit/sec.
  * ------------------------------------------ */
 char find_rate_unit(const char *inarg)
 {
-    // units are b (bundles/sec), B (Bytes/sec) and K (KBytes/sec)
+    // units are b (bundles/sec), K (Kbit/sec), and M (Mbit/sec)
     const char unitArray[] =
-        {'k', 'M', 'b'
+        {'k', 'K', 'M', 'b'
         };
     char * ptr;
     char unit;
@@ -85,7 +89,12 @@ char find_rate_unit(const char *inarg)
     	printf("\nWARNING: (-r option) invalid rate unit, assuming 'k' (kb/s)\n\n");
     	return 'k';
     }
+
     unit = ptr[0];
+
+    if (unit == 'K')
+    	return 'k';
+
     return unit;
 } // end find_data_unit
 
