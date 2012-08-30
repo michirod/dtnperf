@@ -199,7 +199,6 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 }
 
 int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
-		pending_bundle_list_t * pending_list,
 		bp_bundle_object_t * bundle,
 		char * dir)
 {
@@ -249,9 +248,11 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		strtok(temp, "/");
 		eid = strtok(NULL, "/");
 		full_dir = (char*) malloc(strlen(dir) + strlen(eid) + 20);
-		sprintf(full_dir, "%s/%s/%lu/", dir, eid, timestamp.secs);
+		sprintf(full_dir, "%s/%s/", dir, eid);
 		sprintf(temp, "mkdir -p %s", full_dir);
 		system(temp);
+		sprintf(temp, "%lu_", timestamp.secs);
+		strcat(full_dir, temp);
 
 		// create file transfer info object
 		info = file_transfer_info_create(client_eid, filename_len, filename, full_dir, file_dim, timestamp.secs, expiration);

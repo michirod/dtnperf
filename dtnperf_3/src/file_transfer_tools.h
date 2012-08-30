@@ -39,27 +39,6 @@ typedef struct file_transfer_info_list
 	int count;
 } file_transfer_info_list_t;
 
-
-typedef struct pending_bundle
-{
-	bp_bundle_object_t * bundle;
-} pending_bundle_t;
-
-typedef struct pending_bundle_list_item
-{
-	pending_bundle_t * pending_bundle;
-	struct pending_bundle_list_item * previous;
-	struct pending_bundle_list_item * next;
-} pending_bundle_list_item_t;
-
-typedef struct pending_bundle_list
-{
-	pending_bundle_list_item_t * first;
-	pending_bundle_list_item_t * last;
-	int count;
-} pending_bundle_list_t;
-
-
 file_transfer_info_list_t file_transfer_info_list_create();
 void file_transfer_info_list_destroy(file_transfer_info_list_t * list);
 
@@ -90,7 +69,6 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 		u32_t pl_size, u32_t timestamp_secs, u32_t expiration);
 
 int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
-		pending_bundle_list_t * pending_list,
 		bp_bundle_object_t * bundle,
 		char * dir);
 
