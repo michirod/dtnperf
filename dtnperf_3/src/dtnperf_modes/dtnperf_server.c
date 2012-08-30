@@ -18,7 +18,6 @@
  * Global variables
  */
 file_transfer_info_list_t file_transfer_info_list;
-pending_bundle_list_t pending_bundle_list;
 
 
 /*  ----------------------------
@@ -417,7 +416,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("[debug]\tprocessing file transfer bundle...");
 
 			indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
-					&pending_bundle_list, &bundle_object, perf_opt->file_dir);
+					&bundle_object, perf_opt->file_dir);
 
 			if (indicator < 0) // error in processing bundle
 			{
