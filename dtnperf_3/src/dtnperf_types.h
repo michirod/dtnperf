@@ -56,6 +56,8 @@ typedef struct dtnperf_options
 	char * file_dir;		// destination dir of transfered files [~/dtnperf/files]
 	boolean_t acks_to_mon;	// send ACKs to both source and monitor (if monitor is not the source) [FALSE]
 	boolean_t no_acks;		// do not send ACKs (for retro-compatibility purpose)
+	//monitor options
+	char * logs_dir;		// dir where are saved monitor logs [LOGS_DIR_DEFAULT]
 
 } dtnperf_options_t;
 

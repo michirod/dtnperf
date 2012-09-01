@@ -14,6 +14,9 @@
 // dir where are saved transfered files
 #define FILE_DIR_DEFAULT "~/dtnperf/files/"
 
+// dir where are saved monitor logs
+#define LOGS_DIR_DEFAULT "~/dtnperf/logs/"
+
 // source file for bundle in client with use_file option
 #define SOURCE_FILE "dtnperfbuf.src"
 
@@ -34,6 +37,12 @@
 // header of bundles sent in file mode (HEADER_SIZE chars)
 #define FILE_HEADER "DTNPERF3_FILE_MODE__"
 
+// header of start bundle sent by client to monitor (HEADER_SIZE chars)
+#define START_HEADER "DTNPERF3_MON_START__"
+
+// header of stop bundle sent by client to monitor (HEADER_SIZE chars)
+#define STOP_HEADER "DTNPERF3_MON_STOP___"
+
 // max payload (in bytes) if bundles are stored into memory
 #define MAX_MEM_PAYLOAD 50000
 
@@ -43,7 +52,7 @@
 // default value (in bytes) for bundle payload
 #define DEFAULT_PAYLOAD 50000
 
-// default log filename
+// default client log filename
 #define LOG_FILENAME "~/dtnperf/log"
 
 // server endpoint demux string

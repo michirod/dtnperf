@@ -299,6 +299,47 @@ bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 	return result;
 }
 
+bp_error_t prepare_start_bundle(bp_bundle_object_t * start, bp_endpoint_id_t monitor,
+		bp_timeval_t expiration, bp_bundle_priority_t priority)
+{
+	FILE * start_stream;
+	char * start_header = START_HEADER;
+	bp_endpoint_id_t none;
+	bp_bundle_delivery_opts_t opts = BP_DOPTS_NONE;
+	bp_bundle_set_payload_location(start, BP_PAYLOAD_MEM);
+	open_payload_stream_write(*start, &start_stream);
+	fwrite(start_header, HEADER_SIZE, 1, start_stream);
+	close_payload_stream_write(start, start_stream);
+	bp_bundle_set_dest(start, monitor);
+	bp_get_none_endpoint(&none);
+	bp_bundle_set_replyto(start, none);
+	bp_bundle_set_delivery_opts(start, opts);
+	bp_bundle_set_expiration(start, expiration);
+	bp_bundle_set_priority(start, priority);
+
+	return BP_SUCCESS;
+}
+
+bp_error_t prepare_stop_bundle(bp_bundle_object_t * stop, bp_endpoint_id_t monitor,
+		bp_timeval_t expiration, bp_bundle_priority_t priority)
+{
+	FILE * stop_stream;
+	char * stop_header = STOP_HEADER;
+	bp_endpoint_id_t none;
+	bp_bundle_delivery_opts_t opts = BP_DOPTS_NONE;
+	bp_bundle_set_payload_location(stop, BP_PAYLOAD_MEM);
+	open_payload_stream_write(*stop, &stop_stream);
+	fwrite(stop_header, HEADER_SIZE, 1, stop_stream);
+	close_payload_stream_write(stop, stop_stream);
+	bp_bundle_set_dest(stop, monitor);
+	bp_get_none_endpoint(&none);
+	bp_bundle_set_replyto(stop, none);
+	bp_bundle_set_delivery_opts(stop, opts);
+	bp_bundle_set_expiration(stop, expiration);
+	bp_bundle_set_priority(stop, priority);
+
+	return BP_SUCCESS;
+}
 /**
  *
  */
@@ -319,12 +360,11 @@ bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** 
 	return BP_SUCCESS;
 }
 
-bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_timestamp_t * reported_timestamp)
+bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_endpoint_id_t * reported_eid, bp_timestamp_t * reported_timestamp)
 {
 	char* buf;
 	u32_t buf_len;
 	bp_error_t error;
-	bp_endpoint_id_t reported_eid;
 	bp_endpoint_id_t ack_dest;
 	error = bp_bundle_get_dest(*ack, &ack_dest);
 	bp_bundle_get_payload_size(*ack, &buf_len);
@@ -337,13 +377,13 @@ bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_timestamp_t * reported
 	if (strncmp(DSA_HEADER, buf, HEADER_SIZE) == 0)
 	{
 		buf += HEADER_SIZE;
-		memcpy(&reported_eid, buf, sizeof(reported_eid));
-		if (strcmp(reported_eid.uri, ack_dest.uri) == 0)
-		{
-			buf += sizeof(reported_eid);
+		if (reported_eid != NULL)
+			memcpy(&reported_eid, buf, sizeof(bp_endpoint_id_t));
+		buf += sizeof(bp_endpoint_id_t);
+		if (reported_timestamp != NULL)
 			memcpy(reported_timestamp, buf, sizeof(bp_timestamp_t));
-			return BP_SUCCESS;
-		}
+		return BP_SUCCESS;
+
 	}
 	return BP_ERRBASE;
 }

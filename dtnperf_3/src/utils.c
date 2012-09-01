@@ -116,6 +116,33 @@ void add_time(struct timeval *tot_time, struct timeval part_time)
 } // end add_time
 
 
+/* ------------------------------------------
+ * sub_time
+ * Subtract time sub from time min and put the result in result
+ * Result is set to NULL result is a negative value
+ * ------------------------------------------ */
+void sub_time(struct timeval min, struct timeval sub, struct timeval * result)
+{
+	if (result == NULL)
+		return;
+   if (min.tv_sec < sub.tv_sec)
+	   result = NULL;
+   else if (min.tv_sec == sub.tv_sec && min.tv_usec < sub.tv_usec)
+	   result = NULL;
+   else
+   {
+	   if (min.tv_usec < sub.tv_usec)
+	   {
+		   min.tv_usec += 1000 * 1000;
+		   min.tv_sec -= 1;
+	   }
+	   result->tv_sec = min.tv_sec - sub.tv_sec;
+	   result->tv_usec = min.tv_usec - sub.tv_usec;
+   }
+
+} // end add_time
+
+
 /* --------------------------------------------------
  * csv_time_report
  * -------------------------------------------------- */

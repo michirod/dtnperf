@@ -7,6 +7,7 @@
 
 
 #include "dtnperf_client.h"
+#include "dtnperf_monitor.h"
 #include "../includes.h"
 #include "../definitions.h"
 #include "../bundle_tools.h"
@@ -30,6 +31,7 @@
 // pthread variables
 pthread_t sender;
 pthread_t cong_ctrl;
+pthread_t monitor;
 pthread_mutex_t mutexdata;
 pthread_cond_t cond_ackreceiver;
 sem_t window;						// semaphore for congestion control
@@ -89,6 +91,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	char temp1[256]; // buffer for different purpose
 	char temp2[256];
 	FILE * stream; // stream for preparing payolad
+	bp_bundle_object_t bundle_start, bundle_stop;
+	boolean_t dedicated_monitor; // if client must start a dedicated monitor
+	monitor_parameters_t mon_params;
 
 
 	/* ------------------------
@@ -145,7 +150,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	 * ----------------------------------------------------- */
 
 	// append process id to the client demux string
-	client_demux_string = malloc (strlen(CLI_EP_STRING) + 6);
+	client_demux_string = malloc (strlen(CLI_EP_STRING) + 10);
 	sprintf(client_demux_string, "%s_%d", CLI_EP_STRING, getpid());
 
 	//build a local eid
@@ -208,6 +213,32 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	if (create_log)
 		fprintf(log_file, "Reply-to   : %s\n\n", mon_eid.uri);
+
+	// checking if there is a running monitor on this endpoint
+		if(debug && debug_level > 0)
+			printf("[debug] checking for existing monitor on this endpoint...\n");
+		error = bp_find_registration(handle, &mon_eid, &regid);
+		if (error == BP_SUCCESS)
+		{
+			dedicated_monitor = FALSE;
+			printf("there is already a monitor on this endpoint.\n");
+			printf("regid 0x%x\n", (unsigned int) regid);
+		}
+		else
+		{
+			dedicated_monitor = TRUE;
+			mon_params.client_id = getpid();
+			mon_params.perf_g_opt = perf_g_opt;
+			printf("there is not a monitor on this endpoint.\n");
+			sprintf(temp1, "%s_%d", mon_eid.uri, mon_params.client_id);
+			bp_parse_eid_string(&mon_eid, temp1);
+			// start dedicated monitor
+			pthread_create(&monitor, NULL, start_dedicated_monitor, (void *) &mon_params);
+			printf("started a new dedicated monitor\n");
+
+		}
+		if ((debug) && (debug_level > 0))
+			printf(" done\n");
 
 	//create a new registration to the local router based on this eid
 	if(debug && debug_level > 0)
@@ -483,6 +514,27 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	bp_bundle_set_replyto(&bundle, mon_eid);
 	set_bp_options(&bundle, conn_opt);
 
+	// intialize start and stop bundles;
+	bp_bundle_create(&bundle_start);
+	bp_bundle_create(&bundle_stop);
+	prepare_start_bundle(&bundle_start, mon_eid, conn_opt->expiration, conn_opt->priority);
+	bp_bundle_set_source(&bundle_start, local_eid);
+	prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority);
+	bp_bundle_set_source(&bundle_stop, local_eid);
+
+	// send start bundle to monitor
+	if (debug)
+		printf("sending the start bundle to the monitor...");
+	if ((error = bp_bundle_send(handle, regid, &bundle_start)) != 0)
+	{
+		fprintf(stderr, "error sending the start bundle: %d (%s)\n", error, bp_strerror(error));
+		if (create_log)
+			fprintf(log_file, "error sending the start bundle: %d (%s)\n", error, bp_strerror(error));
+		exit(1);
+	}
+	if (debug)
+		printf("done.\n");
+
 	if ((debug) && (debug_level > 0))
 		printf("[debug] entering in loop\n");
 
@@ -523,6 +575,26 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if(perf_opt->create_log)
 		print_final_report(log_file);
 
+	// send stop bundle to monitor
+	if (debug)
+		printf("sending the stop bundle to the monitor...");
+	if ((error = bp_bundle_send(handle, regid, &bundle_stop)) != 0)
+	{
+		fprintf(stderr, "error sending the stop bundle: %d (%s)\n", error, bp_strerror(error));
+		if (create_log)
+			fprintf(log_file, "error sending the stop bundle: %d (%s)\n", error, bp_strerror(error));
+		exit(1);
+	}
+	if (debug)
+		printf("done.\n");
+
+	// waiting monitor stops
+	if (dedicated_monitor)
+	{
+		pthread_join(monitor, (void**)&pthread_status);
+	}
+
+
 	// Close the BP handle --
 	if ((debug) && (debug_level > 0))
 		printf("[debug] closing DTN handle...");
@@ -555,18 +627,16 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	free(transfer_filename);
 	free(send_info);
 	bp_bundle_free(&bundle);
-
+	bp_bundle_free(&bundle_start);
+	bp_bundle_free(&bundle_stop);
 
 	pthread_exit(NULL);
-
 
 	// Final carriage return
 	printf("\n");
 
 	return;
 }
-
-
 
 
 // end client code
@@ -630,6 +700,8 @@ void * send_bundles(void * opt)
 	{								// setting condition for loop
 		condition = sent_bundles < tot_bundles;
 	}
+
+	// send bundles loop
 	while (condition)				//LOOP
 	{
 		// prepare payload if FILE MODE
@@ -728,6 +800,7 @@ void * send_bundles(void * opt)
 		pthread_cond_signal(&cond_ackreceiver);
 	}
 	pthread_mutex_unlock(&mutexdata);
+	// close thread
 	pthread_exit(NULL);
 
 }
@@ -780,12 +853,26 @@ void * congestion_control(void * opt)
 					fprintf(log_file, "error getting server ack: %d (%s)\n", error, bp_strerror(bp_errno(handle)));
 				exit(1);
 			}
+
+			// Check if is actually a server ack bundle
+			if (! is_header(&ack, DSA_HEADER))
+			{
+				fprintf(stderr, "error getting server ack: wrong bundle header\n");
+				if (create_log)
+					fprintf(log_file, "error getting server ack: wrong bundle header\n");
+
+				pthread_mutex_unlock(&mutexdata);
+				//pthread_yield();
+				sched_yield();
+				continue;
+			}
+
 			gettimeofday(&ack_recvd, NULL);
 			if ((debug) && (debug_level > 0))
 				printf("\t[debug cong crtl] ack received\n");
 
 			// Get ack infos
-			error = get_info_from_ack(&ack, &reported_timestamp);
+			error = get_info_from_ack(&ack, NULL, &reported_timestamp);
 			if (error != BP_SUCCESS)
 			{
 				fprintf(stderr, "error getting info from ack: %s\n", bp_strerror(error));
@@ -871,6 +958,15 @@ void * congestion_control(void * opt)
 	return NULL;
 }
 
+void * start_dedicated_monitor(void * params)
+{
+	monitor_parameters_t * parameters = (monitor_parameters_t *) params;
+	parameters->dedicated_monitor = TRUE;
+	run_dtnperf_monitor(parameters);
+	pthread_exit(NULL);
+	return NULL;
+}
+
 void print_final_report(FILE * f)
 {
 	double goodput, sent;
@@ -913,7 +1009,6 @@ void print_final_report(FILE * f)
 	fprintf(f, "Total execution time = %.1f\n", total_secs);
 	fprintf(f, "Goodput = %.3f %s\n", goodput, gput_unit);
 }
-
 
 void print_client_usage(char* progname)
 {

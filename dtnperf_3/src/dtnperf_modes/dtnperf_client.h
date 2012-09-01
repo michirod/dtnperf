@@ -21,4 +21,5 @@ void handler(int sig);
 //pthread functions
 void * send_bundles(void * opt);
 void * congestion_control(void * opt);
+void * start_dedicated_monitor(void * params);
 #endif /* DTNPERF_CLIENT_H_ */

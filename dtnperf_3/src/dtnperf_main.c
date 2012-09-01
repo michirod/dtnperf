@@ -46,6 +46,7 @@ int main(int argc, char ** argv)
 	dtnperf_global_options_t global_options;
 	dtnperf_options_t perf_opt;
 	dtnperf_connection_options_t conn_opt;
+	monitor_parameters_t mon_params;
 
 	// init options
 	init_dtnperf_global_options(&global_options, &perf_opt, &conn_opt);
@@ -55,23 +56,6 @@ int main(int argc, char ** argv)
 
 	// sigint handler
 	signal(SIGINT, main_handler);
-
-	// if client is also monitor, start a different process for monitor instance
-	if (global_options.mode == DTNPERF_CLIENT_MONITOR)
-	{	// client is also monitor
-		pid = fork();
-		if (pid < 0)
-		{
-			perror("error in child process creation");
-			exit(-1);
-		}
-		if (pid == 0)
-		{
-			run_dtnperf_monitor(&global_options);
-			fprintf(stderr,"error in monitor\n");
-			exit(-1);
-		}
-	}
 
 	switch (global_options.mode)
 	{
@@ -85,7 +69,10 @@ int main(int argc, char ** argv)
 		break;
 
 	case DTNPERF_MONITOR:
-		run_dtnperf_monitor(&global_options);
+		mon_params.client_id = 0;
+		mon_params.dedicated_monitor = FALSE;
+		mon_params.perf_g_opt = &global_options;
+		run_dtnperf_monitor(&mon_params);
 		break;
 
 	default:
@@ -159,9 +146,6 @@ void parse_options(int argc, char**argv, dtnperf_global_options_t * global_opt)
 		exit(1);
 	}
 
-	// insert perf_mode in global options
-	global_opt->mode = perf_mode;
-
 	//scroll argv array
 	for(i = 2; i < argc; i++)
 	{
@@ -173,6 +157,8 @@ void parse_options(int argc, char**argv, dtnperf_global_options_t * global_opt)
 	{
 	case DTNPERF_CLIENT:
 		parse_client_options(argc, argv, global_opt);
+		if (global_opt->perf_opt->mon_eid[0] == '\0')
+			perf_mode = DTNPERF_CLIENT_MONITOR;
 		break;
 	case DTNPERF_SERVER:
 		parse_server_options(argc, argv, global_opt);
@@ -185,6 +171,9 @@ void parse_options(int argc, char**argv, dtnperf_global_options_t * global_opt)
 		print_usage(argv[0]);
 		exit(1);
 	}
+
+	// insert perf_mode in global options
+	global_opt->mode = perf_mode;
 
 } // end parse_options
 
@@ -230,6 +219,7 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->log_filename = LOG_FILENAME;
 	opt->acks_to_mon = FALSE;
 	opt->no_acks = FALSE;
+	opt->logs_dir = LOGS_DIR_DEFAULT;
 }
 
 

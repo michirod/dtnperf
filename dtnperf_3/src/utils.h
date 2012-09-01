@@ -21,8 +21,8 @@ void csv_time_report(int b_sent, int payload, struct timeval start, struct timev
 void csv_data_report(int b_id, int payload, struct timeval start, struct timeval end, FILE* csv_log);
 void show_report (u_int buf_len, char* eid, struct timeval start, struct timeval end, long data, FILE* output);
 
-
 void add_time(struct timeval *tot_time, struct timeval part_time);
+void sub_time(struct timeval min, struct timeval sub, struct timeval * result);
 struct timeval set(double sec);
 struct timeval add(double sec);
 
