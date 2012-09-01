@@ -214,7 +214,7 @@ int open_payload_stream_write(bp_bundle_object_t bundle, FILE ** f)
 	if (pl_location == BP_PAYLOAD_MEM)
 	{
 		bp_bundle_get_payload_mem(bundle, &buffer, &buffer_len);
-		*f= open_memstream(&buffer, &buffer_len);
+		*f= open_memstream(&buffer, (size_t *) &buffer_len);
 		if (*f == NULL)
 			return -1;
 	}

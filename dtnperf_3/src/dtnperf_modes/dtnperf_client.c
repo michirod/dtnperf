@@ -969,7 +969,7 @@ void * start_dedicated_monitor(void * params)
 
 void print_final_report(FILE * f)
 {
-	double goodput, sent;
+	double goodput, sent = 0;
 	struct timeval total;
 	double total_secs;
 	char * gput_unit, * sent_unit;

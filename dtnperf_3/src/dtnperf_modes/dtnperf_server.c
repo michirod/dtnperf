@@ -29,8 +29,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	 * variables
 	 * ------------------------ */
 
-	file_transfer_info_list_t * info_list = &file_transfer_info_list;
-
 	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
 	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
 
@@ -261,7 +259,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		// find payload size
 		if ((debug) && (debug_level > 0))
 			printf("[debug] calculating bundle payload size...");
-		error = bp_bundle_get_payload_size(bundle_object, &bundle_payload_len);
+		error = bp_bundle_get_payload_size(bundle_object, (u32_t *) &bundle_payload_len);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
@@ -367,7 +365,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		{
 			if ((debug) && (debug_level > 0))
 				printf("[debug]\tgetting bundle payload filename...");
-			error = bp_bundle_get_payload_file(bundle_object, &pl_filename, &pl_filename_len);
+			error = bp_bundle_get_payload_file(bundle_object, &pl_filename, (u32_t *) &pl_filename_len);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
