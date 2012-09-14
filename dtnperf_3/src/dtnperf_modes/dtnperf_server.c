@@ -639,7 +639,7 @@ void print_server_usage(char * progname)
 			"     --ip-addr <addr>   Ip address of the bp daemon api. Default is 127.0.0.1\n"
 			"     --ip-port <port>   Ip port of the bp daemon api. Default is 5010\n"
 			"     --ddir <dir>       Destination directory of bundles (if not using -M), if dir is not indicated assume %s.\n"
-			"     --fdir <dir>       Destination directory of transfered files\n"
+			"     --fdir <dir>       Destination directory of transfered files. Default is %s\n"
 			"     --debug[=level]    Debug messages [0-1], if level is not indicated assume level=0.\n"
 			" -M, --memory           Save bundles into memory.\n"
 			" -e, --expiration <sec> Bundle acks expiration time. Default is 3600\n"
@@ -648,7 +648,7 @@ void print_server_usage(char * progname)
 			"     --no-acks          Do not send acks (for using with dtnperf2)\n"
 			" -v, --verbose          Print some information message during the execution.\n"
 			" -h, --help             This help.\n",
-			BUNDLE_DIR_DEFAULT);
+			BUNDLE_DIR_DEFAULT, FILE_DIR_DEFAULT);
 	fprintf(stderr, "\n");
 	exit(1);
 }

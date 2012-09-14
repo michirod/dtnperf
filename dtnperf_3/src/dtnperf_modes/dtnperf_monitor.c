@@ -398,14 +398,83 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 void print_monitor_usage(char * progname)
 {
-	//printf("ERROR: dtnperf3 monitor operative mode not yet implemented\n");
-	//exit(1);
+	fprintf(stderr, "\n");
+	fprintf(stderr, "DtnPerf3 monitor mode\n");
+	fprintf(stderr, "SYNTAX: %s --monitor [options]\n", progname);
+	fprintf(stderr, "\n");
+	fprintf(stderr, "options:\n"
+			"     --ldir <dir>       Logs directory. Default is %s\n"
+			"     --debug[=level]    Debug messages [0-1], if level is not indicated assume level=0.\n"
+			" -v, --verbose          Print some information message during the execution.\n"
+			" -h, --help             This help.\n",
+			LOGS_DIR_DEFAULT);
+	fprintf(stderr, "\n");
+	exit(1);
 }
 
 void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * perf_g_opt)
 {
-	//printf("ERROR: dtnperf3 monitor operative mode not yet implemented\n");
-	//exit(1);
+	char c, done = 0;
+		dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
+
+		while (!done)
+		{
+			static struct option long_options[] =
+			{
+					{"help", no_argument, 0, 'h'},
+					{"verbose", no_argument, 0, 'v'},
+					{"debug", optional_argument, 0, 33},
+					{"ldir", required_argument, 0, 40},
+					{0,0,0,0}	// The last element of the array has to be filled with zeros.
+
+			};
+			int option_index = 0;
+			c = getopt_long(argc, argv, "hvMe:P:", long_options, &option_index);
+
+			switch (c)
+			{
+			case 'h':
+				print_monitor_usage(argv[0]);
+				exit(0);
+				return ;
+
+			case 'v':
+				perf_opt->verbose = TRUE;
+				break;
+
+			case 33: // debug
+				perf_opt->debug = TRUE;
+				if (optarg != NULL){
+					int debug_level = atoi(optarg);
+					if (debug_level >= 0 && debug_level <= 2)
+						perf_opt->debug_level = atoi(optarg);
+					else {
+						fprintf(stderr, "wrong --debug argument\n");
+						exit(1);
+						return;
+					}
+				}
+				else
+					perf_opt->debug_level = 2;
+				break;
+
+			case 39:
+				perf_opt->logs_dir = strdup(optarg);
+				break;
+
+			case '?':
+				break;
+
+			case (char)(-1):
+						done = 1;
+			break;
+
+			default:
+				// getopt already prints an error message for unknown option characters
+				print_monitor_usage(argv[0]);
+				exit(1);
+			}
+		}
 }
 
 session_list_t * session_list_create()
