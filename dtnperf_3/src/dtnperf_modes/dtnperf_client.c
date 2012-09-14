@@ -229,6 +229,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		fflush(log_file);
 
 	// checking if there is a running monitor on this endpoint
+	if(perf_g_opt->mode == DTNPERF_CLIENT_MONITOR)
+	{
 		if(debug && debug_level > 0)
 			printf("[debug] checking for existing monitor on this endpoint...\n");
 		error = bp_find_registration(handle, &mon_eid, &regid);
@@ -260,6 +262,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		}
 		if ((debug) && (debug_level > 0))
 			printf(" done\n");
+	}
 
 	//create a new registration to the local router based on this eid
 	if(debug && debug_level > 0)
