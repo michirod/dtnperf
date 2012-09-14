@@ -14,6 +14,18 @@
 #include "../bundle_tools.h"
 #include "../csv_tools.h"
 
+/*
+ * Global Variables
+ */
+
+session_list_t * session_list;
+bp_handle_t handle;
+
+// flags to exit cleanly
+boolean_t dedicated_monitor;
+boolean_t bp_handle_open;
+
+
 /*  ----------------------------
  *          MONITOR CODE
  *  ---------------------------- */
@@ -25,7 +37,6 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	dtnperf_options_t * perf_opt = parameters->perf_g_opt->perf_opt;
 
 	bp_error_t error;
-	bp_handle_t handle;
 	bp_endpoint_id_t local_eid;
 	bp_reg_info_t reginfo;
 	bp_reg_id_t regid;
@@ -36,7 +47,6 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	bp_endpoint_id_t relative_source_addr;
 	bp_timestamp_t relative_creation_timestamp;
 
-	session_list_t session_list;
 	session_t * session;
 	bundle_type_t bundle_type;
 	struct timeval current, start;
@@ -53,6 +63,9 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	 * ------------------------ */
 	boolean_t debug = perf_opt->debug;
 	int debug_level = perf_opt->debug_level;
+
+	dedicated_monitor = parameters->dedicated_monitor;
+	bp_handle_open = FALSE;
 
 	perf_opt->logs_dir = correct_dirname(perf_opt->logs_dir);
 
@@ -81,6 +94,10 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	if(debug && debug_level > 0)
 		printf("done\n");
 
+	// signal handlers
+	signal(SIGINT, monitor_handler);
+	signal(SIGUSR1, monitor_handler);
+
 	//open the connection to the bundle protocol router
 	if(debug && debug_level > 0)
 		printf("[debug] opening connection to bundle protocol router...");
@@ -93,6 +110,10 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		fflush(stdout);
 		fprintf(stderr, "fatal error opening bp handle: %s\n", bp_strerror(error));
 		exit(1);
+	}
+	else
+	{
+		bp_handle_open = TRUE;
 	}
 	if(debug && debug_level > 0)
 		printf("done\n");
@@ -269,12 +290,12 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(filename) + 2);
 			sprintf(full_filename, "%s/%s", perf_opt->logs_dir, filename);
 			file = fopen(full_filename, "w");
-			session = session_create(bundle_source_addr, file, start);
-			session_put(&session_list, session);
+			session = session_create(bundle_source_addr, full_filename, file, start);
+			session_put(session_list, session);
 			// write header in csv log file
 			fprintf(file,"RX_TIME;BUNDLE_SOURCE;BUNDLE_TIMESTAMP;BUNDLE_SEQNO;"
-					"BUNDLE_TYPE;RELATIVE_SOURCE;RELATIVE_TIMESTAMP;RELATIVE_SEQNO;");
-			csv_print_status_report_flags_header(file);
+					"BUNDLE_TYPE;REL_SOURCE;REL_TIMESTAMP;REL_SEQNO;"
+					"REL_FRAG_OFFSET;REL_PAYLOAD;");
 			csv_print_status_report_timestamps_header(file);
 			csv_end_line(file);
 
@@ -282,9 +303,18 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		else
 		{
 			if (bundle_type == STATUS_REPORT)
-				session = session_get(&session_list, status_report->bundle_id.source);
+			{
+				bp_copy_eid(&relative_source_addr, &(status_report->bundle_id.source));
+				relative_creation_timestamp = status_report->bundle_id.creation_ts;
+				session = session_get(session_list, status_report->bundle_id.source);
+			}
+			else if (bundle_type == SERVER_ACK)
+			{
+				get_info_from_ack(&bundle_object, &relative_source_addr, &relative_creation_timestamp);
+				session = session_get(session_list, relative_source_addr);
+			}
 			else
-				session = session_get(&session_list, bundle_source_addr);
+				session = session_get(session_list, bundle_source_addr);
 			if (session == NULL)
 			{
 				fprintf(stderr, "error: bundle received out of session\n");
@@ -326,15 +356,6 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// print relative source and timestamp
 		if (bundle_type == SERVER_ACK || bundle_type == STATUS_REPORT)
 		{
-			if (bundle_type == SERVER_ACK)
-			{
-				get_info_from_ack(&bundle_object, &relative_source_addr, &relative_creation_timestamp);
-			}
-			else if (bundle_type == STATUS_REPORT)
-			{
-				bp_copy_eid(&relative_source_addr, &(status_report->bundle_id.source));
-				relative_creation_timestamp = status_report->bundle_id.creation_ts;
-			}
 			csv_print_eid(file, relative_source_addr);
 			csv_print_timestamp(file, relative_creation_timestamp);
 		}
@@ -342,7 +363,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// print status report infos in csv log
 		if (bundle_type == STATUS_REPORT)
 		{
-			csv_print_status_report_flags(file, status_report->flags);
+			csv_print_ulong(file, status_report->bundle_id.frag_offset);
+			csv_print_ulong(file, status_report->bundle_id.orig_length);
 			csv_print_status_report_timestamps(file, * status_report);
 		}
 
@@ -353,7 +375,9 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		if (bundle_type == CLIENT_STOP)
 		{
 			fclose(file);
-			session_del(&session_list, session);
+			fprintf(stdout, "\nDTNperf monitor: saved log file: %s\n", session->full_filename);
+			session_del(session_list, session);
+
 			// close monitor if dedicated
 			if (parameters->dedicated_monitor)
 			{
@@ -364,7 +388,10 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 	} // end loop
 
+	session_list_destroy(session_list);
 	bp_close(handle);
+	bp_handle_open = FALSE;
+	exit(0);
 
 }
 // end monitor code
@@ -381,26 +408,27 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 	//exit(1);
 }
 
-session_list_t session_list_create()
+session_list_t * session_list_create()
 {
 	session_list_t * list;
 	list = (session_list_t *) malloc(sizeof(session_list_t));
 	list->first = NULL;
 	list->last = NULL;
 	list->count = 0;
-	return * list;
+	return list;
 }
 void session_list_destroy(session_list_t * list)
 {
 	free(list);
 }
 
-session_t * session_create(bp_endpoint_id_t client_eid, FILE * file, struct timeval start)
+session_t * session_create(bp_endpoint_id_t client_eid, char * full_filename, FILE * file, struct timeval start)
 {
 	session_t * session;
 	session = (session_t *) malloc(sizeof(session_t));
 	session->start = (struct timeval *) malloc(sizeof(struct timeval));
 	bp_copy_eid(&(session->client_eid), &client_eid);
+	session->full_filename = strdup(full_filename);
 	session->file = file;
 	memcpy(session->start, &start, sizeof(struct timeval));
 	session->next = NULL;
@@ -468,4 +496,60 @@ void session_del(session_list_t * list, session_t * session)
 	session_destroy(session);
 	list->count --;
 
+}
+
+void monitor_clean_exit(int status)
+{
+	session_t * session;
+
+	// close all log files and delete all sessions
+	if (dedicated_monitor)
+	{
+		session = session_list->first;
+		fclose(session->file);
+		fprintf(stdout, "\nDTNperf monitor: saved log file: %s\n", session->full_filename);
+		session_del(session_list, session);
+	}
+	else
+	{
+		for (session = session_list->first; session != NULL; session = session->next)
+		{
+			fclose(session->file);
+			if (session->prev != NULL)
+				session_destroy(session->prev);
+			if (session->next == NULL)
+			{
+				session_destroy(session);
+				break;
+			}
+		}
+	}
+
+	session_list_destroy(session_list);
+
+	// close bp_handle
+	if (bp_handle_open)
+		bp_close(handle);
+	printf("Dtnperf Monitor: exit.\n");
+	exit(status);
+}
+
+void monitor_handler(int signo)
+{
+	if (dedicated_monitor)
+	{
+		if (signo == SIGUSR1)
+		{
+			printf("\nDtnperf monitor: received signal from client. Exiting\n");
+			monitor_clean_exit(0);
+		}
+	}
+	else
+	{
+		if (signo == SIGINT)
+		{
+			printf("\nDtnperf monitor: received SIGINT. Exiting\n");
+			monitor_clean_exit(0);
+		}
+	}
 }

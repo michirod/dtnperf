@@ -17,7 +17,6 @@
  * Global variables and options
  * --------------------------- */
 dtnperf_global_options_t global_options;
-int pid;
 
 
 
@@ -31,10 +30,6 @@ void init_dtnperf_global_options(dtnperf_global_options_t *, dtnperf_options_t *
 void init_dtnperf_options(dtnperf_options_t *);
 void init_dtnperf_connection_options(dtnperf_connection_options_t*);
 
-// CTRL+C handler
-void main_handler(int signo);
-
-
 
 /* -------------------------------
  *              MAIN
@@ -42,7 +37,6 @@ void main_handler(int signo);
 int main(int argc, char ** argv)
 {
 	// variable declarations
-	int status;
 	dtnperf_global_options_t global_options;
 	dtnperf_options_t perf_opt;
 	dtnperf_connection_options_t conn_opt;
@@ -53,9 +47,6 @@ int main(int argc, char ** argv)
 
 	// parse command line options
 	parse_options(argc, argv, &global_options);
-
-	// sigint handler
-	signal(SIGINT, main_handler);
 
 	switch (global_options.mode)
 	{
@@ -80,19 +71,7 @@ int main(int argc, char ** argv)
 		exit(-1);
 	}
 
-
-	if (global_options.mode == DTNPERF_CLIENT_MONITOR)
-	{
-		wait(&status);
-		if ((char) status == 0)
-			printf("Exited with status %d\n", status>>8);
-		else
-			printf("Exited by signal %d\n,", (char) status);
-	}
-	return 0;
-
-
-
+	exit(0);
 }
 
 void print_usage(char* progname){
@@ -235,17 +214,4 @@ void init_dtnperf_connection_options(dtnperf_connection_options_t* opt)
 	opt->wait_for_report = TRUE;   		// wait for bundle status reports [1]
 	opt->disable_fragmentation = FALSE; //disable bundle fragmentation[0]
 	opt->priority = BP_PRIORITY_NORMAL; // bundle priority [BP_PRIORITY_NORMAL]
-}
-
-
-
-// CTRL + C handler
-void main_handler(int signo)
-{
-	// send signal to the child
-	if (global_options.mode == DTNPERF_CLIENT_MONITOR)
-	{
-		kill(pid, SIGINT);
-	}
-	kill(getpid(), SIGUSR1);
 }

@@ -30,6 +30,7 @@ typedef enum
 typedef struct session
 {
 	bp_endpoint_id_t client_eid;
+	char * full_filename;
 	FILE * file;
 	struct timeval * start;
 	struct session * next;
@@ -43,10 +44,10 @@ typedef struct session_list
 	int count;
 }session_list_t;
 
-session_list_t session_list_create();
+session_list_t * session_list_create();
 void session_list_destroy(session_list_t * list);
 
-session_t * session_create(bp_endpoint_id_t client_eid, FILE * file, struct timeval start);
+session_t * session_create(bp_endpoint_id_t client_eid, char * full_filename, FILE * file, struct timeval start);
 void session_destroy(session_t * session);
 
 void session_put(session_list_t * list, session_t * session);
@@ -58,5 +59,8 @@ void session_del(session_list_t * list, session_t * session);
 void run_dtnperf_monitor(monitor_parameters_t * parameters);
 void print_monitor_usage(char* progname);
 void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * perf_g_opt);
+
+void monitor_clean_exit(int status);
+void monitor_handler(int signo);
 
 #endif /* DTNPERF_MONITOR_H_ */

@@ -6,8 +6,7 @@
  */
 
 #include "utils.h"
-
-#include <bp_abstraction_api.h>
+#include "csv_tools.h"
 
 void csv_print_rx_time(FILE * file, struct timeval time, struct timeval start_time)
 {
@@ -32,47 +31,16 @@ void csv_print_timestamp(FILE * file, bp_timestamp_t timestamp)
 	fwrite(buf, strlen(buf), 1, file);
 }
 
-void csv_print_status_report_flags_header(FILE * file)
-{
-	char buf[256];
-	memset(buf, 0, 256);
-	strcat(buf, "STATUS_RECEIVED;");
-	strcat(buf, "STATUS_CUSTODY_ACCEPTED;");
-	strcat(buf, "STATUS_FORWARDED;");
-	strcat(buf, "STATUS_DELETED;");
-	strcat(buf, "STATUS_DELIVERED;");
-	strcat(buf, "STATUS_ACKED_BY_APP;");
-	fwrite(buf, strlen(buf), 1, file);
-}
-void csv_print_status_report_flags(FILE * file, bp_status_report_flags_t flags)
-{
-	char buf[256];
-	memset(buf, 0, 256);
-	strcat(buf, flags & BP_STATUS_RECEIVED ? "STATUS_RECEIVED" : " ");
-	strcat(buf, ";");
-	strcat(buf, flags & BP_STATUS_CUSTODY_ACCEPTED ? "STATUS_CUSTODY_ACCEPTED" : " ");
-	strcat(buf, ";");
-	strcat(buf, flags & BP_STATUS_FORWARDED ? "STATUS_FORWARDED" : " ");
-	strcat(buf, ";");
-	strcat(buf, flags & BP_STATUS_DELETED ? "STATUS_DELETED" : " ");
-	strcat(buf, ";");
-	strcat(buf, flags & BP_STATUS_DELIVERED ? "STATUS_DELIVERED" : " ");
-	strcat(buf, ";");
-	strcat(buf, flags & BP_STATUS_ACKED_BY_APP ? "STATUS_ACKED_BY_APP" : " ");
-	strcat(buf, ";");
-	fwrite(buf, strlen(buf), 1, file);
-}
-
 void csv_print_status_report_timestamps_header(FILE * file)
 {
 	char buf[300];
 	memset(buf, 0, 300);
-	strcat(buf, "RECEIVED_TIMESTAMP;RECEIVED_SEQNO;");
-	strcat(buf, "CUSTODY_ACCEPTED_TIMESTAMP;CUSTODY_ACCEPTED_SEQNO;");
-	strcat(buf, "FORWARDED_TIMESTAMP;FORWARDED_SEQNO;");
-	strcat(buf, "DELETED_TIMESTAMP;DELETED_SEQNO;");
-	strcat(buf, "DELIVERED_TIMESTAMP;DELIVERED_SEQNO;");
-	strcat(buf, "ACKED_BY_APP_TIMESTAMP;ACKED_BY_APP_SEQNO;");
+	strcat(buf, "STATUS_RECEIVED_TIMESTAMP;SEQNO;");
+	strcat(buf, "STATUS_CUSTODY_ACCEPTED_TIMESTAMP;SEQNO;");
+	strcat(buf, "STATUS_FORWARDED_TIMESTAMP;SEQNO;");
+	strcat(buf, "STATUS_DELETED_TIMESTAMP;SEQNO;");
+	strcat(buf, "STATUS_DELIVERED_TIMESTAMP;SEQNO;");
+	strcat(buf, "STATUS_ACKED_BY_APP_TIMESTAMP;SEQNO;");
 	fwrite(buf, strlen(buf), 1, file);
 }
 void csv_print_status_report_timestamps(FILE * file, bp_bundle_status_report_t status_report)
@@ -117,6 +85,20 @@ void csv_print_status_report_timestamps(FILE * file, bp_bundle_status_report_t s
 	strcat(buf1, buf2);
 
 	fwrite(buf1, strlen(buf1), 1, file);
+}
+
+void csv_print_long(FILE * file, long num)
+{
+	char buf[50];
+	sprintf(buf, "%ld", num);
+	csv_print(file, buf);
+}
+
+void csv_print_ulong(FILE * file, unsigned long num)
+{
+	char buf[50];
+	sprintf(buf, "%lu", num);
+	csv_print(file, buf);
 }
 
 void csv_print(FILE * file, char * string)

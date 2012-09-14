@@ -31,10 +31,10 @@
 // pthread variables
 pthread_t sender;
 pthread_t cong_ctrl;
-pthread_t monitor;
 pthread_mutex_t mutexdata;
 pthread_cond_t cond_ackreceiver;
 sem_t window;						// semaphore for congestion control
+int monitor_pid, monitor_status;
 
 // client threads variables
 send_information_t * send_info;		// array info of sent bundles
@@ -54,9 +54,16 @@ char * transfer_filename;			// basename of the file to transfer
 u32_t transfer_filedim;				// size of the file to transfer
 int transfer_fd;					// file descriptor
 
+// flags to exit cleanly
+boolean_t bp_handle_open;
+boolean_t log_open;
+boolean_t source_file_created;
+
+boolean_t dedicated_monitor; // if client must start a dedicated monitor
+
 // buffer settings
-char* buffer = NULL;            // buffer containing data to be transmitted
-size_t bufferLen;                  // lenght of buffer
+char* buffer = NULL;        	    // buffer containing data to be transmitted
+size_t bufferLen;                   // lenght of buffer
 
 
 // BP variables
@@ -74,8 +81,6 @@ bp_bundle_object_t ack;
 dtnperf_options_t * perf_opt;
 dtnperf_connection_options_t * conn_opt;
 
-void usr(int signo)
-{}
 
 /*  ----------------------------
  *          CLIENT CODE
@@ -92,7 +97,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	char temp2[256];
 	FILE * stream; // stream for preparing payolad
 	bp_bundle_object_t bundle_start, bundle_stop;
-	boolean_t dedicated_monitor; // if client must start a dedicated monitor
 	monitor_parameters_t mon_params;
 
 
@@ -105,6 +109,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	int debug_level =  perf_opt->debug_level;
 	boolean_t verbose = perf_opt->verbose;
 	boolean_t create_log = perf_opt->create_log;
+	log_open = FALSE;
+	bp_handle_open = FALSE;
+	source_file_created = FALSE;
 	stream = NULL;
 	tot_bundles = 0;
 	perf_opt->log_filename = correct_dirname(perf_opt->log_filename);
@@ -117,8 +124,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		if ((log_file = fopen(perf_opt->log_filename, "w")) == NULL)
 		{
 			fprintf(stderr, "fatal error opening log file\n");
-			exit(1);
+			client_clean_exit(1);
 		}
+		log_open = TRUE;
 	}
 
 	// Connect to BP Daemon
@@ -135,15 +143,18 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		fprintf(stderr, "fatal error opening bp handle: %s\n", bp_strerror(error));
 		if (create_log)
 			fprintf(log_file, "fatal error opening bp handle: %s\n", bp_strerror(error));
-		exit(1);
+		client_clean_exit(1);
+	}
+	else
+	{
+		bp_handle_open = TRUE;
 	}
 
 	if ((debug) && (debug_level > 0))
 		printf("done\n");
 
 	// Ctrl+C handler
-	signal(SIGUSR1, &handler);
-	signal(SIGUSR2, &usr);
+	signal(SIGINT, &client_handler);
 
 	/* -----------------------------------------------------
 	 *   initialize and parse bundle src/dest/replyto EIDs
@@ -178,7 +189,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		fprintf(stderr, "fatal error parsing bp EID: invalid eid string '%s'\n", perf_opt->dest_eid);
 		if (create_log)
 			fprintf(log_file, "\nfatal error parsing bp EID: invalid eid string '%s'", perf_opt->dest_eid);
-		exit(1);
+		client_clean_exit(1);
 	}
 
 	if (debug)
@@ -206,13 +217,16 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		fprintf(stderr, "fatal error parsing bp EID: invalid eid string '%s'\n", perf_opt->dest_eid);
 		if (create_log)
 			fprintf(log_file, "\nfatal error parsing bp EID: invalid eid string '%s'", perf_opt->dest_eid);
-		exit(1);
+		client_clean_exit(1);
 	}
 	if (debug)
 		printf("Reply-to   : %s\n\n", mon_eid.uri);
 
 	if (create_log)
 		fprintf(log_file, "Reply-to   : %s\n\n", mon_eid.uri);
+
+	if(create_log)
+		fflush(log_file);
 
 	// checking if there is a running monitor on this endpoint
 		if(debug && debug_level > 0)
@@ -232,8 +246,15 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			printf("there is not a monitor on this endpoint.\n");
 			sprintf(temp1, "%s_%d", mon_eid.uri, mon_params.client_id);
 			bp_parse_eid_string(&mon_eid, temp1);
+
 			// start dedicated monitor
-			pthread_create(&monitor, NULL, start_dedicated_monitor, (void *) &mon_params);
+			//pthread_create(&monitor, NULL, start_dedicated_monitor, (void *) &mon_params);
+			if ((monitor_pid = fork()) == 0)
+			{
+				start_dedicated_monitor((void *) &mon_params);
+				exit(0);
+			}
+
 			printf("started a new dedicated monitor\n");
 
 		}
@@ -256,7 +277,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		if (create_log)
 			fprintf(log_file, "error creating registration: %d (%s)\n",
 					error, bp_strerror(bp_errno(handle)));
-		exit(1);
+		client_clean_exit(1);
 	}
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
@@ -363,7 +384,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 				fprintf(stderr, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
 				if (create_log)
 					fprintf(log_file, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
-				exit(1);
+				client_clean_exit(1);
 			}
 
 			// get transfer file basename
@@ -400,8 +421,10 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			if (create_log)
 				fprintf(log_file, "ERROR: couldn't create file %s.\n \b Maybe you don't have permissions\n", source_file);
 
-			exit(2);
+			client_clean_exit(2);
 		}
+
+		source_file_created = TRUE;
 
 		fclose(stream);
 
@@ -427,7 +450,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 		if (create_log)
 			fprintf(log_file, "ERROR: couldn't create bundle object\n");
-		exit(1);
+		client_clean_exit(1);
 	}
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
@@ -446,7 +469,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 		if (create_log)
 			fprintf(log_file, "ERROR: couldn't set bundle payload\n");
-		exit(1);
+		client_clean_exit(1);
 	}
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
@@ -460,7 +483,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		if (create_log)
 			fprintf(log_file, "ERROR: couldn't open payload stream in write mode");
 
-		exit(2);
+		client_clean_exit(2);
 	}
 
 	// prepare the payload
@@ -474,7 +497,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			fprintf(stderr, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
 			if (create_log)
 				fprintf(log_file, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
-			exit(2);
+			client_clean_exit(2);
 		}
 	}
 	else // Time and Data mode
@@ -485,7 +508,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			fprintf(stderr, "error preparing payload: %s\n", bp_strerror(error));
 			if (create_log)
 				fprintf(log_file, "error preparing payload: %s\n", bp_strerror(error));
-			exit(1);
+			client_clean_exit(1);
 		}
 	}
 
@@ -530,7 +553,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		fprintf(stderr, "error sending the start bundle: %d (%s)\n", error, bp_strerror(error));
 		if (create_log)
 			fprintf(log_file, "error sending the start bundle: %d (%s)\n", error, bp_strerror(error));
-		exit(1);
+		client_clean_exit(1);
 	}
 	if (debug)
 		printf("done.\n");
@@ -583,7 +606,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		fprintf(stderr, "error sending the stop bundle: %d (%s)\n", error, bp_strerror(error));
 		if (create_log)
 			fprintf(log_file, "error sending the stop bundle: %d (%s)\n", error, bp_strerror(error));
-		exit(1);
+		client_clean_exit(1);
 	}
 	if (debug)
 		printf("done.\n");
@@ -591,7 +614,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	// waiting monitor stops
 	if (dedicated_monitor)
 	{
-		pthread_join(monitor, (void**)&pthread_status);
+		//pthread_join(monitor, (void**)&pthread_status);
+		wait(&monitor_status);
 	}
 
 
@@ -604,14 +628,21 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		fprintf(stderr, "fatal error closing bp handle: %s\n", strerror(errno));
 		if (create_log)
 			fprintf(log_file, "fatal error closing bp handle: %s\n", strerror(errno));
-		exit(1);
+		client_clean_exit(1);
+	}
+	else
+	{
+		bp_handle_open = FALSE;
 	}
 
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
 
 	if (create_log)
+	{
 		fclose(log_file);
+		log_open = FALSE;
+	}
 
 	// deallocate memory
 	if (perf_opt->op_mode == 'F')
@@ -619,7 +650,10 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		close(transfer_fd);
 	}
 	if (perf_opt->use_file)
+	{
 		remove(source_file);
+		source_file_created = FALSE;
+	}
 	free((void*)buffer);
 	free(client_demux_string);
 	free(source_file_abs);
@@ -630,12 +664,13 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	bp_bundle_free(&bundle_start);
 	bp_bundle_free(&bundle_stop);
 
-	pthread_exit(NULL);
 
-	// Final carriage return
+	if (perf_opt->create_log)
+		printf("\nClient log saved: %s\n", perf_opt->log_filename);
+
 	printf("\n");
 
-	return;
+	exit(0);
 }
 
 
@@ -735,14 +770,14 @@ void * send_bundles(void * opt)
 			fprintf(stderr, "error sending bundle: %d (%s)\n", error, bp_strerror(error));
 			if (create_log)
 				fprintf(log_file, "error sending bundle: %d (%s)\n", error, bp_strerror(error));
-			exit(1);
+			client_clean_exit(1);
 		}
 		if ((error = bp_bundle_get_id(bundle, &bundle_id)) != 0)
 		{
 			fprintf(stderr, "error getting bundle id: %s\n", bp_strerror(error));
 			if (create_log)
 				fprintf(log_file, "error getting bundle id: %s\n", bp_strerror(error));
-			exit(1);
+			client_clean_exit(1);
 		}
 		if (debug)
 			printf(" bundle sent\n");
@@ -851,7 +886,7 @@ void * congestion_control(void * opt)
 				fprintf(stderr, "error getting server ack: %d (%s)\n", error, bp_strerror(bp_errno(handle)));
 				if (create_log)
 					fprintf(log_file, "error getting server ack: %d (%s)\n", error, bp_strerror(bp_errno(handle)));
-				exit(1);
+				client_clean_exit(1);
 			}
 
 			// Check if is actually a server ack bundle
@@ -878,7 +913,7 @@ void * congestion_control(void * opt)
 				fprintf(stderr, "error getting info from ack: %s\n", bp_strerror(error));
 				if (create_log)
 					fprintf(log_file, "error getting info from ack: %s\n", bp_strerror(error));
-				exit(1);
+				client_clean_exit(1);
 			}
 			if ((debug) && (debug_level > 1))
 				printf("\t[debug cong crtl] ack received timestamp: %lu %lu\n", reported_timestamp.secs, reported_timestamp.seqno);
@@ -888,7 +923,7 @@ void * congestion_control(void * opt)
 				fprintf(stderr, "error removing bundle info\n");
 				if (create_log)
 					fprintf(log_file, "error removing bundle info\n");
-				exit(1);
+				client_clean_exit(1);
 			}
 			remove_from_info(send_info, position);
 			if ((debug) && (debug_level > 0))
@@ -951,7 +986,7 @@ void * congestion_control(void * opt)
 	}
 	else // wrong char for congestion control
 	{
-		exit(1);
+		client_clean_exit(1);
 	}
 
 	pthread_exit(NULL);
@@ -1005,7 +1040,7 @@ void print_final_report(FILE * f)
 	else
 		gput_unit = "bit/sec";
 
-	fprintf(f, "Sent %d bundles, total sent data = %.3f %s\n", sent_bundles, sent, sent_unit);
+	fprintf(f, "\nSent %d bundles, total sent data = %.3f %s\n", sent_bundles, sent, sent_unit);
 	fprintf(f, "Total execution time = %.1f\n", total_secs);
 	fprintf(f, "Goodput = %.3f %s\n", goodput, gput_unit);
 }
@@ -1069,6 +1104,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"rate", required_argument, 0, 'r'},
 				{"debug", optional_argument, 0, 33}, 				// 33 because D is for data mode
 				{"priority", required_argument, 0, 'P'},
+				{"nofragment", no_argument, 0, 'u'},
 				{"log", optional_argument, 0, 'L'},				// create log file
 				{"ip-addr", required_argument, 0, 37},
 				{"ip-port", required_argument, 0, 38},
@@ -1203,6 +1239,10 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				fprintf(stderr, "Invalid priority value %s\n", optarg);
 				exit(1);
 			}
+			break;
+
+		case 'u':
+			conn_opt->disable_fragmentation = TRUE;
 			break;
 
 		case 'L':
@@ -1363,15 +1403,38 @@ void check_options(dtnperf_global_options_t * global_options)
 
 } // end check_options
 
-void handler(int sig)
+void client_handler(int sig)
 {
-	(void)sig;
-	bp_close(handle);
-	if(log_file != NULL)
+	printf("\nDTNperf client received SIGINT: Exiting\n");
+	if (perf_opt->create_log)
+		fprintf(log_file, "\nDTNperf client received SIGINT: Exiting\n");
+
+	client_clean_exit(0);
+}
+
+void client_clean_exit(int status)
+{
+	// terminate immediately all child threads
+	pthread_cancel(sender);
+	pthread_cancel(cong_ctrl);
+
+	// send a signal to the monitor to terminate it
+	if (dedicated_monitor)
+		kill(monitor_pid, SIGUSR1);
+
+	if (perf_opt->create_log)
+		printf("\nClient log saved: %s\n", perf_opt->log_filename);
+	if (bp_handle_open)
+		bp_close(handle);
+	if (log_open)
 		fclose(log_file);
-	if(perf_opt->use_file)
+	if(source_file_created)
 		remove(source_file);
 
+	// wait for monitor to terminate
+	wait(&monitor_status);
 
-	exit(0);
+	printf("Dtnperf client: exit\n");
+	exit(status);
 }
+

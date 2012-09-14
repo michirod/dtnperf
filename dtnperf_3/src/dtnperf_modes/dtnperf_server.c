@@ -18,6 +18,10 @@
  * Global variables
  */
 file_transfer_info_list_t file_transfer_info_list;
+bp_handle_t handle;
+
+// flags to exit cleanly
+boolean_t bp_handle_open;
 
 
 /*  ----------------------------
@@ -32,7 +36,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
 	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
 
-	bp_handle_t handle;
 	bp_endpoint_id_t local_eid;
 	bp_reg_info_t reginfo;
 	bp_reg_id_t regid;
@@ -65,6 +68,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 	perf_opt->dest_dir = correct_dirname(perf_opt->dest_dir);
 	perf_opt->file_dir = correct_dirname(perf_opt->file_dir);
+
+	bp_handle_open = FALSE;
 
 	// initialize structures for file transfers
 	file_transfer_info_list = file_transfer_info_list_create();
@@ -105,6 +110,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		printf("\n");
 
 	}
+
+	//Ctrl+C handler
+	signal(SIGINT, server_handler);
 
 	// create dir where dtnperf server will save incoming bundles
 	// command should be: mkdir -p "dest_dir"
@@ -160,6 +168,10 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		fflush(stdout);
 		fprintf(stderr, "fatal error opening bp handle: %s\n", bp_strerror(error));
 		exit(1);
+	}
+	else
+	{
+		bp_handle_open = TRUE;
 	}
 	if(debug && debug_level > 0)
 		printf("done\n");
@@ -611,6 +623,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	}// while(1)
 
 	bp_close(handle);
+	bp_handle_open = FALSE;
 
 
 }
@@ -760,3 +773,17 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 	}
 }
 
+// Ctrl+C handler
+void server_handler(int sig)
+{
+	printf("\nDTNperf client received SIGINT: Exiting\n");
+	server_clean_exit(0);
+}
+
+void server_clean_exit(int status)
+{
+	if (bp_handle_open)
+		bp_close(handle);
+	printf("\nDTNperf server: Exit.\n");
+	exit(status);
+}
