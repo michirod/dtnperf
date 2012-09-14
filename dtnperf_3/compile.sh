@@ -14,8 +14,8 @@ if [ $# -ne 2 -a $# -ne 3 ]; then
 fi
 
 if [ $# -eq 2 ]; then
-	gcc -o dtnperf -I$1 -O3 -Wall src/*.c src/dtnperf_modes/*.c -fmessage-length=0 -L$2 -ldtnapi -lbp_abstraction_layer -lpthread
+	gcc -o dtnperf -I$1 -O3 -Wall src/*.c src/dtnperf_modes/*.c -fmessage-length=0 -L$2 -lbp_abstraction_layer -ldtnapi -lpthread
 else
-	gcc -o dtnperf -I$1 -O3 -Wall src/*.c src/dtnperf_modes/*.c -fmessage-length=0 -L$2 -L$3 -ldtnapi -lbp_abstraction_layer -lpthread
+	gcc -o dtnperf -I$1 -O3 -Wall src/*.c src/dtnperf_modes/*.c -fmessage-length=0 -L$2 -L$3 -lbp_abstraction_layer -ldtnapi -lpthread
 fi
 
