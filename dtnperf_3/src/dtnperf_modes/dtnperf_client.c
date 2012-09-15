@@ -831,7 +831,8 @@ void * send_bundles(void * opt)
 	close_ack_receiver = 1;
 	if (perf_opt->congestion_ctrl == 'r')
 	{
-		pthread_kill(cong_ctrl, SIGUSR2);
+		// terminate congestion control thread
+		pthread_cancel(cong_ctrl);
 	}
 	else
 	{
