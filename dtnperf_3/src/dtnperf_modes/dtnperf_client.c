@@ -656,6 +656,11 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	{
 		remove(source_file);
 		source_file_created = FALSE;
+
+		if (debug && debug > 1)
+		{
+			printf("[debug] removed file %s\n", source_file);
+		}
 	}
 	free((void*)buffer);
 	free(client_demux_string);
@@ -973,7 +978,7 @@ void * congestion_control(void * opt)
 		interval.tv_nsec = (long) ((interval_secs - interval.tv_sec) * 1000 * 1000 * 1000);
 
 		if (debug && debug_level > 0)
-				printf("[debug cong crtl] wait time for each bundle: %.4f sec\n", interval_secs);
+			printf("[debug cong crtl] wait time for each bundle: %.4f sec\n", interval_secs);
 
 		pthread_mutex_lock(&mutexdata);
 		while(close_ack_receiver == 0)
@@ -1433,8 +1438,13 @@ void client_clean_exit(int status)
 	if (log_open)
 		fclose(log_file);
 	if(source_file_created)
+	{
 		remove(source_file);
-
+		if (perf_opt->debug && perf_opt->debug > 1)
+		{
+			printf("[debug] removed file %s\n", source_file);
+		}
+	}
 	// wait for monitor to terminate
 	wait(&monitor_status);
 

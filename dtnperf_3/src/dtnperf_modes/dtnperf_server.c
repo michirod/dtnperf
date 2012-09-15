@@ -776,7 +776,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 // Ctrl+C handler
 void server_handler(int sig)
 {
-	printf("\nDTNperf client received SIGINT: Exiting\n");
+	printf("\nDTNperf server received SIGINT: Exiting\n");
 	server_clean_exit(0);
 }
 
@@ -784,6 +784,6 @@ void server_clean_exit(int status)
 {
 	if (bp_handle_open)
 		bp_close(handle);
-	printf("\nDTNperf server: Exit.\n");
+	printf("DTNperf server: Exit.\n");
 	exit(status);
 }
