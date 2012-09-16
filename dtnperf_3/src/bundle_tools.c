@@ -2,6 +2,7 @@
 #include "bundle_tools.h"
 #include "definitions.h"
 #include <bp_abstraction_api.h>
+#include <arpa/inet.h>
 
 
 // static variables for stream operations
@@ -321,15 +322,18 @@ bp_error_t prepare_start_bundle(bp_bundle_object_t * start, bp_endpoint_id_t mon
 }
 
 bp_error_t prepare_stop_bundle(bp_bundle_object_t * stop, bp_endpoint_id_t monitor,
-		bp_timeval_t expiration, bp_bundle_priority_t priority)
+		bp_timeval_t expiration, bp_bundle_priority_t priority, int sent_bundles)
 {
 	FILE * stop_stream;
 	char * stop_header = STOP_HEADER;
 	bp_endpoint_id_t none;
+	int buf;
 	bp_bundle_delivery_opts_t opts = BP_DOPTS_NONE;
 	bp_bundle_set_payload_location(stop, BP_PAYLOAD_MEM);
 	open_payload_stream_write(*stop, &stop_stream);
 	fwrite(stop_header, HEADER_SIZE, 1, stop_stream);
+	buf = htonl(sent_bundles);
+	fwrite(&buf, sizeof(buf), 1, stop_stream);
 	close_payload_stream_write(stop, stop_stream);
 	bp_bundle_set_dest(stop, monitor);
 	bp_get_none_endpoint(&none);
@@ -338,6 +342,24 @@ bp_error_t prepare_stop_bundle(bp_bundle_object_t * stop, bp_endpoint_id_t monit
 	bp_bundle_set_expiration(stop, expiration);
 	bp_bundle_set_priority(stop, priority);
 
+	return BP_SUCCESS;
+}
+
+bp_error_t get_info_from_stop(bp_bundle_object_t * stop, int * sent_bundles)
+{
+	FILE * stop_stream;
+	int buf;
+	open_payload_stream_read(*stop, &stop_stream);
+
+	// skip header
+	fseek(stop_stream, HEADER_SIZE, SEEK_SET);
+
+	// read sent bundles num
+	fread(&buf, sizeof(buf), 1, stop_stream);
+
+	* sent_bundles = ntohl(buf);
+
+	close_payload_stream_read(stop_stream);
 	return BP_SUCCESS;
 }
 /**

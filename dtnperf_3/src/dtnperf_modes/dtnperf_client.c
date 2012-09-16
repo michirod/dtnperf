@@ -250,7 +250,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			bp_parse_eid_string(&mon_eid, temp1);
 
 			// start dedicated monitor
-			//pthread_create(&monitor, NULL, start_dedicated_monitor, (void *) &mon_params);
 			if ((monitor_pid = fork()) == 0)
 			{
 				start_dedicated_monitor((void *) &mon_params);
@@ -543,10 +542,10 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	// intialize start and stop bundles;
 	bp_bundle_create(&bundle_start);
 	bp_bundle_create(&bundle_stop);
+
+	// fill the start bundle
 	prepare_start_bundle(&bundle_start, mon_eid, conn_opt->expiration, conn_opt->priority);
 	bp_bundle_set_source(&bundle_start, local_eid);
-	prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority);
-	bp_bundle_set_source(&bundle_stop, local_eid);
 
 	// send start bundle to monitor
 	if (debug)
@@ -601,6 +600,10 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if(perf_opt->create_log)
 		print_final_report(log_file);
 
+	// fill the stop bundle
+	prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority, sent_bundles);
+	bp_bundle_set_source(&bundle_stop, local_eid);
+
 	// send stop bundle to monitor
 	if (debug)
 		printf("sending the stop bundle to the monitor...");
@@ -617,7 +620,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	// waiting monitor stops
 	if (dedicated_monitor)
 	{
-		//pthread_join(monitor, (void**)&pthread_status);
 		wait(&monitor_status);
 	}
 

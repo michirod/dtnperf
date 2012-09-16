@@ -178,7 +178,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 	// start expiration timer thread
 	pthread_mutex_init (&mutexdata, NULL);
-	pthread_create(&session_exp_timer, NULL, session_expiration_timer, NULL);
+	pthread_create(&session_exp_timer, NULL, session_expiration_timer, (void *) parameters);
 
 	// start infinite loop
 	while(1)
@@ -203,7 +203,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// wait until receive a bundle
 		if ((debug) && (debug_level > 0))
 			printf("[debug] waiting for bundles...\n");
-		error = bp_bundle_receive(handle, bundle_object, BP_PAYLOAD_FILE, -1);
+		error = bp_bundle_receive(handle, bundle_object, BP_PAYLOAD_MEM, -1);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
@@ -417,17 +417,11 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// close file
 		if (bundle_type == CLIENT_STOP)
 		{
-			fclose(file);
-			fprintf(stdout, "\nDTNperf monitor: saved log file: %s\n", session->full_filename);
+			int total_to_receive;
+			get_info_from_stop(&bundle_object, &total_to_receive);
 			pthread_mutex_lock(&mutexdata);
-			session_del(session_list, session);
+			session->total_to_receive = total_to_receive;
 			pthread_mutex_unlock(&mutexdata);
-
-			// close monitor if dedicated
-			if (parameters->dedicated_monitor)
-			{
-				break;
-			}
 		}
 
 
@@ -447,7 +441,7 @@ void * session_expiration_timer(void * opt)
 
 	while(1)
 	{
-		pthread_sleep(10);
+		pthread_sleep(5);
 		current_dtn_time = get_current_dtn_time();
 
 		pthread_mutex_lock(&mutexdata);
@@ -455,17 +449,50 @@ void * session_expiration_timer(void * opt)
 		for(session = session_list->first; session != NULL; session = next)
 		{
 			next = session->next;
-			if (session->last_bundle_time + session->expiration < current_dtn_time)
+
+			// all status reports has been received: close session
+			if (session->total_to_receive > 0 && session->delivered_count == session->total_to_receive)
+			{
+				// close monitor if dedicated
+				if (dedicated_monitor)
+				{
+					monitor_clean_exit(0);
+				}
+				else
+				{
+					fclose(session->file);
+					fprintf(stdout, "\nDTNperf monitor: saved log file: %s\n", session->full_filename);
+					session_del(session_list, session);
+				}
+			}
+
+			// stop bundle arrived but not all the status reports have arrived and the timer has expired
+			else if (session->total_to_receive > 0 &&session->last_bundle_time + session->wait_after_stop < current_dtn_time)
 			{
 				if (fclose(session->file) < 0)
 					perror("Error closing expired file:");
-				fprintf(stdout, "\nDTNperf monitor: Session Expired\n\tsaved log file: %s\n", session->full_filename);
+				fprintf(stdout, "\nDTNperf monitor: Session Expired: Bundle stop arrived, but not all the status reports did\n\tsaved log file: %s\n", session->full_filename);
+				session_del(session_list, session);
+			}
+			// stop bundle is not yet arrived and the last bundle has expired
+			else if (session->last_bundle_time + session->expiration < current_dtn_time)
+			{
+				if (fclose(session->file) < 0)
+					perror("Error closing expired file:");
+				fprintf(stdout, "\nDTNperf monitor: Session Expired: Bundle stop did not arrive\n\tsaved log file: %s\n", session->full_filename);
 				session_del(session_list, session);
 			}
 		}
 		pthread_mutex_unlock(&mutexdata);
 		sched_yield();
 	}
+	pthread_exit(NULL);
+}
+
+// waiting thread
+void * wait_for_last_status_reports(void * opt)
+{
+
 	pthread_exit(NULL);
 }
 
@@ -632,6 +659,8 @@ session_t * session_create(bp_endpoint_id_t client_eid, char * full_filename, FI
 	session->last_bundle_time = bundle_timestamp_secs;
 	session->expiration = bundle_expiration_time;
 	session->delivered_count = 0;
+	session->total_to_receive = 0;
+	session->wait_after_stop = bundle_expiration_time / 2;
 	session->next = NULL;
 	session->prev = NULL;
 	return session;

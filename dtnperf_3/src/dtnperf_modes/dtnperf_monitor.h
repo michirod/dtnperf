@@ -36,6 +36,8 @@ typedef struct session
 	u32_t last_bundle_time;
 	u32_t expiration;
 	int delivered_count;
+	int total_to_receive;
+	u32_t wait_after_stop;
 	struct session * next;
 	struct session * prev;
 }session_t;
