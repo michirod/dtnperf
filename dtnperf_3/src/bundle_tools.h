@@ -51,5 +51,6 @@ bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_endpoint_id_t * report
 boolean_t is_header(bp_bundle_object_t * bundle, const char * header_string);
 boolean_t is_congestion_ctrl(bp_bundle_object_t * bundle, char mode);
 
+u32_t get_current_dtn_time();
 
 #endif /*BUNDLE_TOOLS_H_*/

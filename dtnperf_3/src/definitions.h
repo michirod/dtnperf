@@ -80,4 +80,7 @@
 // generic payload pattern
 #define PL_PATTERN "0123456789"
 
+// unix time of 1/1/2000
+#define DTN_EPOCH 946684800
+
 #endif /* DEFINITIONS_H_ */

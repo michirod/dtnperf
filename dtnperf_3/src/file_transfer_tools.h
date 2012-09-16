@@ -60,6 +60,8 @@ file_transfer_info_t *  file_transfer_info_get(file_transfer_info_list_t * list,
 
 void file_transfer_info_del(file_transfer_info_list_t * list, bp_endpoint_id_t client);
 
+void file_transfer_info_list_item_delete(file_transfer_info_list_t * list, file_transfer_info_list_item_t * item);
+
 /*
  * assemble_file() writes the file fragment contained in bundle to the file
  * indicated by info. Returns -1 if an error occurs, 0 if the fragment is written

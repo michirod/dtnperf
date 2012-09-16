@@ -13,6 +13,10 @@
 #include <stddef.h>
 
 void run_dtnperf_server(dtnperf_global_options_t * global_options );
+
+// file expiration timer thread
+void * file_expiration_timer(void * opt);
+
 void print_server_usage(char* progname);
 void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * perf_g_opt);
 bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** payload, size_t * payload_size);

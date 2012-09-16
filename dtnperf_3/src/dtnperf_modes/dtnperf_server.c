@@ -17,6 +17,11 @@
 /*
  * Global variables
  */
+
+// pthread variables
+pthread_t file_exp_timer;
+pthread_mutex_t mutexdata;
+
 file_transfer_info_list_t file_transfer_info_list;
 bp_handle_t handle;
 
@@ -237,10 +242,14 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	if ((debug) && (debug_level > 0))
 		printf(" done. Bundles will be saved into %s\n", perf_opt->use_file ? "file" : "memory");
 
+	// start thread
+	pthread_mutex_init (&mutexdata, NULL);
+	pthread_create(&file_exp_timer, NULL, file_expiration_timer, NULL);
+
+
+
 	if ((debug) && (debug_level > 0))
 		printf("[debug] entering infinite loop...\n");
-
-
 
 	// start infinite loop
 	while(1)
@@ -432,8 +441,13 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			if ((debug) && (debug_level > 0))
 				printf("[debug]\tprocessing file transfer bundle...");
 
+			pthread_mutex_lock(&mutexdata);
+
 			indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
 					&bundle_object, perf_opt->file_dir);
+
+			pthread_mutex_unlock(&mutexdata);
+			sched_yield();
 
 			if (indicator < 0) // error in processing bundle
 			{
@@ -636,6 +650,40 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 }
 // end server code
 
+// file expiration timer thread
+void * file_expiration_timer(void * opt)
+{
+	u32_t current_dtn_time;
+	file_transfer_info_list_item_t * item, * next;
+
+	while(1)
+	{
+		pthread_sleep(10);
+		current_dtn_time = get_current_dtn_time();
+
+		pthread_mutex_lock(&mutexdata);
+
+		for(item = file_transfer_info_list.first; item != NULL; item = next)
+		{
+			next = item->next;
+			if (item->info->last_bundle_time + item->info->expiration < current_dtn_time)
+			{
+				char* filename = (char*) malloc(item->info->filename_len + strlen(item->info->full_dir) +1);
+				strcpy(filename, item->info->full_dir);
+				strcat(filename, item->info->filename);
+				if (remove(filename) < 0)
+					perror("Error eliminating expired file:");
+				printf("Eliminated file %s because timer has expired\n", filename);
+				file_transfer_info_list_item_delete(&file_transfer_info_list, item);
+				free(filename);
+			}
+		}
+		pthread_mutex_unlock(&mutexdata);
+		sched_yield();
+	}
+	pthread_exit(NULL);
+}
+
 void print_server_usage(char * progname)
 {
 	fprintf(stderr, "\n");
@@ -821,6 +869,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 	}
 }
 
+
 // Ctrl+C handler
 void server_handler(int sig)
 {
@@ -830,6 +879,25 @@ void server_handler(int sig)
 
 void server_clean_exit(int status)
 {
+	file_transfer_info_list_item_t * item;
+
+	// terminate immediately all child threads
+	pthread_cancel(file_exp_timer);
+
+	// delete all incomplete files
+	for(item = file_transfer_info_list.first; item != NULL; item = item->next)
+	{
+
+		char* filename = (char*) malloc(item->info->filename_len + strlen(item->info->full_dir) +1);
+		strcpy(filename, item->info->full_dir);
+		strcat(filename, item->info->filename);
+		if (remove(filename) < 0)
+			perror("Error eliminating incomplete file:");
+		printf("Eliminated file %s because incomplete\n", filename);
+		file_transfer_info_list_item_delete(&file_transfer_info_list, item);
+		free(filename);
+	}
+
 	if (bp_handle_open)
 		bp_close(handle);
 	printf("DTNperf server: Exit.\n");

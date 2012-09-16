@@ -115,32 +115,36 @@ void file_transfer_info_del(file_transfer_info_list_t * list, bp_endpoint_id_t c
 	item = file_transfer_info_get_list_item(list, client);
 	if (item != NULL)
 	{
-		if (item->next == NULL && item->previous == NULL) // unique element of the list
-		{
-			list->first = NULL;
-			list->last = NULL;
-		}
-		else if (item->next == NULL)  // last element of list
-		{
-			item->previous->next = NULL;
-			list->last = item->previous;
-		}
-		else if (item->previous == NULL) // first element of list
-		{
-			item->next->previous = NULL;
-			list->first = item->next;
-		}
-		else // generic element of list
-		{
-			item->next->previous = item->previous;
-			item->previous->next = item->next;
-		}
-		file_transfer_info_destroy(item->info);
-		free(item);
-		list->count --;
+		file_transfer_info_list_item_delete(list, item);
 	}
 }
 
+void file_transfer_info_list_item_delete(file_transfer_info_list_t * list, file_transfer_info_list_item_t * item)
+{
+	if (item->next == NULL && item->previous == NULL) // unique element of the list
+	{
+		list->first = NULL;
+		list->last = NULL;
+	}
+	else if (item->next == NULL)  // last element of list
+	{
+		item->previous->next = NULL;
+		list->last = item->previous;
+	}
+	else if (item->previous == NULL) // first element of list
+	{
+		item->next->previous = NULL;
+		list->first = item->next;
+	}
+	else // generic element of list
+	{
+		item->next->previous = item->previous;
+		item->previous->next = item->next;
+	}
+	file_transfer_info_destroy(item->info);
+	free(item);
+	list->count --;
+}
 
 
 int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
@@ -281,6 +285,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		return result;
 	if (result == 1) // transfer completed
 	{
+		printf("Successfully transfered file: %s%s\n", info->full_dir, info->filename);
 		// remove info from list
 		file_transfer_info_del(info_list, client_eid);
 		return 1;

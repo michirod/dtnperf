@@ -955,7 +955,6 @@ void * congestion_control(void * opt)
 	else if (perf_opt->congestion_ctrl == 'r') // Rate based congestion control
 	{
 		double interval_secs;
-		struct timespec interval, remaining;
 
 		if (perf_opt->rate_unit == 'b') // rate is bundles per second
 		{
@@ -974,9 +973,6 @@ void * congestion_control(void * opt)
 			interval_secs = (double)perf_opt->bundle_payload * 8 / perf_opt->rate;
 		}
 
-		interval.tv_sec = (long) interval_secs;
-		interval.tv_nsec = (long) ((interval_secs - interval.tv_sec) * 1000 * 1000 * 1000);
-
 		if (debug && debug_level > 0)
 			printf("[debug cong crtl] wait time for each bundle: %.4f sec\n", interval_secs);
 
@@ -988,8 +984,8 @@ void * congestion_control(void * opt)
 			//pthread_yield();
 			sched_yield();
 			if (debug && debug_level > 0)
-					printf("[debug cong crtl] increased window size\n");
-			nanosleep(&interval, &remaining);
+				printf("[debug cong crtl] increased window size\n");
+			pthread_sleep(interval_secs);
 			pthread_mutex_lock(&mutexdata);
 		}
 	}

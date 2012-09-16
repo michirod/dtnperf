@@ -447,3 +447,23 @@ char * get_exe_name(char * full_name)
 	free (buf2);
 	return result;
 }
+
+void pthread_sleep(double sec)
+{
+	pthread_mutex_t fakeMutex = PTHREAD_MUTEX_INITIALIZER;
+	pthread_cond_t fakeCond = PTHREAD_COND_INITIALIZER;
+	struct timespec abs_timespec;
+	struct timeval time_to_wait;
+	struct timeval abs_time;
+
+	gettimeofday(&abs_time,NULL);
+	time_to_wait = set(sec);
+	add_time(&abs_time, time_to_wait);
+
+	abs_timespec.tv_sec = abs_time.tv_sec;
+	abs_timespec.tv_nsec = abs_time.tv_usec*1000;
+
+	pthread_mutex_lock(&fakeMutex);
+	pthread_cond_timedwait(&fakeCond, &fakeMutex, &abs_timespec);
+	pthread_mutex_unlock(&fakeMutex);
+}

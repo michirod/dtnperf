@@ -419,3 +419,12 @@ boolean_t is_congestion_ctrl(bp_bundle_object_t * bundle, char mode)
 		return TRUE;
 	return FALSE;
 }
+
+u32_t get_current_dtn_time()
+{
+	u32_t result;
+	time_t dtn_epoch = (time_t) DTN_EPOCH;
+	time_t current = time(NULL);
+	result = (u32_t) difftime(current, dtn_epoch);
+	return result;
+}

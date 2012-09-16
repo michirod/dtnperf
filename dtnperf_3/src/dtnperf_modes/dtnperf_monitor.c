@@ -18,6 +18,10 @@
  * Global Variables
  */
 
+// pthread variables
+pthread_t session_exp_timer;
+pthread_mutex_t mutexdata;
+
 session_list_t * session_list;
 bp_handle_t handle;
 
@@ -44,6 +48,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	bp_bundle_status_report_t * status_report;
 	bp_endpoint_id_t bundle_source_addr;
 	bp_timestamp_t bundle_creation_timestamp;
+	bp_timeval_t bundle_expiration;
 	bp_endpoint_id_t relative_source_addr;
 	bp_timestamp_t relative_creation_timestamp;
 
@@ -94,7 +99,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	if (system(command) < 0)
 	{
 		perror("Error opening monitor logs dir");
-		exit(-1);
+		monitor_clean_exit(-1);
 	}
 	free(command);
 	if(debug && debug_level > 0)
@@ -115,7 +120,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	{
 		fflush(stdout);
 		fprintf(stderr, "fatal error opening bp handle: %s\n", bp_strerror(error));
-		exit(1);
+		monitor_clean_exit(1);
 	}
 	else
 	{
@@ -146,8 +151,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		fflush(stdout);
 		fprintf(stderr, "error: there is a registration with the same eid.\n");
 		fprintf(stderr, "regid 0x%x\n", (unsigned int) regid);
-		bp_close(handle);
-		exit(1);
+		monitor_clean_exit(1);
 	}
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
@@ -165,12 +169,16 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		fflush(stdout);
 		fprintf(stderr, "error creating registration: %d (%s)\n",
 				error, bp_strerror(bp_errno(handle)));
-		exit(1);
+		monitor_clean_exit(1);
 	}
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
 	if (debug)
 		printf("regid 0x%x\n", (unsigned int) regid);
+
+	// start expiration timer thread
+	pthread_mutex_init (&mutexdata, NULL);
+	pthread_create(&session_exp_timer, NULL, session_expiration_timer, NULL);
 
 	// start infinite loop
 	while(1)
@@ -186,7 +194,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		{
 			fflush(stdout);
 			fprintf(stderr, "fatal error initiating memory for bundles: %s\n", bp_strerror(error));
-			exit(1);
+			monitor_clean_exit(1);
 		}
 		if(debug && debug_level > 0)
 			printf("done\n");
@@ -201,7 +209,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			fflush(stdout);
 			fprintf(stderr, "error getting recv reply: %d (%s)\n",
 					error, bp_strerror(bp_errno(handle)));
-			exit(1);
+			monitor_clean_exit(1);
 		}
 		if ((debug) && (debug_level > 0))
 			printf(" bundle received\n");
@@ -222,7 +230,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			fflush(stdout);
 			fprintf(stderr, "error getting bundle source eid: %s\n",
 					bp_strerror(error));
-			exit(1);
+			monitor_clean_exit(1);
 		}
 		if ((debug) && (debug_level > 0))
 		{
@@ -240,7 +248,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			fflush(stdout);
 			fprintf(stderr, "error getting bundle creation timestamp: %s\n",
 					bp_strerror(error));
-			exit(1);
+			monitor_clean_exit(1);
 		}
 		if ((debug) && (debug_level > 0))
 		{
@@ -248,6 +256,24 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			printf("\tbundle creation timestamp:\n"
 					"\tsecs = %d\n\tseqno= %d\n",
 					(int)bundle_creation_timestamp.secs, (int)bundle_creation_timestamp.seqno);
+			printf("\n");
+		}
+
+		// get bundle EXPIRATION TIME
+		if ((debug) && (debug_level > 0))
+			printf("[debug]\tgetting bundle expiration time...");
+		error = bp_bundle_get_expiration(bundle_object, &bundle_expiration);
+		if (error != BP_SUCCESS)
+		{
+			fflush(stdout);
+			fprintf(stderr, "error getting bundle expiration time: %s\n",
+					bp_strerror(error));
+			monitor_clean_exit(1);
+		}
+		if ((debug) && (debug_level > 0))
+		{
+			printf(" done:\n");
+			printf("\tbundle expiration: %lu\n", bundle_expiration);
 			printf("\n");
 		}
 
@@ -281,6 +307,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		}
 
 		// retrieve or open log file
+		pthread_mutex_lock(&mutexdata);
+
 		if (bundle_type == CLIENT_START)
 		{
 			// mark start time
@@ -296,7 +324,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(filename) + 2);
 			sprintf(full_filename, "%s/%s", perf_opt->logs_dir, filename);
 			file = fopen(full_filename, "w");
-			session = session_create(bundle_source_addr, full_filename, file, start);
+			session = session_create(bundle_source_addr, full_filename, file, start,
+					bundle_creation_timestamp.secs, bundle_expiration);
 			session_put(session_list, session);
 			// write header in csv log file
 			fprintf(file,"RX_TIME;BUNDLE_SOURCE;BUNDLE_TIMESTAMP;BUNDLE_SEQNO;"
@@ -313,6 +342,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				bp_copy_eid(&relative_source_addr, &(status_report->bundle_id.source));
 				relative_creation_timestamp = status_report->bundle_id.creation_ts;
 				session = session_get(session_list, status_report->bundle_id.source);
+				if (status_report->flags & BP_STATUS_DELIVERED)
+					session->delivered_count++;
 			}
 			else if (bundle_type == SERVER_ACK)
 			{
@@ -326,9 +357,15 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				fprintf(stderr, "error: bundle received out of session\n");
 				continue;
 			}
+
+			// update session infos
+			session->last_bundle_time = bundle_creation_timestamp.secs;
+			session->expiration = bundle_expiration;
 			file = session->file;
 			memcpy(&start, session->start, sizeof(struct timeval));
 		}
+
+		pthread_mutex_unlock(&mutexdata);
 
 		// print rx time in csv log
 		csv_print_rx_time(file, current, start);
@@ -382,7 +419,9 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		{
 			fclose(file);
 			fprintf(stdout, "\nDTNperf monitor: saved log file: %s\n", session->full_filename);
+			pthread_mutex_lock(&mutexdata);
 			session_del(session_list, session);
+			pthread_mutex_unlock(&mutexdata);
 
 			// close monitor if dedicated
 			if (parameters->dedicated_monitor)
@@ -399,6 +438,36 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	bp_handle_open = FALSE;
 }
 // end monitor code
+
+// session expiration timer thread
+void * session_expiration_timer(void * opt)
+{
+	u32_t current_dtn_time;
+	session_t * session, * next;
+
+	while(1)
+	{
+		pthread_sleep(10);
+		current_dtn_time = get_current_dtn_time();
+
+		pthread_mutex_lock(&mutexdata);
+
+		for(session = session_list->first; session != NULL; session = next)
+		{
+			next = session->next;
+			if (session->last_bundle_time + session->expiration < current_dtn_time)
+			{
+				if (fclose(session->file) < 0)
+					perror("Error closing expired file:");
+				fprintf(stdout, "\nDTNperf monitor: Session Expired\n\tsaved log file: %s\n", session->full_filename);
+				session_del(session_list, session);
+			}
+		}
+		pthread_mutex_unlock(&mutexdata);
+		sched_yield();
+	}
+	pthread_exit(NULL);
+}
 
 void print_monitor_usage(char * progname)
 {
@@ -550,7 +619,8 @@ void session_list_destroy(session_list_t * list)
 	free(list);
 }
 
-session_t * session_create(bp_endpoint_id_t client_eid, char * full_filename, FILE * file, struct timeval start)
+session_t * session_create(bp_endpoint_id_t client_eid, char * full_filename, FILE * file, struct timeval start,
+		u32_t bundle_timestamp_secs, u32_t bundle_expiration_time)
 {
 	session_t * session;
 	session = (session_t *) malloc(sizeof(session_t));
@@ -559,6 +629,9 @@ session_t * session_create(bp_endpoint_id_t client_eid, char * full_filename, FI
 	session->full_filename = strdup(full_filename);
 	session->file = file;
 	memcpy(session->start, &start, sizeof(struct timeval));
+	session->last_bundle_time = bundle_timestamp_secs;
+	session->expiration = bundle_expiration_time;
+	session->delivered_count = 0;
 	session->next = NULL;
 	session->prev = NULL;
 	return session;
@@ -629,6 +702,9 @@ void session_del(session_list_t * list, session_t * session)
 void monitor_clean_exit(int status)
 {
 	session_t * session;
+
+	// terminate all child thread
+	pthread_cancel(session_exp_timer);
 
 	// close all log files and delete all sessions
 	if (dedicated_monitor)
