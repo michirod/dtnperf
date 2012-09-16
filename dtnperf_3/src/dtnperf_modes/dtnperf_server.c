@@ -640,7 +640,7 @@ void print_server_usage(char * progname)
 {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "DtnPerf3 server mode\n");
-	fprintf(stderr, "SYNTAX: %s --server [options]\n", progname);
+	fprintf(stderr, "SYNTAX: %s %s [options]\n", progname, SERVER_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
 			" -a, --daemon           Start server as daemon. Output is redirected to %s\n"

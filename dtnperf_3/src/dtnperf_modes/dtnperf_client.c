@@ -1058,7 +1058,7 @@ void print_client_usage(char* progname)
 {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "DtnPerf3 client mode\n");
-	fprintf(stderr, "SYNTAX: %s --client -d <dest_eid> <[-T <sec> | -D <num> | -F <filename]> [-w <size> | -r <rate>] [options]\n", progname);
+	fprintf(stderr, "SYNTAX: %s %s -d <dest_eid> <[-T <sec> | -D <num> | -F <filename]> [-w <size> | -r <rate>] [options]\n", progname, CLIENT_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
 			" -d, --destination <eid>     Destination eid (required).\n"

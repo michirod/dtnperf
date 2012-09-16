@@ -404,7 +404,7 @@ void print_monitor_usage(char * progname)
 {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "DtnPerf3 monitor mode\n");
-	fprintf(stderr, "SYNTAX: %s --monitor [options]\n", progname);
+	fprintf(stderr, "SYNTAX: %s %s [options]\n", progname, MONITOR_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
 			" -a, --daemon           Start monitor as daemon. Output is redirected to %s\n"

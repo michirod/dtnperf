@@ -150,9 +150,9 @@ void print_usage(char* progname){
 	fprintf(stderr, "SYNTAX: %s <operative mode> [options]\n", progname);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "operative modes:\n");
-	fprintf(stderr, " --server\n");
-	fprintf(stderr, " --client\n");
-	fprintf(stderr, " --monitor\n");
+	fprintf(stderr, " %s\n", SERVER_STRING);
+	fprintf(stderr, " %s\n", CLIENT_STRING);
+	fprintf(stderr, " %s\n", MONITOR_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "For more options see\n %s <operative mode> --help\n", progname);
 	fprintf(stderr, " %s --help\tPrint this screen.\n", progname);
@@ -172,15 +172,15 @@ void parse_options(int argc, char**argv, dtnperf_global_options_t * global_opt)
 		print_usage(argv[0]);
 		exit(1);
 	}
-	if (strcmp(argv[1], "--server") == 0)
+	if (strcmp(argv[1], SERVER_STRING) == 0)
 	{
 		perf_mode = DTNPERF_SERVER;
 	}
-	else if (strcmp(argv[1], "--client") == 0)
+	else if (strcmp(argv[1], CLIENT_STRING) == 0)
 	{
 		perf_mode = DTNPERF_CLIENT;
 	}
-	else if (strcmp(argv[1], "--monitor") == 0)
+	else if (strcmp(argv[1], MONITOR_STRING) == 0)
 	{
 		perf_mode = DTNPERF_MONITOR;
 	}
