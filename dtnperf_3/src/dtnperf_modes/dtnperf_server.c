@@ -74,6 +74,13 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	// initialize structures for file transfers
 	file_transfer_info_list = file_transfer_info_list_create();
 
+	// set out buffer size if daemon
+	if (perf_opt->daemon)
+	{
+		setlinebuf(stdout);
+		setlinebuf(stderr);
+	}
+
 	// show requested options (debug)
 	if (debug)
 	{
@@ -636,6 +643,9 @@ void print_server_usage(char * progname)
 	fprintf(stderr, "SYNTAX: %s --server [options]\n", progname);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
+			" -a, --daemon           Start server as daemon. Output is redirected to %s\n"
+			" -o, --output <file>    Change output file (only with -d option)\n"
+			" -s, --stop             Stop a demonized instance of server\n"
 			"     --ip-addr <addr>   Ip address of the bp daemon api. Default is 127.0.0.1\n"
 			"     --ip-port <port>   Ip port of the bp daemon api. Default is 5010\n"
 			"     --ddir <dir>       Destination directory of bundles (if not using -M), if dir is not indicated assume %s.\n"
@@ -648,7 +658,7 @@ void print_server_usage(char * progname)
 			"     --no-acks          Do not send acks (for using with dtnperf2)\n"
 			" -v, --verbose          Print some information message during the execution.\n"
 			" -h, --help             This help.\n",
-			BUNDLE_DIR_DEFAULT, FILE_DIR_DEFAULT);
+			SERVER_OUTPUT_FILE, BUNDLE_DIR_DEFAULT, FILE_DIR_DEFAULT);
 	fprintf(stderr, "\n");
 	exit(1);
 }
@@ -656,8 +666,12 @@ void print_server_usage(char * progname)
 void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * perf_g_opt)
 {
 	char c, done = 0;
+	boolean_t output_set = FALSE;
 	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
 	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
+	// kill daemon variables
+	int pid;
+	char cmd[256];
 
 	while (!done)
 	{
@@ -675,11 +689,14 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"no-acks", no_argument, 0, 36},				// server only option
 				{"ip-addr", required_argument, 0, 37},
 				{"ip-port", required_argument, 0, 38},
+				{"daemon", no_argument, 0, 'a'},
+				{"output", required_argument, 0, 'o'},
+				{"stop", no_argument, 0, 's'},
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
 		};
 		int option_index = 0;
-		c = getopt_long(argc, argv, "hvMe:P:", long_options, &option_index);
+		c = getopt_long(argc, argv, "hvMe:P:ao:s", long_options, &option_index);
 
 		switch (c)
 		{
@@ -758,6 +775,31 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			perf_opt->file_dir = strdup(optarg);
 			break;
 
+		case 'a':
+			perf_opt->daemon = TRUE;
+			break;
+
+		case 'o':
+			perf_opt->server_output_file = strdup(optarg);
+			output_set = TRUE;
+			break;
+
+		case 's':
+			memset(cmd, 0, sizeof(cmd));
+			sprintf(cmd, "%s %s", argv[0], SERVER_STRING);
+			pid = find_proc(cmd);
+			if (pid)
+			{
+				printf("Closing dtnperf server pid: %d\n", pid);
+				kill(pid, SIGINT);
+			}
+			else
+			{
+				fprintf(stderr, "ERROR: cannot find a running instance of dtnperf server\n");
+			}
+			exit(0);
+			break;
+
 		case '?':
 			break;
 
@@ -770,6 +812,12 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			print_server_usage(argv[0]);
 			exit(1);
 		}
+	}
+	if (output_set && !perf_opt->daemon)
+	{
+		fprintf(stderr, "\nSYNTAX ERROR: -o option can be used only with -a option\n");   \
+		print_server_usage(argv[0]);                                               \
+		exit(1);
 	}
 }
 

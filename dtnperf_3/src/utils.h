@@ -29,4 +29,6 @@ struct timeval add(double sec);
 boolean_t file_exists(const char * filename);
 
 char * correct_dirname(char * dir);
+int find_proc(char * cmd);
+char * get_exe_name(char * full_name);
 #endif /*UTILS_H_*/

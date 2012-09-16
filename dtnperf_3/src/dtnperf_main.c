@@ -41,6 +41,7 @@ int main(int argc, char ** argv)
 	dtnperf_options_t perf_opt;
 	dtnperf_connection_options_t conn_opt;
 	monitor_parameters_t mon_params;
+	int fd, pid;
 
 	// init options
 	init_dtnperf_global_options(&global_options, &perf_opt, &conn_opt);
@@ -51,7 +52,42 @@ int main(int argc, char ** argv)
 	switch (global_options.mode)
 	{
 	case DTNPERF_SERVER:
-		run_dtnperf_server(&global_options);
+		if (perf_opt.daemon)
+		{
+			if ((fd = open(perf_opt.server_output_file,O_WRONLY | O_CREAT | O_TRUNC, 0755)) > 0)
+			{
+				pid = fork();
+				if (pid == 0)
+				{
+					close(1);
+					close(2);
+					dup(fd);
+					dup(fd);
+					run_dtnperf_server(&global_options);
+					close(1);
+					close(2);
+					close(fd);
+				}
+				else
+				{
+					close(fd);
+					printf("Started dtnperf server in daemon mode.\n");
+					printf("Pid = %d\n", pid);
+					printf("To terminate the daemon use:\n");
+					printf("\t%s %s --stop\n", argv[0], SERVER_STRING);
+					printf("See log at %s\n", perf_opt.server_output_file);
+				}
+			}
+			else
+			{
+				printf("ERROR: failed to open output file %s: %s\n", perf_opt.server_output_file, strerror(errno));
+				exit(1);
+			}
+		}
+		else
+		{
+			run_dtnperf_server(&global_options);
+		}
 		break;
 
 	case DTNPERF_CLIENT_MONITOR:
@@ -63,7 +99,42 @@ int main(int argc, char ** argv)
 		mon_params.client_id = 0;
 		mon_params.dedicated_monitor = FALSE;
 		mon_params.perf_g_opt = &global_options;
-		run_dtnperf_monitor(&mon_params);
+		if (perf_opt.daemon)
+				{
+					if ((fd = open(perf_opt.monitor_output_file,O_WRONLY | O_CREAT | O_TRUNC, 0755)) > 0)
+					{
+						pid = fork();
+						if (pid == 0)
+						{
+							close(1);
+							close(2);
+							dup(fd);
+							dup(fd);
+							run_dtnperf_monitor(&mon_params);
+							close(1);
+							close(2);
+							close(fd);
+						}
+						else
+						{
+							close(fd);
+							printf("Started dtnperf monitor in daemon mode.\n");
+							printf("Pid = %d\n", pid);
+							printf("To terminate the daemon use:\n");
+							printf("\t%s %s --stop\n", argv[0], MONITOR_STRING);
+							printf("See log at %s\n", perf_opt.monitor_output_file);
+						}
+					}
+					else
+					{
+						printf("ERROR: failed to open output file %s: %s\n", perf_opt.monitor_output_file, strerror(errno));
+						exit(1);
+					}
+				}
+				else
+				{
+					run_dtnperf_monitor(&mon_params);
+				}
 		break;
 
 	default:
@@ -174,6 +245,9 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->use_ip = FALSE;
 	opt->ip_addr = "127.0.0.1";
 	opt->ip_port = 5010;
+	opt->daemon = FALSE;
+	opt->server_output_file = SERVER_OUTPUT_FILE;
+	opt->monitor_output_file = MONITOR_OUTPUT_FILE;
 	memset(opt->dest_eid, 0, BP_MAX_ENDPOINT_ID);
 	memset(opt->mon_eid, 0, BP_MAX_ENDPOINT_ID);
 	opt->op_mode = 'D';

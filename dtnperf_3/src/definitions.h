@@ -8,6 +8,15 @@
 #ifndef DEFINITIONS_H_
 #define DEFINITIONS_H_
 
+// dtnperf server mode string
+#define SERVER_STRING "--server"
+
+// dtnperf client mode string
+#define CLIENT_STRING "--client"
+
+// dtnperf monitor mode string
+#define MONITOR_STRING "--monitor"
+
 // dir where are saved incoming bundles
 #define BUNDLE_DIR_DEFAULT "~/dtnperf/bundles/"
 
@@ -19,6 +28,13 @@
 
 // source file for bundle in client with use_file option
 #define SOURCE_FILE "dtnperfbuf.src"
+
+// default client log filename
+#define LOG_FILENAME "~/dtnperf/log"
+
+// output file: stdin and stderr redirect here if daemon is TRUE;
+#define SERVER_OUTPUT_FILE "server_output.txt"
+#define MONITOR_OUTPUT_FILE "monitor_output.txt"
 
 /*
  * FIXED SIZE HEADERS
@@ -51,9 +67,6 @@
 
 // default value (in bytes) for bundle payload
 #define DEFAULT_PAYLOAD 50000
-
-// default client log filename
-#define LOG_FILENAME "~/dtnperf/log"
 
 // server endpoint demux string
 #define SERV_EP_STRING "/dtnperf:/dest"

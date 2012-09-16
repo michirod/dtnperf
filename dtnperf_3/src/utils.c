@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <dirent.h>
 
 
 /* ------------------------------------------
@@ -333,4 +334,116 @@ char * correct_dirname(char * dir)
 		return result;
 	}
 	else return dir;
+}
+
+int find_proc(char * cmd)
+{
+	DIR * proc;
+	struct dirent * item;
+	char cmdline_file[100];
+	char buf[256], cmdline[256];
+	char cmd_exe[256], cmdline_exe[256];
+	char cmd_args[256], cmdline_args[256];
+	char * cmdline_args_ptr;
+	int item_len, i, fd, pid, length;
+	int result = 0;
+	boolean_t found_not_num, found_null;
+
+	// prepare cmd
+	memset(cmd_args, 0, sizeof(cmd_args));
+	memset(cmd_exe, 0, sizeof(cmd_exe));
+	strcpy(cmd_args, strchr(cmd, ' '));
+	strcpy(cmd_exe, get_exe_name(strtok(cmd, " ")));
+	strncat(cmd_exe, cmd_args, strlen(cmd_args));
+
+	proc = opendir("/proc/");
+	while ((item = readdir(proc)) != NULL)
+	{
+		found_not_num = FALSE;
+		item_len = strlen(item->d_name);
+		for(i = 0; i < item_len; i++)
+		{
+			if (item->d_name[i] < '0' || item->d_name[i] > '9')
+			{
+				found_not_num = TRUE;
+				break;
+			}
+		}
+		if (found_not_num)
+			continue;
+
+		memset(cmdline_file, 0, sizeof(cmdline_file));
+		memset(cmdline, 0, sizeof(cmdline));
+		memset(buf, 0, sizeof(buf));
+
+		sprintf(cmdline_file, "/proc/%s/cmdline", item->d_name);
+		fd = open(cmdline_file, O_RDONLY);
+		length = read(fd, buf, sizeof(buf));
+		close(fd);
+
+		found_null = FALSE;
+		if(buf[0] == '\0')
+			continue;
+
+		for(i = 0; i < length; i++)
+		{
+			if(buf[i] == '\0')
+			{
+				if(found_null)
+				{
+					//reached end of cmdline
+					cmdline[i -1] = '\0';
+					break;
+				}
+				else
+				{
+					found_null = TRUE;
+					cmdline[i] = ' ';
+				}
+			}
+			else
+			{
+				found_null = FALSE;
+				cmdline[i] = buf[i];
+			}
+		}
+
+		memset(cmdline_args, 0, sizeof(cmdline_args));
+		memset(cmdline_exe, 0, sizeof(cmdline_exe));
+		cmdline_args_ptr = strchr(cmdline, ' ');
+		strcpy(cmdline_args, cmdline_args_ptr != NULL ? cmdline_args_ptr : "");
+		strcpy(cmdline_exe, get_exe_name(strtok(cmdline, " ")));
+		strncat(cmdline_exe, cmdline_args, sizeof(cmdline_exe) - strlen(cmdline_exe) - 2);
+
+		if (strncmp(cmdline_exe, cmd_exe, strlen(cmd_exe)) == 0)
+		{
+			pid = atoi(item->d_name);
+			if (pid == getpid())
+				continue;
+			else
+			{
+				result = pid;
+				break;
+			}
+		}
+
+	}
+	closedir(proc);
+	return result;
+}
+
+char * get_exe_name(char * full_name)
+{
+	char * buf1 = strdup(full_name);
+	char * buf2;
+	char * result;
+	char * token = strtok(full_name, "/");
+	do
+	{
+		buf2 = strdup(token);
+	} while ((token = strtok(NULL, "/")) != NULL);
+	result = strdup(buf2);
+	free (buf1);
+	free (buf2);
+	return result;
 }

@@ -72,6 +72,12 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	status_report = NULL;
 	session_list = session_list_create();
 
+	// set out buffer size if daemon
+	if (perf_opt->daemon)
+	{
+		setlinebuf(stdout);
+		setlinebuf(stderr);
+	}
 
 	// create dir where dtnperf monitor will save logs
 	// command should be: mkdir -p "logs_dir"
@@ -391,8 +397,6 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	session_list_destroy(session_list);
 	bp_close(handle);
 	bp_handle_open = FALSE;
-	exit(0);
-
 }
 // end monitor code
 
@@ -403,11 +407,16 @@ void print_monitor_usage(char * progname)
 	fprintf(stderr, "SYNTAX: %s --monitor [options]\n", progname);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
+			" -a, --daemon           Start monitor as daemon. Output is redirected to %s\n"
+			" -o, --output <file>    Change output file (only with -d option)\n"
+			" -s, --stop             Stop a demonized instance of monitor\n"
+			"     --ip-addr <addr>   Ip address of the bp daemon api. Default is 127.0.0.1\n"
+			"     --ip-port <port>   Ip port of the bp daemon api. Default is 5010\n"
 			"     --ldir <dir>       Logs directory. Default is %s\n"
 			"     --debug[=level]    Debug messages [0-1], if level is not indicated assume level=0.\n"
 			" -v, --verbose          Print some information message during the execution.\n"
 			" -h, --help             This help.\n",
-			LOGS_DIR_DEFAULT);
+			MONITOR_OUTPUT_FILE, LOGS_DIR_DEFAULT);
 	fprintf(stderr, "\n");
 	exit(1);
 }
@@ -415,7 +424,11 @@ void print_monitor_usage(char * progname)
 void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * perf_g_opt)
 {
 	char c, done = 0;
-		dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
+	boolean_t output_set = FALSE;
+	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
+	// kill daemon variables
+	int pid;
+	char cmd[256];
 
 		while (!done)
 		{
@@ -425,11 +438,16 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 					{"verbose", no_argument, 0, 'v'},
 					{"debug", optional_argument, 0, 33},
 					{"ldir", required_argument, 0, 40},
+					{"ip-addr", required_argument, 0, 37},
+					{"ip-port", required_argument, 0, 38},
+					{"daemon", no_argument, 0, 'a'},
+					{"output", required_argument, 0, 'o'},
+					{"stop", no_argument, 0, 's'},
 					{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
 			};
 			int option_index = 0;
-			c = getopt_long(argc, argv, "hvMe:P:", long_options, &option_index);
+			c = getopt_long(argc, argv, "hvao:s", long_options, &option_index);
 
 			switch (c)
 			{
@@ -458,8 +476,43 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 					perf_opt->debug_level = 2;
 				break;
 
+			case 37:
+				perf_opt->ip_addr = strdup(optarg);
+				perf_opt->use_ip = TRUE;
+				break;
+
+			case 38:
+				perf_opt->ip_port = atoi(optarg);
+				perf_opt->use_ip = TRUE;
+				break;
+
 			case 39:
 				perf_opt->logs_dir = strdup(optarg);
+				break;
+
+			case 'a':
+				perf_opt->daemon = TRUE;
+				break;
+
+			case 'o':
+				perf_opt->monitor_output_file = strdup(optarg);
+				output_set = TRUE;
+				break;
+
+			case 's':
+				memset(cmd, 0, sizeof(cmd));
+				sprintf(cmd, "%s %s", argv[0], MONITOR_STRING);
+				pid = find_proc(cmd);
+				if (pid)
+				{
+					printf("Closing dtnperf monitor pid: %d\n", pid);
+					kill(pid, SIGINT);
+				}
+				else
+				{
+					fprintf(stderr, "ERROR: cannot find a running instance of dtnperf monitor\n");
+				}
+				exit(0);
 				break;
 
 			case '?':
@@ -474,6 +527,12 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 				print_monitor_usage(argv[0]);
 				exit(1);
 			}
+		}
+		if (output_set && !perf_opt->daemon)
+		{
+			fprintf(stderr, "\nSYNTAX ERROR: -o option can be used only with -a option\n");   \
+			print_monitor_usage(argv[0]);                                               \
+			exit(1);
 		}
 }
 
