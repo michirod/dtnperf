@@ -103,16 +103,18 @@ char find_rate_unit(const char *inarg)
 /* ------------------------------------------
  * add_time
  * ------------------------------------------ */
-void add_time(struct timeval *tot_time, struct timeval part_time)
+struct timeval add_time(struct timeval * time_1, struct timeval * time_2)
 {
-    tot_time->tv_sec += part_time.tv_sec;
-    tot_time->tv_usec += part_time.tv_sec;
+	struct timeval result;
+    result.tv_sec = time_1->tv_sec + time_2->tv_sec;
+    result.tv_usec = time_1->tv_usec + time_2->tv_usec;
 
-    if (tot_time->tv_usec >= 1000000)
+    if (result.tv_usec >= 1000000)
     {
-        tot_time->tv_sec++;
-        tot_time->tv_usec -= 1000000;
+        result.tv_sec++;
+        result.tv_usec -= 1000000;
     }
+    return result;
 
 } // end add_time
 
@@ -453,12 +455,12 @@ void pthread_sleep(double sec)
 	pthread_mutex_t fakeMutex = PTHREAD_MUTEX_INITIALIZER;
 	pthread_cond_t fakeCond = PTHREAD_COND_INITIALIZER;
 	struct timespec abs_timespec;
-	struct timeval time_to_wait;
+	struct timeval current, time_to_wait;
 	struct timeval abs_time;
 
-	gettimeofday(&abs_time,NULL);
+	gettimeofday(&current,NULL);
 	time_to_wait = set(sec);
-	add_time(&abs_time, time_to_wait);
+	abs_time = add_time(&current, &time_to_wait);
 
 	abs_timespec.tv_sec = abs_time.tv_sec;
 	abs_timespec.tv_nsec = abs_time.tv_usec*1000;
