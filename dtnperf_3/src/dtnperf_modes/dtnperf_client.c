@@ -988,7 +988,7 @@ void * congestion_control(void * opt)
 			interval_secs = (double)perf_opt->bundle_payload * 8 / perf_opt->rate;
 		}
 
-		if (debug && debug_level > 0)
+		if (debug)
 			printf("[debug cong crtl] wait time for each bundle: %.4f sec\n", interval_secs);
 
 		pthread_mutex_lock(&mutexdata);
