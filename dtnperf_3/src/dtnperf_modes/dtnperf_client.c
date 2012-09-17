@@ -1080,9 +1080,11 @@ void print_client_usage(char* progname)
 			" -w, --window <size>         Size of transmission window, i.e. max number of bundles \"in flight\" (not still ACKed by a server ack); default =1.\n"
 			" -r, --rate <rate[k|M|b]>    Bitrate of transmission. k = kbit/s, M = Mbit/s, b = bundles/s. Default is kb/s\n"
 			" -C, --custody               Enable both custody transfer and \"custody accepted\" status reports.\n"
+			" -f, --forwarded             Enable request for bundle status forwarded report\n"
+			" -R, --received              Enable request for bundle status received report\n"
+			" -u, --nofragment            Disable bundle fragmentation.\n"
 			" -i, --exitinterval <sec>    Additional interval before exit.\n"
 			" -p, --payload <size[B|k|M]> Size of bundle payloads; B = Bytes, k = kBytes, M = MBytes. Default= 'k' (kB).\n"
-			" -u, --nofragment            Disable bundle fragmentation.\n"
 			" -M, --memory                Store the bundle into memory instead of file (if payload < 50KB).\n"
 			" -L, --log[=log_filename]    Create a log file. Default log filename is %s\n"
 			"     --ip-addr <addr>        Ip address of the bp daemon api. Default is 127.0.0.1\n"
@@ -1125,6 +1127,8 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"debug", optional_argument, 0, 33}, 				// 33 because D is for data mode
 				{"priority", required_argument, 0, 'P'},
 				{"nofragment", no_argument, 0, 'u'},
+				{"received", no_argument, 0, 'R'},
+				{"forwarded", no_argument, 0, 'f'},
 				{"log", optional_argument, 0, 'L'},				// create log file
 				{"ip-addr", required_argument, 0, 37},
 				{"ip-port", required_argument, 0, 38},
@@ -1133,7 +1137,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		};
 
 		int option_index = 0;
-		c = getopt_long(argc, argv, "hvMCw:d:m:i:T:D:F:p:e:r:P:L::", long_options, &option_index);
+		c = getopt_long(argc, argv, "hvMCw:d:m:i:T:D:F:p:e:r:P:uRfL::", long_options, &option_index);
 
 		switch (c)
 		{
@@ -1263,6 +1267,14 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 
 		case 'u':
 			conn_opt->disable_fragmentation = TRUE;
+			break;
+
+		case 'f':
+			conn_opt->forwarding_receipts = TRUE;
+			break;
+
+		case 'R':
+			conn_opt->receive_receipts = TRUE;
 			break;
 
 		case 'L':

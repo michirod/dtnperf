@@ -33,10 +33,11 @@ typedef struct session
 	char * full_filename;
 	FILE * file;
 	struct timeval * start;
-	u32_t last_bundle_time;
+	u32_t last_bundle_time; // secs of bp creation timestamp
 	u32_t expiration;
 	int delivered_count;
 	int total_to_receive;
+	struct timeval * stop_arrival_time;
 	u32_t wait_after_stop;
 	struct session * next;
 	struct session * prev;

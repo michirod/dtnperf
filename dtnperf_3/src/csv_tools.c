@@ -35,12 +35,15 @@ void csv_print_status_report_timestamps_header(FILE * file)
 {
 	char buf[300];
 	memset(buf, 0, 300);
-	strcat(buf, "STATUS_RECEIVED_TIMESTAMP;SEQNO;");
+	strcat(buf, "STATUS_DELIVERED_TIMESTAMP;SEQNO;");
 	strcat(buf, "STATUS_CUSTODY_ACCEPTED_TIMESTAMP;SEQNO;");
+	strcat(buf, "STATUS_RECEIVED_TIMESTAMP;SEQNO;");
 	strcat(buf, "STATUS_FORWARDED_TIMESTAMP;SEQNO;");
 	strcat(buf, "STATUS_DELETED_TIMESTAMP;SEQNO;");
-	strcat(buf, "STATUS_DELIVERED_TIMESTAMP;SEQNO;");
-	strcat(buf, "STATUS_ACKED_BY_APP_TIMESTAMP;SEQNO;");
+
+	// not useful for now
+	// strcat(buf, "STATUS_ACKED_BY_APP_TIMESTAMP;SEQNO;");
+
 	fwrite(buf, strlen(buf), 1, file);
 }
 void csv_print_status_report_timestamps(FILE * file, bp_bundle_status_report_t status_report)
@@ -48,14 +51,21 @@ void csv_print_status_report_timestamps(FILE * file, bp_bundle_status_report_t s
 	char buf1[256];
 	char buf2[50];
 	memset(buf1, 0, 256);
-	if (status_report.flags & BP_STATUS_RECEIVED)
-		sprintf(buf2, "%lu;%lu;", status_report.receipt_ts.secs, status_report.receipt_ts.seqno);
+
+	if (status_report.flags & BP_STATUS_DELIVERED)
+		sprintf(buf2, "%lu;%lu;", status_report.delivery_ts.secs, status_report.delivery_ts.seqno);
 	else
 		sprintf(buf2, " ; ;");
 	strcat(buf1, buf2);
 
 	if (status_report.flags & BP_STATUS_CUSTODY_ACCEPTED)
 		sprintf(buf2, "%lu;%lu;", status_report.custody_ts.secs, status_report.custody_ts.seqno);
+	else
+		sprintf(buf2, " ; ;");
+	strcat(buf1, buf2);
+
+	if (status_report.flags & BP_STATUS_RECEIVED)
+		sprintf(buf2, "%lu;%lu;", status_report.receipt_ts.secs, status_report.receipt_ts.seqno);
 	else
 		sprintf(buf2, " ; ;");
 	strcat(buf1, buf2);
@@ -72,17 +82,14 @@ void csv_print_status_report_timestamps(FILE * file, bp_bundle_status_report_t s
 		sprintf(buf2, " ; ;");
 	strcat(buf1, buf2);
 
-	if (status_report.flags & BP_STATUS_DELIVERED)
-		sprintf(buf2, "%lu;%lu;", status_report.delivery_ts.secs, status_report.delivery_ts.seqno);
-	else
-		sprintf(buf2, " ; ;");
-	strcat(buf1, buf2);
-
+	// not useful for now
+	/*
 	if (status_report.flags & BP_STATUS_ACKED_BY_APP)
 		sprintf(buf2, "%lu;%lu;", status_report.ack_by_app_ts.secs, status_report.ack_by_app_ts.seqno);
 	else
 		sprintf(buf2, " ; ;");
 	strcat(buf1, buf2);
+	*/
 
 	fwrite(buf1, strlen(buf1), 1, file);
 }

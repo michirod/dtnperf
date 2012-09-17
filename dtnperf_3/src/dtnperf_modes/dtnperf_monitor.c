@@ -422,6 +422,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			get_info_from_stop(&bundle_object, &total_to_receive);
 			pthread_mutex_lock(&mutexdata);
 			session->total_to_receive = total_to_receive;
+			session->wait_after_stop = bundle_expiration;
+			gettimeofday(session->stop_arrival_time, NULL);
 			pthread_mutex_unlock(&mutexdata);
 		}
 
@@ -438,12 +440,14 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 void * session_expiration_timer(void * opt)
 {
 	u32_t current_dtn_time;
+	struct timeval current_time;
 	session_t * session, * next;
 
 	while(1)
 	{
 		pthread_sleep(5);
 		current_dtn_time = get_current_dtn_time();
+		gettimeofday(&current_time, NULL);
 
 		pthread_mutex_lock(&mutexdata);
 
@@ -461,27 +465,47 @@ void * session_expiration_timer(void * opt)
 				}
 				else
 				{
-					fclose(session->file);
 					fprintf(stdout, "\nDTNperf monitor: saved log file: %s\n", session->full_filename);
+					fclose(session->file);
 					session_del(session_list, session);
 				}
 			}
 
 			// stop bundle arrived but not all the status reports have arrived and the timer has expired
-			else if (session->total_to_receive > 0 &&session->last_bundle_time + session->wait_after_stop < current_dtn_time)
+			else if (session->total_to_receive > 0 &&session->stop_arrival_time->tv_sec + session->wait_after_stop < current_time.tv_sec)
 			{
-				if (fclose(session->file) < 0)
-					perror("Error closing expired file:");
-				fprintf(stdout, "\nDTNperf monitor: Session Expired: Bundle stop arrived, but not all the status reports did\n\tsaved log file: %s\n", session->full_filename);
-				session_del(session_list, session);
+				fprintf(stdout, "\nDTNperf monitor: Session Expired: Bundle stop arrived, but not all the status reports did\n");
+
+				// close monitor if dedicated
+				if (dedicated_monitor)
+				{
+					kill(getpid(), SIGUSR2);
+				}
+				else
+				{
+					fprintf(stdout, "\tsaved log file: %s\n", session->full_filename);
+					if (fclose(session->file) < 0)
+						perror("Error closing expired file:");
+					session_del(session_list, session);
+				}
 			}
 			// stop bundle is not yet arrived and the last bundle has expired
 			else if (session->last_bundle_time + session->expiration < current_dtn_time)
 			{
-				if (fclose(session->file) < 0)
-					perror("Error closing expired file:");
-				fprintf(stdout, "\nDTNperf monitor: Session Expired: Bundle stop did not arrive\n\tsaved log file: %s\n", session->full_filename);
-				session_del(session_list, session);
+				fprintf(stdout, "\nDTNperf monitor: Session Expired: Bundle stop did not arrive\n");
+
+				// close monitor if dedicated
+				if (dedicated_monitor)
+				{
+					kill(getpid(), SIGUSR2);
+				}
+				else
+				{
+					fprintf(stdout,"\tsaved log file: %s\n", session->full_filename);
+					if (fclose(session->file) < 0)
+						perror("Error closing expired file:");
+					session_del(session_list, session);
+				}
 			}
 		}
 		pthread_mutex_unlock(&mutexdata);
@@ -693,6 +717,7 @@ session_t * session_create(bp_endpoint_id_t client_eid, char * full_filename, FI
 	session_t * session;
 	session = (session_t *) malloc(sizeof(session_t));
 	session->start = (struct timeval *) malloc(sizeof(struct timeval));
+	session->stop_arrival_time = (struct timeval *) malloc(sizeof(struct timeval));
 	bp_copy_eid(&(session->client_eid), &client_eid);
 	session->full_filename = strdup(full_filename);
 	session->file = file;
@@ -701,13 +726,16 @@ session_t * session_create(bp_endpoint_id_t client_eid, char * full_filename, FI
 	session->expiration = bundle_expiration_time;
 	session->delivered_count = 0;
 	session->total_to_receive = 0;
-	session->wait_after_stop = bundle_expiration_time / 2;
+	session->wait_after_stop = 0;
 	session->next = NULL;
 	session->prev = NULL;
 	return session;
 }
 void session_destroy(session_t * session)
 {
+	free(session->start);
+	free(session->stop_arrival_time);
+	free(session->full_filename);
 	free(session);
 }
 
