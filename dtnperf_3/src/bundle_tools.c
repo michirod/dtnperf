@@ -412,9 +412,9 @@ bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_endpoint_id_t * report
 		{
 			memcpy(&timestamp_secs, buf, sizeof(uint32_t));
 			memcpy(&timestamp_seqno, buf, sizeof(uint32_t));
+			reported_timestamp->secs = timestamp_secs;
+			reported_timestamp->seqno = timestamp_seqno;
 		}
-		reported_timestamp->secs = timestamp_secs;
-		reported_timestamp->seqno = timestamp_seqno;
 		return BP_SUCCESS;
 
 	}
