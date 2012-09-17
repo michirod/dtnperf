@@ -1446,7 +1446,21 @@ void client_handler(int sig)
 
 void client_clean_exit(int status)
 {
-	// terminate immediately all child threads
+	printf("Dtnperf client: exit\n");
+	if (perf_opt->create_log)
+		printf("\nClient log saved: %s\n", perf_opt->log_filename);
+	if (log_open)
+		fclose(log_file);
+	if(source_file_created)
+	{
+		remove(source_file);
+		if (perf_opt->debug && perf_opt->debug > 1)
+		{
+			printf("[debug] removed file %s\n", source_file);
+		}
+	}
+
+	// terminate all child threads
 	pthread_cancel(sender);
 	pthread_cancel(cong_ctrl);
 
@@ -1458,28 +1472,14 @@ void client_clean_exit(int status)
 		pthread_kill(monitor, SIGUSR1);
 #endif
 
-	if (perf_opt->create_log)
-		printf("\nClient log saved: %s\n", perf_opt->log_filename);
 	if (bp_handle_open)
 		bp_close(handle);
-	if (log_open)
-		fclose(log_file);
-	if(source_file_created)
-	{
-		remove(source_file);
-		if (perf_opt->debug && perf_opt->debug > 1)
-		{
-			printf("[debug] removed file %s\n", source_file);
-		}
-	}
 	// wait for monitor to terminate
 #if DEDICATED_MONITOR_CREATION == 1
 	wait(&monitor_status);
 #else
 	pthread_join(monitor, (void**)&monitor_status);
 #endif
-
-	printf("Dtnperf client: exit\n");
 	exit(status);
 }
 

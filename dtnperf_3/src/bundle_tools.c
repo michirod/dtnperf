@@ -370,10 +370,15 @@ bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** 
 	FILE * buf_stream;
 	char * buf;
 	size_t buf_size;
+	uint32_t timestamp_secs;
+	uint32_t timestamp_seqno;
 	buf_stream = open_memstream(& buf, &buf_size);
 	fwrite(ack.header, 1, HEADER_SIZE, buf_stream);
 	fwrite(&(ack.bundle_source), 1, sizeof(ack.bundle_source), buf_stream);
-	fwrite(&(ack.bundle_creation_ts), 1, sizeof(ack.bundle_creation_ts), buf_stream);
+	timestamp_secs = (uint32_t) ack.bundle_creation_ts.secs;
+	timestamp_seqno = (uint32_t) ack.bundle_creation_ts.seqno;
+	fwrite(&timestamp_secs, 1, sizeof(uint32_t), buf_stream);
+	fwrite(&timestamp_seqno, 1, sizeof(uint32_t), buf_stream);
 	fclose(buf_stream);
 	*payload = (char*)malloc(buf_size);
 	memcpy(*payload, buf, buf_size);
@@ -388,6 +393,7 @@ bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_endpoint_id_t * report
 	u32_t buf_len;
 	bp_error_t error;
 	bp_endpoint_id_t ack_dest;
+	uint32_t timestamp_secs, timestamp_seqno;
 	error = bp_bundle_get_dest(*ack, &ack_dest);
 	bp_bundle_get_payload_size(*ack, &buf_len);
 	buf = malloc(buf_len);
@@ -403,7 +409,12 @@ bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_endpoint_id_t * report
 			memcpy(&reported_eid, buf, sizeof(bp_endpoint_id_t));
 		buf += sizeof(bp_endpoint_id_t);
 		if (reported_timestamp != NULL)
-			memcpy(reported_timestamp, buf, sizeof(bp_timestamp_t));
+		{
+			memcpy(&timestamp_secs, buf, sizeof(uint32_t));
+			memcpy(&timestamp_seqno, buf, sizeof(uint32_t));
+		}
+		reported_timestamp->secs = timestamp_secs;
+		reported_timestamp->seqno = timestamp_seqno;
 		return BP_SUCCESS;
 
 	}
