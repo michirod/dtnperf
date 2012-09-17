@@ -108,6 +108,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	// signal handlers
 	signal(SIGINT, monitor_handler);
 	signal(SIGUSR1, monitor_handler);
+	signal(SIGUSR2, monitor_handler);
 
 	//open the connection to the bundle protocol router
 	if(debug && debug_level > 0)
@@ -456,7 +457,7 @@ void * session_expiration_timer(void * opt)
 				// close monitor if dedicated
 				if (dedicated_monitor)
 				{
-					monitor_clean_exit(0);
+					kill(getpid(), SIGUSR2);
 				}
 				else
 				{
@@ -487,6 +488,46 @@ void * session_expiration_timer(void * opt)
 		sched_yield();
 	}
 	pthread_exit(NULL);
+}
+
+void monitor_clean_exit(int status)
+{
+	session_t * session;
+
+	// terminate all child thread
+	pthread_cancel(session_exp_timer);
+
+	// close all log files and delete all sessions
+	if (dedicated_monitor)
+	{
+		session = session_list->first;
+		fclose(session->file);
+		fprintf(stdout, "\nDTNperf monitor: saved log file: %s\n", session->full_filename);
+		session_del(session_list, session);
+	}
+	else
+	{
+		for (session = session_list->first; session != NULL; session = session->next)
+		{
+			fclose(session->file);
+			fprintf(stdout, "\nDTNperf monitor: saved log file: %s\n", session->full_filename);
+			if (session->prev != NULL)
+				session_destroy(session->prev);
+			if (session->next == NULL)
+			{
+				session_destroy(session);
+				break;
+			}
+		}
+	}
+
+	session_list_destroy(session_list);
+
+	// close bp_handle
+	if (bp_handle_open)
+		bp_close(handle);
+	printf("Dtnperf Monitor: exit.\n");
+	exit(status);
 }
 
 // waiting thread
@@ -728,45 +769,6 @@ void session_del(session_list_t * list, session_t * session)
 
 }
 
-void monitor_clean_exit(int status)
-{
-	session_t * session;
-
-	// terminate all child thread
-	pthread_cancel(session_exp_timer);
-
-	// close all log files and delete all sessions
-	if (dedicated_monitor)
-	{
-		session = session_list->first;
-		fclose(session->file);
-		fprintf(stdout, "\nDTNperf monitor: saved log file: %s\n", session->full_filename);
-		session_del(session_list, session);
-	}
-	else
-	{
-		for (session = session_list->first; session != NULL; session = session->next)
-		{
-			fclose(session->file);
-			if (session->prev != NULL)
-				session_destroy(session->prev);
-			if (session->next == NULL)
-			{
-				session_destroy(session);
-				break;
-			}
-		}
-	}
-
-	session_list_destroy(session_list);
-
-	// close bp_handle
-	if (bp_handle_open)
-		bp_close(handle);
-	printf("Dtnperf Monitor: exit.\n");
-	exit(status);
-}
-
 void monitor_handler(int signo)
 {
 	if (dedicated_monitor)
@@ -774,6 +776,10 @@ void monitor_handler(int signo)
 		if (signo == SIGUSR1)
 		{
 			printf("\nDtnperf monitor: received signal from client. Exiting\n");
+			monitor_clean_exit(0);
+		}
+		else if (signo == SIGUSR2)
+		{
 			monitor_clean_exit(0);
 		}
 	}
