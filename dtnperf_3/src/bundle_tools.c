@@ -411,9 +411,10 @@ bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_endpoint_id_t * report
 		if (reported_timestamp != NULL)
 		{
 			memcpy(&timestamp_secs, buf, sizeof(uint32_t));
+			buf += sizeof(uint32_t);
 			memcpy(&timestamp_seqno, buf, sizeof(uint32_t));
-			reported_timestamp->secs = timestamp_secs;
-			reported_timestamp->seqno = timestamp_seqno;
+			reported_timestamp->secs = (u32_t) timestamp_secs;
+			reported_timestamp->seqno = (u32_t) timestamp_seqno;
 		}
 		return BP_SUCCESS;
 
