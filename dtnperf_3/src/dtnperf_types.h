@@ -89,7 +89,6 @@ typedef struct dtnperf_global_options
 
 typedef struct dtnperf_server_ack_payload
 {
-	char header[HEADER_SIZE];
 	bp_endpoint_id_t bundle_source;
 	bp_timestamp_t bundle_creation_ts;
 } dtnperf_server_ack_payload_t;

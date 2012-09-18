@@ -54,7 +54,7 @@ int main(int argc, char ** argv)
 	case DTNPERF_SERVER:
 		if (perf_opt.daemon)
 		{
-			if ((fd = open(perf_opt.server_output_file,O_WRONLY | O_CREAT | O_TRUNC, 0755)) > 0)
+			if ((fd = open(perf_opt.server_output_file,O_WRONLY | O_CREAT | O_TRUNC, 0644)) > 0)
 			{
 				pid = fork();
 				if (pid == 0)
@@ -101,7 +101,7 @@ int main(int argc, char ** argv)
 		mon_params.perf_g_opt = &global_options;
 		if (perf_opt.daemon)
 				{
-					if ((fd = open(perf_opt.monitor_output_file,O_WRONLY | O_CREAT | O_TRUNC, 0755)) > 0)
+					if ((fd = open(perf_opt.monitor_output_file,O_WRONLY | O_CREAT | O_TRUNC, 0644)) > 0)
 					{
 						pid = fork();
 						if (pid == 0)

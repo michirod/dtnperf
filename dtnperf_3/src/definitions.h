@@ -8,6 +8,8 @@
 #ifndef DEFINITIONS_H_
 #define DEFINITIONS_H_
 
+#include <stdint.h>
+
 // dtnperf server mode string
 #define SERVER_STRING "--server"
 
@@ -39,25 +41,29 @@
 /*
  * FIXED SIZE HEADERS
  */
+// header type
+#define HEADER_TYPE uint32_t
+
 // header size
-#define HEADER_SIZE 20
-// header of dtnperf server bundle ack (HEADER_SIZE chars)
-#define DSA_HEADER "DTNPERF3_SERVER_ACK_"
+#define HEADER_SIZE sizeof(HEADER_TYPE)
 
-// header of bundles sent in time mode (HEADER_SIZE chars)
-#define TIME_HEADER "DTNPERF3_TIME_MODE__"
+// header of bundles sent in time mode
+#define TIME_HEADER 0x1
 
-// header of bundles sent in data mode (HEADER_SIZE chars)
-#define DATA_HEADER "DTNPERF3_DATA_MODE__"
+// header of bundles sent in data mode
+#define DATA_HEADER 0x2
 
-// header of bundles sent in file mode (HEADER_SIZE chars)
-#define FILE_HEADER "DTNPERF3_FILE_MODE__"
+// header of bundles sent in file mode
+#define FILE_HEADER 0x4
 
-// header of start bundle sent by client to monitor (HEADER_SIZE chars)
-#define START_HEADER "DTNPERF3_MON_START__"
+// header of dtnperf server bundle ack
+#define DSA_HEADER 0x8
 
-// header of stop bundle sent by client to monitor (HEADER_SIZE chars)
-#define STOP_HEADER "DTNPERF3_MON_STOP___"
+// header of start bundle sent by client to monitor
+#define START_HEADER 0x10
+
+// header of stop bundle sent by client to monitor
+#define STOP_HEADER 0x20
 
 // max payload (in bytes) if bundles are stored into memory
 #define MAX_MEM_PAYLOAD 50000

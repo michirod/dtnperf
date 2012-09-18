@@ -252,23 +252,23 @@ bp_error_t prepare_payload_header(dtnperf_options_t *opt, FILE * f)
 	if (f == NULL)
 		return BP_ENULLPNTR;
 
-	char header[HEADER_SIZE];
+	HEADER_TYPE header;
 	char congestion_control = opt->congestion_ctrl;
 	switch(opt->op_mode)
 	{
 	case 'T':
-		strncpy(header, TIME_HEADER, HEADER_SIZE);
+		header = TIME_HEADER;
 		break;
 	case 'D':
-		strncpy(header, DATA_HEADER, HEADER_SIZE);
+		header = DATA_HEADER;
 		break;
 	case 'F':
-		strncpy(header, FILE_HEADER, HEADER_SIZE);
+		header = FILE_HEADER;
 		break;
 	default:
 		return BP_EINVAL;
 	}
-	fwrite(header, HEADER_SIZE, 1, f);
+	fwrite(&header, HEADER_SIZE, 1, f);
 	fwrite(&congestion_control, 1, 1, f);
 
 	return BP_SUCCESS;
@@ -304,12 +304,12 @@ bp_error_t prepare_start_bundle(bp_bundle_object_t * start, bp_endpoint_id_t mon
 		bp_timeval_t expiration, bp_bundle_priority_t priority)
 {
 	FILE * start_stream;
-	char * start_header = START_HEADER;
+	HEADER_TYPE start_header = START_HEADER;
 	bp_endpoint_id_t none;
 	bp_bundle_delivery_opts_t opts = BP_DOPTS_NONE;
 	bp_bundle_set_payload_location(start, BP_PAYLOAD_MEM);
 	open_payload_stream_write(*start, &start_stream);
-	fwrite(start_header, HEADER_SIZE, 1, start_stream);
+	fwrite(&start_header, HEADER_SIZE, 1, start_stream);
 	close_payload_stream_write(start, start_stream);
 	bp_bundle_set_dest(start, monitor);
 	bp_get_none_endpoint(&none);
@@ -325,13 +325,13 @@ bp_error_t prepare_stop_bundle(bp_bundle_object_t * stop, bp_endpoint_id_t monit
 		bp_timeval_t expiration, bp_bundle_priority_t priority, int sent_bundles)
 {
 	FILE * stop_stream;
-	char * stop_header = STOP_HEADER;
+	HEADER_TYPE stop_header = STOP_HEADER;
 	bp_endpoint_id_t none;
-	int buf;
+	uint32_t buf;
 	bp_bundle_delivery_opts_t opts = BP_DOPTS_NONE;
 	bp_bundle_set_payload_location(stop, BP_PAYLOAD_MEM);
 	open_payload_stream_write(*stop, &stop_stream);
-	fwrite(stop_header, HEADER_SIZE, 1, stop_stream);
+	fwrite(&stop_header, HEADER_SIZE, 1, stop_stream);
 	buf = htonl(sent_bundles);
 	fwrite(&buf, sizeof(buf), 1, stop_stream);
 	close_payload_stream_write(stop, stop_stream);
@@ -348,7 +348,7 @@ bp_error_t prepare_stop_bundle(bp_bundle_object_t * stop, bp_endpoint_id_t monit
 bp_error_t get_info_from_stop(bp_bundle_object_t * stop, int * sent_bundles)
 {
 	FILE * stop_stream;
-	int buf;
+	uint32_t buf;
 	open_payload_stream_read(*stop, &stop_stream);
 
 	// skip header
@@ -357,7 +357,7 @@ bp_error_t get_info_from_stop(bp_bundle_object_t * stop, int * sent_bundles)
 	// read sent bundles num
 	fread(&buf, sizeof(buf), 1, stop_stream);
 
-	* sent_bundles = ntohl(buf);
+	* sent_bundles = (int) ntohl(buf);
 
 	close_payload_stream_read(stop_stream);
 	return BP_SUCCESS;
@@ -370,10 +370,11 @@ bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** 
 	FILE * buf_stream;
 	char * buf;
 	size_t buf_size;
+	HEADER_TYPE header = DSA_HEADER;
 	uint32_t timestamp_secs;
 	uint32_t timestamp_seqno;
 	buf_stream = open_memstream(& buf, &buf_size);
-	fwrite(ack.header, 1, HEADER_SIZE, buf_stream);
+	fwrite(&header, 1, HEADER_SIZE, buf_stream);
 	fwrite(&(ack.bundle_source), 1, sizeof(ack.bundle_source), buf_stream);
 	timestamp_secs = (uint32_t) ack.bundle_creation_ts.secs;
 	timestamp_seqno = (uint32_t) ack.bundle_creation_ts.seqno;
@@ -389,51 +390,47 @@ bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** 
 
 bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_endpoint_id_t * reported_eid, bp_timestamp_t * reported_timestamp)
 {
-	char* buf;
-	u32_t buf_len;
 	bp_error_t error;
-	bp_endpoint_id_t ack_dest;
+	HEADER_TYPE header;
+	FILE * pl_stream;
 	uint32_t timestamp_secs, timestamp_seqno;
-	error = bp_bundle_get_dest(*ack, &ack_dest);
-	bp_bundle_get_payload_size(*ack, &buf_len);
-	buf = malloc(buf_len);
-	if (error < 0)
-		return error;
-	error = bp_bundle_get_payload_mem(*ack, &buf, &buf_len);
-	if (error != BP_SUCCESS)
-		return error;
-	if (strncmp(DSA_HEADER, buf, HEADER_SIZE) == 0)
+	open_payload_stream_read(*ack, &pl_stream);
+	fread(&header, HEADER_SIZE, 1, pl_stream);
+	if (header == DSA_HEADER)
 	{
-		buf += HEADER_SIZE;
 		if (reported_eid != NULL)
-			memcpy(&reported_eid, buf, sizeof(bp_endpoint_id_t));
-		buf += sizeof(bp_endpoint_id_t);
+			fread(reported_eid, sizeof(bp_endpoint_id_t), 1, pl_stream);
+		else
+			fseek(pl_stream, sizeof(bp_endpoint_id_t), SEEK_CUR);
+
 		if (reported_timestamp != NULL)
 		{
-			memcpy(&timestamp_secs, buf, sizeof(uint32_t));
-			buf += sizeof(uint32_t);
-			memcpy(&timestamp_seqno, buf, sizeof(uint32_t));
+			fread(&timestamp_secs, sizeof(uint32_t), 1, pl_stream);
+			fread(&timestamp_seqno, sizeof(uint32_t), 1, pl_stream);
 			reported_timestamp->secs = (u32_t) timestamp_secs;
 			reported_timestamp->seqno = (u32_t) timestamp_seqno;
 		}
-		return BP_SUCCESS;
-
+		error = BP_SUCCESS;
 	}
-	return BP_ERRBASE;
+	else
+		error = BP_ERRBASE;
+
+	close_payload_stream_read(pl_stream);
+	return error;
 }
 
-boolean_t is_header(bp_bundle_object_t * bundle, const char * header_string)
+boolean_t is_header(bp_bundle_object_t * bundle, HEADER_TYPE header_id)
 {
 	if (bundle == NULL)
 		return FALSE;
 	FILE * pl_stream = NULL;
 	open_payload_stream_read(*bundle, &pl_stream);
-	char header[HEADER_SIZE];
+	HEADER_TYPE header;
 
-	fread(header, HEADER_SIZE, 1, pl_stream);
+	fread(&header, HEADER_SIZE, 1, pl_stream);
 	fclose(pl_stream);
 
-	if (strncmp(header, header_string, HEADER_SIZE) == 0)
+	if (header == header_id)
 		return TRUE;
 	return FALSE;
 }
@@ -443,13 +440,17 @@ boolean_t is_congestion_ctrl(bp_bundle_object_t * bundle, char mode)
 	if (bundle == NULL)
 		return FALSE;
 	FILE * pl_stream = NULL;
+	char c;
 	open_payload_stream_read(*bundle, &pl_stream);
-	char header[HEADER_SIZE + 1];
 
-	fread(header, HEADER_SIZE + 1, 1, pl_stream);
+	// skip header
+	fseek(pl_stream, HEADER_SIZE, SEEK_CUR);
+
+	// read congestion control char
+	fread(&c, 1, 1, pl_stream);
 	fclose(pl_stream);
 
-	if (header[HEADER_SIZE] == mode)
+	if (c == mode)
 		return TRUE;
 	return FALSE;
 }

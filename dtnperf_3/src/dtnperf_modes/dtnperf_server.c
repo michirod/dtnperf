@@ -480,7 +480,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 
 			// initiate server ack payload
-			strncpy(server_ack_payload.header, DSA_HEADER, HEADER_SIZE);
 			// set server ack payload source
 			server_ack_payload.bundle_source = bundle_source_addr;
 			// set server ack payload timestamp
