@@ -80,11 +80,6 @@
 // generic payload pattern
 #define PL_PATTERN "0123456789"
 
-// define how dedicated monitor is started by the client
-// 0 = start as a new thread
-// 1 = start as a new process
-#define DEDICATED_MONITOR_CREATION 1
-
 // unix time of 1/1/2000
 #define DTN_EPOCH 946684800
 

@@ -35,11 +35,7 @@ pthread_mutex_t mutexdata;
 pthread_cond_t cond_ackreceiver;
 sem_t window;			// semaphore for congestion control
 int monitor_status;
-#if DEDICATED_MONITOR_CREATION == 1 //process
 int monitor_pid;
-#else //thread
-pthread_t monitor;
-#endif
 
 // client threads variables
 send_information_t * send_info;		// array info of sent bundles
@@ -255,15 +251,11 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			bp_parse_eid_string(&mon_eid, temp1);
 
 			// start dedicated monitor
-#if DEDICATED_MONITOR_CREATION == 1
 			if ((monitor_pid = fork()) == 0)
 			{
 				start_dedicated_monitor((void *) &mon_params);
 				exit(0);
 			}
-#else
-			pthread_create(&monitor, NULL, start_dedicated_monitor, (void *) &mon_params);
-#endif
 			printf("started a new dedicated monitor\n");
 
 		}
@@ -629,11 +621,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if (dedicated_monitor)
 	{
 		printf("\nWaiting for dedicated monitor to stop...\n");
-#if DEDICATED_MONITOR_CREATION == 1
 		wait(&monitor_status);
-#else
-		pthread_join(monitor, (void**)&monitor_status);
-#endif
 	}
 
 
@@ -1466,20 +1454,12 @@ void client_clean_exit(int status)
 
 	// send a signal to the monitor to terminate it
 	if (dedicated_monitor)
-#if DEDICATED_MONITOR_CREATION == 1
 		kill(monitor_pid, SIGUSR1);
-#else
-		pthread_kill(monitor, SIGUSR1);
-#endif
 
 	if (bp_handle_open)
 		bp_close(handle);
 	// wait for monitor to terminate
-#if DEDICATED_MONITOR_CREATION == 1
 	wait(&monitor_status);
-#else
-	pthread_join(monitor, (void**)&monitor_status);
-#endif
 	exit(status);
 }
 
