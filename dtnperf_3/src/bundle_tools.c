@@ -371,11 +371,14 @@ bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** 
 	char * buf;
 	size_t buf_size;
 	HEADER_TYPE header = DSA_HEADER;
+	uint16_t eid_len;
 	uint32_t timestamp_secs;
 	uint32_t timestamp_seqno;
 	buf_stream = open_memstream(& buf, &buf_size);
 	fwrite(&header, 1, HEADER_SIZE, buf_stream);
-	fwrite(&(ack.bundle_source), 1, sizeof(ack.bundle_source), buf_stream);
+	eid_len = strlen(ack.bundle_source.uri);
+	fwrite(&eid_len, sizeof(eid_len), 1, buf_stream);
+	fwrite(&(ack.bundle_source.uri), 1, eid_len, buf_stream);
 	timestamp_secs = (uint32_t) ack.bundle_creation_ts.secs;
 	timestamp_seqno = (uint32_t) ack.bundle_creation_ts.seqno;
 	fwrite(&timestamp_secs, 1, sizeof(uint32_t), buf_stream);
@@ -393,15 +396,20 @@ bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_endpoint_id_t * report
 	bp_error_t error;
 	HEADER_TYPE header;
 	FILE * pl_stream;
+	uint16_t eid_len;
 	uint32_t timestamp_secs, timestamp_seqno;
 	open_payload_stream_read(*ack, &pl_stream);
 	fread(&header, HEADER_SIZE, 1, pl_stream);
 	if (header == DSA_HEADER)
 	{
+		fread(&eid_len, sizeof(eid_len), 1, pl_stream);
 		if (reported_eid != NULL)
-			fread(reported_eid, sizeof(bp_endpoint_id_t), 1, pl_stream);
+		{
+			fread(reported_eid->uri, eid_len, 1, pl_stream);
+			reported_eid->uri[eid_len] = '\0';
+		}
 		else
-			fseek(pl_stream, sizeof(bp_endpoint_id_t), SEEK_CUR);
+			fseek(pl_stream, eid_len, SEEK_CUR);
 
 		if (reported_timestamp != NULL)
 		{

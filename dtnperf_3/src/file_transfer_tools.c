@@ -153,7 +153,7 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	char * transfer;
 	u32_t transfer_len;
 	int fd;
-	u32_t offset;
+	uint32_t offset;
 
 
 	// transfer length is total payload length without header,
@@ -161,7 +161,7 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	transfer_len = get_file_fragment_size(pl_size, info->filename_len);
 
 	// read file fragment offset
-	fread(&offset, sizeof(u32_t), 1, pl_stream);
+	fread(&offset, sizeof(offset), 1, pl_stream);
 
 	// read remaining file fragment
 	transfer = (char*) malloc(transfer_len);
@@ -211,9 +211,11 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	bp_timeval_t expiration;
 	file_transfer_info_t * info;
 	FILE * pl_stream;
-	int result, filename_len;
+	int result;
+	uint16_t filename_len;
 	char * filename;
-	u32_t file_dim, pl_size;
+	uint32_t file_dim;
+	u32_t pl_size;
 	char * eid, temp[256];
 	char * full_dir;
 
@@ -234,7 +236,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	if (info == NULL) // this is the first bundle
 	{
 		// get filename len
-		result = fread(&filename_len, sizeof(int), 1, pl_stream);
+		result = fread(&filename_len, sizeof(filename_len), 1, pl_stream);
 
 		// get filename
 		filename = (char *) malloc(filename_len + 1);
@@ -245,7 +247,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		filename[filename_len] = '\0';
 
 		//get file size
-		fread(&file_dim, sizeof(u32_t), 1, pl_stream);
+		fread(&file_dim, sizeof(file_dim), 1, pl_stream);
 
 		// create destination dir for file
 		strncpy(temp, client_eid.uri, strlen(client_eid.uri) + 1);
@@ -270,10 +272,10 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	else  // first bundle of transfer already received
 	{
 		// skip filename_len and filename
-		fseek(pl_stream, sizeof(int) + strlen(info->filename), SEEK_CUR);
+		fseek(pl_stream, sizeof(filename_len) + strlen(info->filename), SEEK_CUR);
 
 		// skip file_size
-		fseek(pl_stream, sizeof(u32_t), SEEK_CUR);
+		fseek(pl_stream, sizeof(file_dim), SEEK_CUR);
 
 
 	}
@@ -295,34 +297,34 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 
 }
 
-u32_t get_file_fragment_size(long payload_size, int filename_len)
+u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len)
 {
 	u32_t result;
 	// file fragment size is payload without header, congestion ctrl char and offset
-	result = payload_size - (HEADER_SIZE + 1 + sizeof(u32_t));
+	result = payload_size - (HEADER_SIZE + 1 + sizeof(uint32_t));
 	// ... without filename_len, filename, file_size
-	result -= (filename_len + sizeof(filename_len) + sizeof(u32_t));
+	result -= (filename_len + sizeof(filename_len) + sizeof(uint32_t));
 	return result;
 }
 
 bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, int fd,
-		char * filename, u32_t file_dim, boolean_t * eof)
+		char * filename, uint32_t file_dim, boolean_t * eof)
 {
 	if (f == NULL)
 		return BP_ENULLPNTR;
 
 	bp_error_t result;
-	u32_t fragment_len;
+	uint32_t fragment_len;
 	char * fragment;
-	u32_t offset;
+	uint32_t offset;
 	long bytes_read;
-	int filename_len = strlen(filename);
+	uint16_t filename_len = strlen(filename);
 
 	// prepare header and congestion control
 	result = prepare_payload_header(opt, f);
 
 	// write filename length
-	fwrite(&filename_len, sizeof(int), 1, f);
+	fwrite(&filename_len, sizeof(filename_len), 1, f);
 
 	// write filename
 	fwrite(filename, filename_len, 1, f);
