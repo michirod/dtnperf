@@ -861,6 +861,7 @@ void * congestion_control(void * opt)
 
 	bp_timestamp_t reported_timestamp;
 	bp_endpoint_id_t ack_sender;
+	HEADER_TYPE ack_header;
 	bp_copy_eid(&ack_sender, &dest_eid);
 	struct timeval temp;
 
@@ -902,7 +903,8 @@ void * congestion_control(void * opt)
 			}
 
 			// Check if is actually a server ack bundle
-			if (! is_header(&ack, DSA_HEADER))
+			get_bundle_header_and_options(&ack, &ack_header, NULL);
+			if (ack_header != DSA_HEADER)
 			{
 				fprintf(stderr, "error getting server ack: wrong bundle header\n");
 				if (create_log)
@@ -1071,7 +1073,6 @@ void print_client_usage(char* progname)
 			" -f, --forwarded             Enable request for bundle status forwarded report\n"
 			" -R, --received              Enable request for bundle status received report\n"
 			" -u, --nofragment            Disable bundle fragmentation.\n"
-			" -i, --exitinterval <sec>    Additional interval before exit.\n"
 			" -p, --payload <size[B|k|M]> Size of bundle payloads; B = Bytes, k = kBytes, M = MBytes. Default= 'k' (kB).\n"
 			" -M, --memory                Store the bundle into memory instead of file (if payload < 50KB).\n"
 			" -L, --log[=log_filename]    Create a log file. Default log filename is %s\n"
@@ -1080,6 +1081,10 @@ void print_client_usage(char* progname)
 			"     --debug[=level]         Debug messages [0-1], if level is not indicated assume level=2.\n"
 			" -e, --expiration <time>     Bundles expiration time (seconds). Default is 3600\n"
 			" -P, --priority <val>        Bundles priority [bulk|normal|expedited|reserved]. Default is normal\n"
+			"     --acks-to-mon           Force server to send bundle acks to the monitor\n"
+			"     --no-acks-to-mon        Force server to NOT send bundle acks to the monitor\n"
+			"     --acks-exp              Force server to set bundle acks expiration time as the one of the client bundles\n"
+			"     --acks-priority[=val]   Force server to set bundle acks priority as the one of client bundles or as the val provided\n"
 			" -v, --verbose               Print some information messages during the execution.\n"
 			" -h, --help                  This help.\n",
 			LOG_FILENAME);
@@ -1093,6 +1098,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
 	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
 	boolean_t w = FALSE, r = FALSE;
+	boolean_t set_ack_priority_as_bundle = FALSE;
 
 	while (!done)
 	{
@@ -1120,6 +1126,10 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"log", optional_argument, 0, 'L'},				// create log file
 				{"ip-addr", required_argument, 0, 37},
 				{"ip-port", required_argument, 0, 38},
+				{"acks-to-mon", no_argument, 0, 44},			// force server to send acks to monitor
+				{"no-acks-to-mon", no_argument, 0, 45},		// force server to NOT send acks to monitor
+				{"acks-exp", no_argument, 0, 46}	,			// set server ack expiration equal to client bundles
+				{"acks-priority", optional_argument, 0, 47},	// set server ack priority as indicated or equal to client bundles
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
 		};
@@ -1303,6 +1313,40 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case '?':
 			break;
 
+		case 44:
+			perf_opt->bundle_ack_options.ack_to_mon = ATM_FORCE_YES;
+			break;
+
+		case 45:
+			perf_opt->bundle_ack_options.ack_to_mon = ATM_FORCE_NO;
+			break;
+
+		case 46:
+			perf_opt->bundle_ack_options.set_ack_expiration = TRUE;
+			break;
+
+		case 47:
+			perf_opt->bundle_ack_options.set_ack_priority = TRUE;
+			if (!optarg)
+				set_ack_priority_as_bundle = TRUE;
+			else
+			{
+				if (!strcasecmp(optarg, "bulk"))   {
+					perf_opt->bundle_ack_options.priority = BP_PRIORITY_BULK;
+				} else if (!strcasecmp(optarg, "normal")) {
+					perf_opt->bundle_ack_options.priority = BP_PRIORITY_NORMAL;
+				} else if (!strcasecmp(optarg, "expedited")) {
+					perf_opt->bundle_ack_options.priority = BP_PRIORITY_EXPEDITED;
+				} else if (!strcasecmp(optarg, "reserved")) {
+					perf_opt->bundle_ack_options.priority = BP_PRIORITY_RESERVED;
+				} else {
+					fprintf(stderr, "Invalid ack priority value %s\n", optarg);
+					exit(1);
+				}
+			}
+			break;
+
+
 		case (char)(-1):
 																									done = 1;
 		break;
@@ -1319,6 +1363,15 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	{
 		perf_g_opt->mode = DTNPERF_CLIENT_MONITOR;
 	}
+
+	// set ack-to-client request
+	if (perf_opt->congestion_ctrl == 'w')
+		perf_opt->bundle_ack_options.ack_to_client = TRUE;
+	else perf_opt->bundle_ack_options.ack_to_client = FALSE;
+
+	// set bundle ack priority as the same of bundle one
+	if (set_ack_priority_as_bundle)
+		perf_opt->bundle_ack_options.priority = conn_opt->priority;
 
 
 #define CHECK_SET(_arg, _what)                                          	\

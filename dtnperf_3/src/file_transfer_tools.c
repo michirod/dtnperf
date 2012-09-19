@@ -321,7 +321,7 @@ bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, int f
 	uint16_t filename_len = strlen(filename);
 
 	// prepare header and congestion control
-	result = prepare_payload_header(opt, f);
+	result = prepare_payload_header_and_ack_options(opt, f);
 
 	// write filename length
 	fwrite(&filename_len, sizeof(filename_len), 1, f);

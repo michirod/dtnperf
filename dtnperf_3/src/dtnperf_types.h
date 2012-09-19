@@ -18,6 +18,23 @@ typedef enum {
 	DTNPERF_CLIENT_MONITOR
 } dtnperf_mode_t;
 
+// server ack to monitor options
+typedef enum {
+	ATM_NORMAL = 0x0,
+	ATM_FORCE_YES = 0x1,
+	ATM_FORCE_NO = 0x2,
+} dtnperf_ack_to_mon_options_t;
+
+// options to send to the server by the client
+typedef struct dtnperf_bundle_ack_options
+{
+	boolean_t ack_to_client;
+	dtnperf_ack_to_mon_options_t ack_to_mon;
+	boolean_t set_ack_expiration;
+	boolean_t set_ack_priority;
+	bp_bundle_priority_t priority;
+} dtnperf_bundle_ack_options_t;
+
 /**
  * To change default values go to init_dtnperf_options()
  */
@@ -51,6 +68,7 @@ typedef struct dtnperf_options
 	char rate_unit;			// b = bit/sec; B = bundle/sec [b]
 	int wait_before_exit;	// additional interval before exit [0]
 	long bundle_payload;  	// quantity of data (in bytes) to send (-p option) [DEFAULT_PAYLOAD]
+	dtnperf_bundle_ack_options_t bundle_ack_options; // options to send to the server
 	bp_bundle_payload_location_t payload_type;	// the type of data source for the bundle [DTN_PAYLOAD_FILE]
 	boolean_t create_log;	// create log file [FALSE]
 	char * log_filename;	// log filename [LOG_FILENAME]
@@ -92,5 +110,6 @@ typedef struct dtnperf_server_ack_payload
 	bp_endpoint_id_t bundle_source;
 	bp_timestamp_t bundle_creation_ts;
 } dtnperf_server_ack_payload_t;
+
 
 #endif /* DTNPERF_TYPES_H_ */

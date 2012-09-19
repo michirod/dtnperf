@@ -65,6 +65,44 @@
 // header of stop bundle sent by client to monitor
 #define STOP_HEADER 0x20
 
+// bundle options type
+#define BUNDLE_OPT_TYPE uint16_t
+
+// bundle options size
+#define BUNDLE_OPT_SIZE sizeof(uint16_t)
+
+// congestion control options
+// window based
+#define BO_ACK_CLIENT_YES 0x8000
+// rate based
+#define BO_ACK_CLIENT_NO 0x0000
+// congestion control option mask (first 2 bits)
+#define BO_ACK_CLIENT_MASK 0xC000
+
+// acks to monitor options
+// default behavior
+#define BO_ACK_MON_NORMAL 0x0000
+// force server to send acks to monitor
+#define BO_ACK_MON_FORCE_YES 0x2000
+// force server to not send acks to monitor
+#define BO_ACK_MON_FORCE_NO 0x1000
+// acks to monitor options mask
+#define BO_ACK_MON_MASK 0x3000
+
+// set ack expiration time as this bundle one
+#define BO_SET_EXPIRATION 0x0080
+
+// ack priority options
+// set ack priority bit
+#define BO_SET_PRIORITY 0x0040
+// priorities indicated
+#define BO_PRIORITY_BULK 0x0000
+#define BO_PRIORITY_NORMAL 0x0010
+#define BO_PRIORITY_EXPEDITED 0x0020
+#define BO_PRIORITY_RESERVED 0x0030
+// priority mask
+#define BO_PRIORITY_MASK 0x0030
+
 // max payload (in bytes) if bundles are stored into memory
 #define MAX_MEM_PAYLOAD 50000
 

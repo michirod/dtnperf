@@ -33,7 +33,9 @@ int close_payload_stream_read(FILE * f);
 int open_payload_stream_write(bp_bundle_object_t bundle, FILE ** f);
 int close_payload_stream_write(bp_bundle_object_t * bundle, FILE * f);
 
-bp_error_t prepare_payload_header(dtnperf_options_t *opt, FILE * f);
+bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FILE * f);
+int get_bundle_header_and_options(bp_bundle_object_t * bundle, HEADER_TYPE * header, dtnperf_bundle_ack_options_t * options);
+
 bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f);
 bp_error_t prepare_start_bundle(bp_bundle_object_t * start, bp_endpoint_id_t monitor,
 		bp_timeval_t expiration, bp_bundle_priority_t priority);
@@ -47,10 +49,6 @@ bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** 
  * If you don't need either eid or timestamp, just put NULL in eid or timestamp.
  */
 bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_endpoint_id_t * reported_eid, bp_timestamp_t * report_timestamp);
-
-
-boolean_t is_header(bp_bundle_object_t * bundle, HEADER_TYPE header_id);
-boolean_t is_congestion_ctrl(bp_bundle_object_t * bundle, char mode);
 
 u32_t get_current_dtn_time();
 

@@ -273,6 +273,10 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->acks_to_mon = FALSE;
 	opt->no_acks = FALSE;
 	opt->logs_dir = LOGS_DIR_DEFAULT;
+	opt->bundle_ack_options.ack_to_client = TRUE;
+	opt->bundle_ack_options.ack_to_mon = ATM_NORMAL;;
+	opt->bundle_ack_options.set_ack_expiration = FALSE;
+	opt->bundle_ack_options.set_ack_priority = FALSE;
 }
 
 

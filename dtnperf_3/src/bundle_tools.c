@@ -247,13 +247,15 @@ int close_payload_stream_write(bp_bundle_object_t * bundle, FILE *f)
 	return 0;
 }
 
-bp_error_t prepare_payload_header(dtnperf_options_t *opt, FILE * f)
+bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FILE * f)
 {
 	if (f == NULL)
 		return BP_ENULLPNTR;
 
 	HEADER_TYPE header;
-	char congestion_control = opt->congestion_ctrl;
+	BUNDLE_OPT_TYPE options;
+
+	// header
 	switch(opt->op_mode)
 	{
 	case 'T':
@@ -268,10 +270,117 @@ bp_error_t prepare_payload_header(dtnperf_options_t *opt, FILE * f)
 	default:
 		return BP_EINVAL;
 	}
+
+	// options
+	options = 0;
+	// ack to client
+	if (opt->bundle_ack_options.ack_to_client)
+		options |= BO_ACK_CLIENT_YES;
+	else
+		options |= BO_ACK_CLIENT_NO;
+	//ack to monitor
+	if (opt->bundle_ack_options.ack_to_mon == ATM_NORMAL)
+		options |= BO_ACK_MON_NORMAL;
+	else if (opt->bundle_ack_options.ack_to_mon == ATM_FORCE_YES)
+		options |= BO_ACK_MON_FORCE_YES;
+	else if (opt->bundle_ack_options.ack_to_mon == ATM_FORCE_NO)
+		options |= BO_ACK_MON_FORCE_NO;
+	// bundle ack expiration time
+	if (opt->bundle_ack_options.set_ack_expiration)
+		options |= BO_SET_EXPIRATION;
+	// bundle ack priority
+	if (opt->bundle_ack_options.set_ack_priority)
+	{
+		options |= BO_SET_PRIORITY;
+		switch (opt->bundle_ack_options.priority)
+		{
+		case BP_PRIORITY_BULK:
+			options |= BO_PRIORITY_BULK;
+			break;
+		case BP_PRIORITY_NORMAL:
+			options |= BO_PRIORITY_NORMAL;
+			break;
+		case BP_PRIORITY_EXPEDITED:
+			options |= BO_PRIORITY_EXPEDITED;
+			break;
+		case BP_PRIORITY_RESERVED:
+			options |= BO_PRIORITY_RESERVED;
+			break;
+		default:
+			break;
+		}
+	}
+
+	// write in payload
 	fwrite(&header, HEADER_SIZE, 1, f);
-	fwrite(&congestion_control, 1, 1, f);
+	fwrite(&options, BUNDLE_OPT_SIZE, 1, f);
 
 	return BP_SUCCESS;
+}
+
+int get_bundle_header_and_options(bp_bundle_object_t * bundle, HEADER_TYPE * header, dtnperf_bundle_ack_options_t * options)
+{
+	if (bundle == NULL)
+		return -1;
+	BUNDLE_OPT_TYPE opt;
+	FILE * pl_stream = NULL;
+	open_payload_stream_read(*bundle, &pl_stream);
+
+	if (header != NULL)
+	{
+		// read header
+		fread(header, HEADER_SIZE, 1, pl_stream);
+	}
+	else
+	{
+		// skip header
+		fseek(pl_stream, HEADER_SIZE, SEEK_SET);
+	}
+
+	if (options != NULL)
+	{
+		// initiate options
+		options->ack_to_client = FALSE;
+		options->ack_to_mon = ATM_NORMAL;
+		options->set_ack_expiration = FALSE;
+		options->set_ack_priority = FALSE;
+
+		// read options
+		fread(&opt, BUNDLE_OPT_SIZE, 1, pl_stream);
+
+		// ack to client
+		if ((opt & BO_ACK_CLIENT_MASK) == BO_ACK_CLIENT_YES)
+			options->ack_to_client = TRUE;
+		else if ((opt & BO_ACK_CLIENT_MASK) == BO_ACK_CLIENT_NO)
+			options->ack_to_client = FALSE;
+
+		// ack to mon
+		if ((opt & BO_ACK_MON_MASK) == BO_ACK_MON_NORMAL)
+			options->ack_to_mon = ATM_NORMAL;
+		if ((opt & BO_ACK_MON_MASK) == BO_ACK_MON_FORCE_YES)
+			options->ack_to_mon = ATM_FORCE_YES;
+		else if ((opt & BO_ACK_MON_MASK) == BO_ACK_MON_FORCE_NO)
+			options->ack_to_mon = ATM_FORCE_NO;
+
+		// expiration
+		if (opt & BO_SET_EXPIRATION)
+			options->set_ack_expiration = TRUE;
+
+		// priority
+		if (opt & BO_SET_PRIORITY)
+		{
+			options->set_ack_priority = TRUE;
+			if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_BULK)
+				options->priority = BP_PRIORITY_BULK;
+			else if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_NORMAL)
+				options->priority = BP_PRIORITY_NORMAL;
+			else if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_EXPEDITED)
+				options->priority = BP_PRIORITY_EXPEDITED;
+			else if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_RESERVED)
+				options->priority = BP_PRIORITY_RESERVED;
+		}
+	}
+	return 0;
 }
 
 bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
@@ -285,7 +394,7 @@ bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 	bp_error_t result;
 
 	// prepare header and congestion control
-	result = prepare_payload_header(opt, f);
+	result = prepare_payload_header_and_ack_options(opt, f);
 
 	// remaining = bundle_payload - HEADER_SIZE - congestion control char
 	remaining = opt->bundle_payload - HEADER_SIZE - 1;
@@ -425,42 +534,6 @@ bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_endpoint_id_t * report
 
 	close_payload_stream_read(pl_stream);
 	return error;
-}
-
-boolean_t is_header(bp_bundle_object_t * bundle, HEADER_TYPE header_id)
-{
-	if (bundle == NULL)
-		return FALSE;
-	FILE * pl_stream = NULL;
-	open_payload_stream_read(*bundle, &pl_stream);
-	HEADER_TYPE header;
-
-	fread(&header, HEADER_SIZE, 1, pl_stream);
-	fclose(pl_stream);
-
-	if (header == header_id)
-		return TRUE;
-	return FALSE;
-}
-
-boolean_t is_congestion_ctrl(bp_bundle_object_t * bundle, char mode)
-{
-	if (bundle == NULL)
-		return FALSE;
-	FILE * pl_stream = NULL;
-	char c;
-	open_payload_stream_read(*bundle, &pl_stream);
-
-	// skip header
-	fseek(pl_stream, HEADER_SIZE, SEEK_CUR);
-
-	// read congestion control char
-	fread(&c, 1, 1, pl_stream);
-	fclose(pl_stream);
-
-	if (c == mode)
-		return TRUE;
-	return FALSE;
 }
 
 u32_t get_current_dtn_time()

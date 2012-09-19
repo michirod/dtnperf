@@ -53,8 +53,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	bp_bundle_object_t bundle_ack_object;
 	bp_bundle_delivery_opts_t bundle_ack_dopts;
 	bp_timestamp_t bundle_creation_timestamp;
+	bp_timeval_t bundle_expiration;
 	size_t bundle_payload_len;
 	dtnperf_server_ack_payload_t server_ack_payload;
+	HEADER_TYPE bundle_header;
+	dtnperf_bundle_ack_options_t bundle_ack_options;
 	time_t current;
 	char* command = NULL;
 	char* pl_filename = NULL;
@@ -420,10 +423,23 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			printf ("--------------------------------------\n");
 		}
 
+		// get bundle header and options
+		if ((debug) && (debug_level > 0))
+			printf("[debug]\tgetting bundle header and options...");
+		if (get_bundle_header_and_options(&bundle_object, &bundle_header, &bundle_ack_options) < 0)
+		{
+			printf("Error in getting bundle header and options\n");
+			continue;
+		}
+		if ((debug) && (debug_level > 0))
+		{
+			printf(" done.\n");
+		}
+
 		// check if is file transfer bundle
 		if ((debug) && (debug_level > 0))
 			printf("[debug]\tchecking if this is a file transfer bundle...");
-		if (is_header(&bundle_object, FILE_HEADER))
+		if (bundle_header == FILE_HEADER)
 		{
 			is_file_transfer_bundle = TRUE;
 		}
@@ -461,11 +477,25 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 		}
 
-		// send acks only if client use sliding window and no acks option is not set
-		if(!perf_opt->no_acks && is_congestion_ctrl(&bundle_object, 'w'))
+		// get bundle expiration time and priority
+		if (bundle_ack_options.set_ack_expiration)
+		{
+			bp_bundle_get_expiration(bundle_object, &bundle_expiration);
+		}
+
+		// send acks to the client only if requested by client
+		// send acks to the monitor if:
+		// ack requested by client AND ack-to-monitor option set AND bundle_ack_options.ack_to_mon == ATM_NORMAL
+		// OR client forced server to send ack to monitor
+
+		boolean_t send_ack_to_client = bundle_ack_options.ack_to_client;
+		boolean_t send_ack_to_monitor = FALSE;
+		send_ack_to_monitor = (bundle_ack_options.ack_to_client && (bundle_ack_options.ack_to_mon == ATM_NORMAL) && bundle_ack_options.ack_to_client && perf_opt->acks_to_mon)
+				|| (bundle_ack_options.ack_to_mon == ATM_FORCE_YES);
+		if (send_ack_to_client || send_ack_to_monitor)
 		{
 
-			// create bundle ack to send to client
+			// create bundle ack to send
 			if ((debug) && (debug_level > 0))
 				printf("[debug] initiating memory for bundle ack...");
 			error = bp_bundle_create(&bundle_ack_object);
@@ -558,7 +588,14 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			{
 				printf("[debug] setting priority of the bundle ack...");
 			}
-			bp_bundle_set_priority(& bundle_ack_object, conn_opt->priority);
+			if (bundle_ack_options.set_ack_priority == TRUE)
+			{
+				bp_bundle_set_priority(& bundle_ack_object, bundle_ack_options.priority);
+			}
+			else
+			{
+				bp_bundle_set_priority(& bundle_ack_object, conn_opt->priority);
+			}
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
@@ -572,7 +609,10 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			{
 				printf("[debug] setting expiration time of the bundle ack...");
 			}
-			bp_bundle_set_expiration(& bundle_ack_object, conn_opt->expiration);
+			if (bundle_ack_options.set_ack_expiration)
+				bp_bundle_set_expiration(& bundle_ack_object, bundle_expiration);
+			else
+				bp_bundle_set_expiration(& bundle_ack_object, conn_opt->expiration);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
@@ -598,21 +638,24 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("done\n");
 
 			// send the bundle ack to the client
-			if ((debug) && (debug_level > 0))
-				printf("[debug] sending bundle ack to client...");
-			error = bp_bundle_send(handle, regid, & bundle_ack_object);
-			if (error != BP_SUCCESS)
+			if (send_ack_to_client)
 			{
-				fflush(stdout);
-				fprintf(stderr, "error sending bundle ack to client: %d (%s)\n",
-						error, bp_strerror(bp_errno(handle)));
-				exit(1);
+				if ((debug) && (debug_level > 0))
+					printf("[debug] sending bundle ack to client...");
+				error = bp_bundle_send(handle, regid, & bundle_ack_object);
+				if (error != BP_SUCCESS)
+				{
+					fflush(stdout);
+					fprintf(stderr, "error sending bundle ack to client: %d (%s)\n",
+							error, bp_strerror(bp_errno(handle)));
+					exit(1);
+				}
+				if ((debug) && (debug_level > 0))
+					printf(" bundle ack sent to client\n");
 			}
-			if ((debug) && (debug_level > 0))
-				printf(" bundle ack sent to client\n");
 
 			// send the bundle ack to the monitor
-			if (perf_opt->acks_to_mon)
+			if (send_ack_to_monitor)
 			{
 				bp_bundle_set_dest(& bundle_ack_object, bundle_replyto_addr);
 				if ((debug) && (debug_level > 0))
@@ -702,7 +745,6 @@ void print_server_usage(char * progname)
 			" -e, --expiration <sec> Bundle acks expiration time. Default is 3600\n"
 			" -P, --priority <val>   Bundle acks priority [bulk|normal|expedited|reserved]. Default is normal\n"
 			"     --acks-to-mon      Send bundle acks to the monitor too\n"
-			"     --no-acks          Do not send acks (for using with dtnperf2)\n"
 			" -v, --verbose          Print some information message during the execution.\n"
 			" -h, --help             This help.\n",
 			SERVER_OUTPUT_FILE, BUNDLE_DIR_DEFAULT, FILE_DIR_DEFAULT);
@@ -732,8 +774,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"priority", required_argument, 0, 'P'},
 				{"ddir", required_argument, 0, 34},
 				{"fdir", required_argument, 0, 39},
-				{"acks-to-mon", no_argument, 0, 35},			// server only option
-				{"no-acks", no_argument, 0, 36},				// server only option
+				{"acks-to-mon", no_argument, 0, 35},		// server only option
 				{"ip-addr", required_argument, 0, 37},
 				{"ip-port", required_argument, 0, 38},
 				{"daemon", no_argument, 0, 'a'},

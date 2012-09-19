@@ -51,6 +51,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	bp_timeval_t bundle_expiration;
 	bp_endpoint_id_t relative_source_addr;
 	bp_timestamp_t relative_creation_timestamp;
+	HEADER_TYPE bundle_header;
 
 	session_t * session;
 	bundle_type_t bundle_type;
@@ -295,16 +296,21 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// check for other bundle types
 		if (status_report != NULL)
 			bundle_type = STATUS_REPORT;
-		else if (is_header(&bundle_object, START_HEADER))
-			bundle_type = CLIENT_START;
-		else if (is_header(&bundle_object, STOP_HEADER))
-			bundle_type = CLIENT_STOP;
-		else if (is_header(&bundle_object, DSA_HEADER))
-			bundle_type = SERVER_ACK;
-		else // unknown bundle type
+		else
 		{
-			fprintf(stderr, "error: unknown bundle type\n");
-			continue;
+			get_bundle_header_and_options(&bundle_object, & bundle_header, NULL);
+
+			if (bundle_header == START_HEADER)
+				bundle_type = CLIENT_START;
+			else if (bundle_header == STOP_HEADER)
+				bundle_type = CLIENT_STOP;
+			else if (bundle_header == DSA_HEADER)
+				bundle_type = SERVER_ACK;
+			else // unknown bundle type
+			{
+				fprintf(stderr, "error: unknown bundle type\n");
+				continue;
+			}
 		}
 
 		// retrieve or open log file
