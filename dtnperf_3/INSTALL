@@ -38,6 +38,11 @@ Eg:
 # install dtnperf -m 755 /usr/bin/
 
 
+NOTE:
+This is a temporary compiling solution, it will be provided a better 
+way to compile the source using configure and make.
+
+
 If you found bugs or any issue contact me at michirod@gmail.com
 Thank you :)
 
