@@ -23,4 +23,5 @@ void client_clean_exit(int status);
 void * send_bundles(void * opt);
 void * congestion_control(void * opt);
 void * start_dedicated_monitor(void * params);
+void * wait_for_sigint(void * arg);
 #endif /* DTNPERF_CLIENT_H_ */

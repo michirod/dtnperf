@@ -300,8 +300,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		{
 			get_bundle_header_and_options(&bundle_object, & bundle_header, NULL);
 
-			if (bundle_header == START_HEADER)
-				bundle_type = CLIENT_START;
+			if (bundle_header == FORCE_STOP_HEADER)
+				bundle_type = CLIENT_FORCE_STOP;
 			else if (bundle_header == STOP_HEADER)
 				bundle_type = CLIENT_STOP;
 			else if (bundle_header == DSA_HEADER)
@@ -316,23 +316,48 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// retrieve or open log file
 		pthread_mutex_lock(&mutexdata);
 
-		if (bundle_type == CLIENT_START)
+		session = NULL;
+
+		switch (bundle_type)
+		{
+		case STATUS_REPORT:
+			bp_copy_eid(&relative_source_addr, &(status_report->bundle_id.source));
+			relative_creation_timestamp = status_report->bundle_id.creation_ts;
+			break;
+
+		case SERVER_ACK:
+			get_info_from_ack(&bundle_object, &relative_source_addr, &relative_creation_timestamp);
+			break;
+
+		case CLIENT_STOP:
+		case CLIENT_FORCE_STOP:
+			bp_copy_eid(&relative_source_addr, &bundle_source_addr);
+			relative_creation_timestamp = bundle_creation_timestamp;
+			break;
+
+		default:
+			break;
+		}
+
+		session = session_get(session_list, relative_source_addr);
+
+		if (session == NULL) // start a new session
 		{
 			// mark start time
 			start = current;
-			filename_len = strlen(bundle_source_addr.uri) - strlen("dtn://") + 15;
+			filename_len = strlen(relative_source_addr.uri) - strlen("dtn://") + 15;
 			filename = (char *) malloc(filename_len);
 			memset(filename, 0, filename_len);
-			strncpy(temp, bundle_source_addr.uri, strlen(bundle_source_addr.uri) + 1);
+			strncpy(temp, relative_source_addr.uri, strlen(relative_source_addr.uri) + 1);
 			strtok(temp, "/");
-			sprintf(filename, "%lu_", bundle_creation_timestamp.secs);
+			sprintf(filename, "%lu_", relative_creation_timestamp.secs);
 			strcat(filename, strtok(NULL, "/"));
 			strcat(filename, ".csv");
 			full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(filename) + 2);
 			sprintf(full_filename, "%s/%s", perf_opt->logs_dir, filename);
 			file = fopen(full_filename, "w");
-			session = session_create(bundle_source_addr, full_filename, file, start,
-					bundle_creation_timestamp.secs, bundle_expiration);
+			session = session_create(relative_source_addr, full_filename, file, start,
+					relative_creation_timestamp.secs, bundle_expiration);
 			session_put(session_list, session);
 			// write header in csv log file
 			fprintf(file,"RX_TIME;BUNDLE_SOURCE;BUNDLE_TIMESTAMP;BUNDLE_SEQNO;"
@@ -340,36 +365,17 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 					"REL_FRAG_OFFSET;REL_PAYLOAD;");
 			csv_print_status_report_timestamps_header(file);
 			csv_end_line(file);
-
 		}
-		else
-		{
-			if (bundle_type == STATUS_REPORT)
-			{
-				bp_copy_eid(&relative_source_addr, &(status_report->bundle_id.source));
-				relative_creation_timestamp = status_report->bundle_id.creation_ts;
-				session = session_get(session_list, status_report->bundle_id.source);
-				if (status_report->flags & BP_STATUS_DELIVERED)
-					session->delivered_count++;
-			}
-			else if (bundle_type == SERVER_ACK)
-			{
-				get_info_from_ack(&bundle_object, &relative_source_addr, &relative_creation_timestamp);
-				session = session_get(session_list, relative_source_addr);
-			}
-			else
-				session = session_get(session_list, bundle_source_addr);
-			if (session == NULL)
-			{
-				fprintf(stderr, "error: bundle received out of session\n");
-				continue;
-			}
 
-			// update session infos
-			session->last_bundle_time = bundle_creation_timestamp.secs;
-			session->expiration = bundle_expiration;
-			file = session->file;
-			memcpy(&start, session->start, sizeof(struct timeval));
+		// update session infos
+		session->last_bundle_time = bundle_creation_timestamp.secs;
+		session->expiration = bundle_expiration;
+		file = session->file;
+		memcpy(&start, session->start, sizeof(struct timeval));
+
+		if (bundle_type == STATUS_REPORT && (status_report->flags & BP_STATUS_DELIVERED))
+		{
+			session->delivered_count++;
 		}
 
 		pthread_mutex_unlock(&mutexdata);
@@ -386,11 +392,11 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// print bundle type in csv log
 		switch (bundle_type)
 		{
-		case CLIENT_START:
-			csv_print(file, "CLIENT_START");
-			break;
 		case CLIENT_STOP:
 			csv_print(file, "CLIENT_STOP");
+			break;
+		case CLIENT_FORCE_STOP:
+			csv_print(file, "CLIENT_FORCE_STOP");
 			break;
 		case SERVER_ACK:
 			csv_print(file, "SERVER_ACK");
@@ -432,6 +438,11 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			gettimeofday(session->stop_arrival_time, NULL);
 			pthread_mutex_unlock(&mutexdata);
 		}
+		else if (bundle_type == CLIENT_FORCE_STOP)
+		{
+			printf("DTNperf monitor: received forced end session bundle\n");
+			session_close(session_list, session);
+		}
 
 
 	} // end loop
@@ -471,16 +482,14 @@ void * session_expiration_timer(void * opt)
 				}
 				else
 				{
-					fprintf(stdout, "\nDTNperf monitor: saved log file: %s\n", session->full_filename);
-					fclose(session->file);
-					session_del(session_list, session);
+					session_close(session_list, session);
 				}
 			}
 
 			// stop bundle arrived but not all the status reports have arrived and the timer has expired
 			else if (session->total_to_receive > 0 &&session->stop_arrival_time->tv_sec + session->wait_after_stop < current_time.tv_sec)
 			{
-				fprintf(stdout, "\nDTNperf monitor: Session Expired: Bundle stop arrived, but not all the status reports did\n");
+				fprintf(stdout, "DTNperf monitor: Session Expired: Bundle stop arrived, but not all the status reports did\n");
 
 				// close monitor if dedicated
 				if (dedicated_monitor)
@@ -489,7 +498,7 @@ void * session_expiration_timer(void * opt)
 				}
 				else
 				{
-					fprintf(stdout, "\tsaved log file: %s\n", session->full_filename);
+					fprintf(stdout, "\tsaved log file: %s\n\n", session->full_filename);
 					if (fclose(session->file) < 0)
 						perror("Error closing expired file:");
 					session_del(session_list, session);
@@ -498,7 +507,7 @@ void * session_expiration_timer(void * opt)
 			// stop bundle is not yet arrived and the last bundle has expired
 			else if (session->last_bundle_time + session->expiration < current_dtn_time)
 			{
-				fprintf(stdout, "\nDTNperf monitor: Session Expired: Bundle stop did not arrive\n");
+				fprintf(stdout, "DTNperf monitor: Session Expired: Bundle stop did not arrive\n");
 
 				// close monitor if dedicated
 				if (dedicated_monitor)
@@ -507,7 +516,7 @@ void * session_expiration_timer(void * opt)
 				}
 				else
 				{
-					fprintf(stdout,"\tsaved log file: %s\n", session->full_filename);
+					fprintf(stdout,"\tsaved log file: %s\n\n", session->full_filename);
 					if (fclose(session->file) < 0)
 						perror("Error closing expired file:");
 					session_del(session_list, session);
@@ -531,23 +540,14 @@ void monitor_clean_exit(int status)
 	if (dedicated_monitor)
 	{
 		session = session_list->first;
-		fclose(session->file);
-		fprintf(stdout, "\nDTNperf monitor: saved log file: %s\n", session->full_filename);
-		session_del(session_list, session);
+		session_close(session_list, session);
 	}
 	else
 	{
-		for (session = session_list->first; session != NULL; session = session->next)
+		while (session_list->first != NULL)
 		{
-			fclose(session->file);
-			fprintf(stdout, "\nDTNperf monitor: saved log file: %s\n", session->full_filename);
-			if (session->prev != NULL)
-				session_destroy(session->prev);
-			if (session->next == NULL)
-			{
-				session_destroy(session);
-				break;
-			}
+			session = session_list->first;
+			session_close(session_list, session);
 		}
 	}
 
@@ -560,11 +560,11 @@ void monitor_clean_exit(int status)
 	exit(status);
 }
 
-// waiting thread
-void * wait_for_last_status_reports(void * opt)
+void session_close(session_list_t * list, session_t * session)
 {
-
-	pthread_exit(NULL);
+	fclose(session->file);
+	fprintf(stdout, "DTNperf monitor: saved log file: %s\n\n", session->full_filename);
+	session_del(session_list, session);
 }
 
 void print_monitor_usage(char * progname)

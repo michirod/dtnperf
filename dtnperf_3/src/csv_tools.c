@@ -122,5 +122,6 @@ void csv_end_line(FILE * file)
 {
 	char c = '\n';
 	fwrite(&c, 1, 1, file);
+	fflush(file);
 }
 

@@ -37,8 +37,8 @@ bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FILE *
 int get_bundle_header_and_options(bp_bundle_object_t * bundle, HEADER_TYPE * header, dtnperf_bundle_ack_options_t * options);
 
 bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f);
-bp_error_t prepare_start_bundle(bp_bundle_object_t * start, bp_endpoint_id_t monitor,
-		bp_timeval_t expiration, bp_bundle_priority_t priority);
+bp_error_t prepare_force_stop_bundle(bp_bundle_object_t * start, bp_endpoint_id_t monitor,
+				bp_timeval_t expiration, bp_bundle_priority_t priority);
 bp_error_t prepare_stop_bundle(bp_bundle_object_t * stop, bp_endpoint_id_t monitor,
 		bp_timeval_t expiration, bp_bundle_priority_t priority, int sent_bundles);
 bp_error_t get_info_from_stop(bp_bundle_object_t * stop, int * sent_bundles);

@@ -23,8 +23,8 @@ typedef enum
 	NONE,
 	STATUS_REPORT,
 	SERVER_ACK,
-	CLIENT_START,
-	CLIENT_STOP
+	CLIENT_STOP,
+	CLIENT_FORCE_STOP
 } bundle_type_t;
 
 typedef struct session
@@ -62,7 +62,7 @@ void session_put(session_list_t * list, session_t * session);
 session_t * session_get(session_list_t * list, bp_endpoint_id_t client);
 
 void session_del(session_list_t * list, session_t * session);
-
+void session_close(session_list_t * list, session_t * session);
 void run_dtnperf_monitor(monitor_parameters_t * parameters);
 
 //session expiration timer thread

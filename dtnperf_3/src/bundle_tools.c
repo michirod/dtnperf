@@ -409,11 +409,11 @@ bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 	return result;
 }
 
-bp_error_t prepare_start_bundle(bp_bundle_object_t * start, bp_endpoint_id_t monitor,
+bp_error_t prepare_force_stop_bundle(bp_bundle_object_t * start, bp_endpoint_id_t monitor,
 		bp_timeval_t expiration, bp_bundle_priority_t priority)
 {
 	FILE * start_stream;
-	HEADER_TYPE start_header = START_HEADER;
+	HEADER_TYPE start_header = FORCE_STOP_HEADER;
 	bp_endpoint_id_t none;
 	bp_bundle_delivery_opts_t opts = BP_DOPTS_NONE;
 	bp_bundle_set_payload_location(start, BP_PAYLOAD_MEM);

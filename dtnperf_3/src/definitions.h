@@ -59,8 +59,8 @@
 // header of dtnperf server bundle ack
 #define DSA_HEADER 0x8
 
-// header of start bundle sent by client to monitor
-#define START_HEADER 0x10
+// header of force stop bundle sent by client to monitor
+#define FORCE_STOP_HEADER 0x10
 
 // header of stop bundle sent by client to monitor
 #define STOP_HEADER 0x20

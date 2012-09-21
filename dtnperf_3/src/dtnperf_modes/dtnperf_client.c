@@ -31,6 +31,7 @@
 // pthread variables
 pthread_t sender;
 pthread_t cong_ctrl;
+pthread_t wait_for_signal;
 pthread_mutex_t mutexdata;
 pthread_cond_t cond_ackreceiver;
 sem_t window;			// semaphore for congestion control
@@ -46,6 +47,8 @@ int sent_bundles = 0;					// sent bundles counter
 unsigned int sent_data = 0;				// sent byte counter
 int close_ack_receiver = 0;			// to signal the ack receiver to close
 unsigned int data_written = 0;			// num of bytes written on the source file
+
+boolean_t process_interrupted;
 
 
 FILE * log_file = NULL;
@@ -97,7 +100,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	char temp1[256]; // buffer for different purpose
 	char temp2[256];
 	FILE * stream; // stream for preparing payolad
-	bp_bundle_object_t bundle_start, bundle_stop;
+	bp_bundle_object_t bundle_stop;
 	monitor_parameters_t mon_params;
 
 
@@ -115,6 +118,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	source_file_created = FALSE;
 	stream = NULL;
 	tot_bundles = 0;
+	process_interrupted = FALSE;
 	perf_opt->log_filename = correct_dirname(perf_opt->log_filename);
 	source_file = (char*) malloc(strlen(SOURCE_FILE) + 7);
 	sprintf(source_file, "%s_%d", SOURCE_FILE, getpid());
@@ -539,26 +543,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	bp_bundle_set_replyto(&bundle, mon_eid);
 	set_bp_options(&bundle, conn_opt);
 
-	// intialize start and stop bundles;
-	bp_bundle_create(&bundle_start);
+	// intialize stop bundle;
 	bp_bundle_create(&bundle_stop);
-
-	// fill the start bundle
-	prepare_start_bundle(&bundle_start, mon_eid, conn_opt->expiration, conn_opt->priority);
-	bp_bundle_set_source(&bundle_start, local_eid);
-
-	// send start bundle to monitor
-	if (debug)
-		printf("sending the start bundle to the monitor...");
-	if ((error = bp_bundle_send(handle, regid, &bundle_start)) != 0)
-	{
-		fprintf(stderr, "error sending the start bundle: %d (%s)\n", error, bp_strerror(error));
-		if (create_log)
-			fprintf(log_file, "error sending the start bundle: %d (%s)\n", error, bp_strerror(error));
-		client_clean_exit(1);
-	}
-	if (debug)
-		printf("done.\n");
 
 	if ((debug) && (debug_level > 0))
 		printf("[debug] entering in loop\n");
@@ -569,12 +555,24 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	else								// rate based congestion control
 		sem_init(&window, 0, 0);
 
+
+	sigset_t sigset;
+
+	// blocking signals for the threads
+	sigemptyset(&sigset);
+	sigaddset(&sigset, SIGINT);
+	sigaddset(&sigset, SIGUSR1);
+	sigaddset(&sigset, SIGUSR2);
+	pthread_sigmask(SIG_BLOCK, &sigset, NULL);
+
+
 	pthread_cond_init(&cond_ackreceiver, NULL);
 	pthread_mutex_init (&mutexdata, NULL);
 
 
 	pthread_create(&sender, NULL, send_bundles, (void*)perf_g_opt);
 	pthread_create(&cong_ctrl, NULL, congestion_control, (void*)perf_g_opt);
+	pthread_create(&wait_for_signal, NULL, wait_for_sigint, (void*) client_demux_string);
 
 	pthread_join(cong_ctrl, (void**)&pthread_status);
 	pthread_join(sender, (void**)&pthread_status);
@@ -582,6 +580,11 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	pthread_mutex_destroy(&mutexdata);
 	sem_destroy(&window);
 	pthread_cond_destroy(&cond_ackreceiver);
+
+	// if user sent Ctrl+C to the client,
+	// let the wait_for_signal thread to terminate the execution
+	if (process_interrupted)
+		pause();
 
 	if ((debug) && (debug_level > 0))
 		printf("[debug] out from loop\n");
@@ -672,7 +675,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	free(transfer_filename);
 	free(send_info);
 	bp_bundle_free(&bundle);
-	bp_bundle_free(&bundle_start);
 	bp_bundle_free(&bundle_stop);
 
 
@@ -1009,6 +1011,88 @@ void * start_dedicated_monitor(void * params)
 	parameters->dedicated_monitor = TRUE;
 	run_dtnperf_monitor(parameters);
 	pthread_exit(NULL);
+	return NULL;
+}
+
+void * wait_for_sigint(void * arg)
+{
+	sigset_t sigset;
+	int signo;
+	bp_handle_t force_stop_handle;
+
+	sigemptyset(&sigset);
+	sigaddset(&sigset, SIGINT);
+	pthread_sigmask(SIG_UNBLOCK, &sigset, NULL);
+	sigwait(&sigset, &signo);
+
+	printf("\nDTNperf client received SIGINT: Exiting\n");
+	if (perf_opt->create_log)
+		fprintf(log_file, "\nDTNperf client received SIGINT: Exiting\n");
+
+	// send a signal to the monitor to terminate it
+	if (dedicated_monitor)
+	{
+		kill(monitor_pid, SIGUSR1);
+
+		// wait for monitor to terminate
+		wait(&monitor_status);
+	}
+	else
+	{
+
+		bp_bundle_object_t bundle_force_stop;
+
+		// Open a new connection to BP Daemon
+		if ((perf_opt->debug) && (perf_opt->debug_level > 0))
+			printf("[debug] opening a new connection to local BP daemon...");
+
+		if (perf_opt->use_ip)
+			error = bp_open_with_ip(perf_opt->ip_addr,perf_opt->ip_port,&force_stop_handle);
+		else
+			error = bp_open(&force_stop_handle);
+
+		if (error != BP_SUCCESS)
+		{
+			fprintf(stderr, "fatal error opening a new bp handle: %s\n", bp_strerror(error));
+			if (perf_opt->create_log)
+				fprintf(log_file, "fatal error opening a new bp handle: %s\n", bp_strerror(error));
+			client_clean_exit(1);
+		}
+		if ((perf_opt->debug) && (perf_opt->debug_level > 0))
+			printf("done\n");
+
+		// create the bundle force stop
+		bp_bundle_create(&bundle_force_stop);
+
+		// fill the force stop bundle
+		prepare_force_stop_bundle(&bundle_force_stop, mon_eid, conn_opt->expiration, conn_opt->priority);
+		bp_bundle_set_source(&bundle_force_stop, local_eid);
+
+		// send force_stop bundle to monitor
+		printf("Sending the force stop bundle to the monitor...");
+		if ((error = bp_bundle_send(force_stop_handle, regid, &bundle_force_stop)) != 0)
+		{
+			fprintf(stderr, "error sending the force stop bundle: %d (%s)\n", error, bp_strerror(error));
+			if (perf_opt->create_log)
+				fprintf(log_file, "error sending the force stop bundle: %d (%s)\n", error, bp_strerror(error));
+			bp_close(force_stop_handle);
+			exit(1);
+		}
+		printf("done.\n");
+
+
+		bp_bundle_free(&bundle_force_stop);
+	}
+
+	process_interrupted = TRUE;
+
+	// terminate all child threads
+	pthread_cancel(sender);
+	pthread_cancel(cong_ctrl);
+
+	client_clean_exit(0);
+
+
 	return NULL;
 }
 
@@ -1488,6 +1572,11 @@ void client_handler(int sig)
 void client_clean_exit(int status)
 {
 	printf("Dtnperf client: exit\n");
+
+	// terminate all child threads
+	pthread_cancel(sender);
+	pthread_cancel(cong_ctrl);
+
 	if (perf_opt->create_log)
 		printf("\nClient log saved: %s\n", perf_opt->log_filename);
 	if (log_open)
@@ -1501,18 +1590,8 @@ void client_clean_exit(int status)
 		}
 	}
 
-	// terminate all child threads
-	pthread_cancel(sender);
-	pthread_cancel(cong_ctrl);
-
-	// send a signal to the monitor to terminate it
-	if (dedicated_monitor)
-		kill(monitor_pid, SIGUSR1);
-
 	if (bp_handle_open)
 		bp_close(handle);
-	// wait for monitor to terminate
-	wait(&monitor_status);
 	exit(status);
 }
 
