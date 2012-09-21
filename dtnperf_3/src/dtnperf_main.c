@@ -156,6 +156,7 @@ void print_usage(char* progname){
 	fprintf(stderr, "\n");
 	fprintf(stderr, "For more options see\n %s <operative mode> --help\n", progname);
 	fprintf(stderr, " %s --help\tPrint this screen.\n", progname);
+	fprintf(stderr, " %s --Version\tShow version information.\n", progname);
 	fprintf(stderr, "\n");
 	exit(1);
 }
@@ -187,6 +188,11 @@ void parse_options(int argc, char**argv, dtnperf_global_options_t * global_opt)
 	else if (strcmp(argv[1], "--help") == 0) // general help option
 	{
 		print_usage(argv[0]);
+		exit(0);
+	}
+	else if (strcmp(argv[1], "--version") == 0) // print program version
+	{
+		printf("DTNperf version %s\n", DTNPERF_VERSION);
 		exit(0);
 	}
 	else
