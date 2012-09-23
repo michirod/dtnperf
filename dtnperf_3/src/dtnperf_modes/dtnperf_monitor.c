@@ -586,13 +586,13 @@ void print_monitor_usage(char * progname)
 	fprintf(stderr, "SYNTAX: %s %s [options]\n", progname, MONITOR_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
-			" -a, --daemon           Start monitor as daemon. Output is redirected to %s\n"
-			" -o, --output <file>    Change output file (only with -d option)\n"
-			" -s, --stop             Stop a demonized instance of monitor\n"
-			"     --ip-addr <addr>   Ip address of the bp daemon api. Default is 127.0.0.1\n"
-			"     --ip-port <port>   Ip port of the bp daemon api. Default is 5010\n"
-			"     --ldir <dir>       Logs directory. Default is %s\n"
-			"     --debug[=level]    Debug messages [0-1], if level is not indicated assume level=0.\n"
+			" -a, --daemon           Start the monitor as a daemon. Output is redirected to %s .\n"
+			" -o, --output <file>    Change the default output file (only with -a option).\n"
+			" -s, --stop             Stop a demonized instance of monitor.\n"
+			"     --ip-addr <addr>   Ip address of the bp daemon api. Default: 127.0.0.1\n"
+			"     --ip-port <port>   Ip port of the bp daemon api. Default: 5010\n"
+			"     --ldir <dir>       Logs directory. Default: %s .\n"
+			"     --debug[=level]    Debug messages [0-1], if level is not indicated level = 1.\n"
 			" -v, --verbose          Print some information message during the execution.\n"
 			" -h, --help             This help.\n",
 			MONITOR_OUTPUT_FILE, LOGS_DIR_DEFAULT);

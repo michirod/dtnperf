@@ -230,7 +230,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		return -1;
 
 	// skip header and congestion control char
-	fseek(pl_stream, HEADER_SIZE + 1, SEEK_SET);
+	fseek(pl_stream, HEADER_SIZE + BUNDLE_OPT_SIZE, SEEK_SET);
 
 	info = file_transfer_info_get(info_list, client_eid);
 	if (info == NULL) // this is the first bundle

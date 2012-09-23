@@ -1150,32 +1150,32 @@ void print_client_usage(char* progname)
 {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "DtnPerf3 client mode\n");
-	fprintf(stderr, "SYNTAX: %s %s -d <dest_eid> <[-T <sec> | -D <num> | -F <filename]> [-w <size> | -r <rate>] [options]\n", progname, CLIENT_STRING);
+	fprintf(stderr, "SYNTAX: %s %s -d <dest_eid> <[-T <s> | -D <num> | -F <filename>]> [-w <size> | -r <rate>] [options]\n", progname, CLIENT_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
 			" -d, --destination <eid>     Destination eid (required).\n"
-			" -m, --monitor <eid>         Monitor eid. Default is same as local eid.\n"
+			" -m, --monitor <eid>         Monitor eid. Default: the same as local eid.\n"
 			" -T, --time <seconds>        Time-mode: seconds of transmission.\n"
-			" -D, --data <num[B|k|M]>     Data-mode: bytes to transmit; B = Bytes, k = kBytes, M = MBytes. Default 'M' (MB).\n"
+			" -D, --data <num[B|k|M]>     Data-mode: bytes to transmit; B = Bytes, k = kBytes, M = MBytes. Default 'M' (MB). Note: following the SI and the IEEE standards 1 MB=10^6 bytes\n"
 			" -F, --file <filename>       File-mode: file to transfer\n"
-			" -w, --window <size>         Size of transmission window, i.e. max number of bundles \"in flight\" (not still ACKed by a server ack); default =1.\n"
+			" -w, --window <size>         Size of DTNperf transmission window, i.e. max number of bundles \"in flight\" (not still ACKed by a server ack); default: 1.\n"
 			" -r, --rate <rate[k|M|b]>    Bitrate of transmission. k = kbit/s, M = Mbit/s, b = bundles/s. Default is kb/s\n"
 			" -C, --custody               Enable both custody transfer and \"custody accepted\" status reports.\n"
 			" -f, --forwarded             Enable request for bundle status forwarded report\n"
 			" -R, --received              Enable request for bundle status received report\n"
 			" -u, --nofragment            Disable bundle fragmentation.\n"
-			" -p, --payload <size[B|k|M]> Size of bundle payloads; B = Bytes, k = kBytes, M = MBytes. Default= 'k' (kB).\n"
+			" -p, --payload <size[B|k|M]> Size of bundle payloads; B = Bytes, k = kBytes, M = MBytes. Default= 'k' (kB). Note: following the SI and the IEEE standards 1 MB=10^6 bytes.\n"
 			" -M, --memory                Store the bundle into memory instead of file (if payload < 50KB).\n"
 			" -L, --log[=log_filename]    Create a log file. Default log filename is %s\n"
 			"     --ip-addr <addr>        Ip address of the bp daemon api. Default is 127.0.0.1\n"
 			"     --ip-port <port>        Ip port of the bp daemon api. Default is 5010\n"
-			"     --debug[=level]         Debug messages [0-1], if level is not indicated assume level=2.\n"
-			" -e, --expiration <time>     Bundles expiration time (seconds). Default is 3600\n"
+			"     --debug[=level]         Debug messages [0-1], if level is not indicated level = 1.\n"
+			" -e, --expiration <time>     Bundles expiration time (s). Default is 3600\n"
 			" -P, --priority <val>        Bundles priority [bulk|normal|expedited|reserved]. Default is normal\n"
-			"     --acks-to-mon           Force server to send bundle acks to the monitor\n"
-			"     --no-acks-to-mon        Force server to NOT send bundle acks to the monitor\n"
-			"     --acks-exp              Force server to set bundle acks expiration time as the one of the client bundles\n"
-			"     --acks-priority[=val]   Force server to set bundle acks priority as the one of client bundles or as the val provided\n"
+			"     --ack-to-mon            Force server to send bundle acks to the monitor\n"
+			"     --no-ack-to-mon         Force server to NOT send bundle acks to the monitor\n"
+			"     --ack-exp               Force server to set bundle ack expiration time to the same value of the data bundles sent by the client\n"
+			"     --ack-priority[=val]    Force server to set bundle ack priority as the one of client bundles or as the val provided\n"
 			" -v, --verbose               Print some information messages during the execution.\n"
 			" -h, --help                  This help.\n",
 			LOG_FILENAME);
@@ -1217,10 +1217,10 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"log", optional_argument, 0, 'L'},				// create log file
 				{"ip-addr", required_argument, 0, 37},
 				{"ip-port", required_argument, 0, 38},
-				{"acks-to-mon", no_argument, 0, 44},			// force server to send acks to monitor
-				{"no-acks-to-mon", no_argument, 0, 45},		// force server to NOT send acks to monitor
-				{"acks-exp", no_argument, 0, 46}	,			// set server ack expiration equal to client bundles
-				{"acks-priority", optional_argument, 0, 47},	// set server ack priority as indicated or equal to client bundles
+				{"ack-to-mon", no_argument, 0, 44},			// force server to send acks to monitor
+				{"no-ack-to-mon", no_argument, 0, 45},		// force server to NOT send acks to monitor
+				{"ack-exp", no_argument, 0, 46}	,			// set server ack expiration equal to client bundles
+				{"ack-priority", optional_argument, 0, 47},	// set server ack priority as indicated or equal to client bundles
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
 		};

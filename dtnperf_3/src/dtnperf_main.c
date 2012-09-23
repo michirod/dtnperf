@@ -247,7 +247,7 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 {
 	opt->verbose = FALSE;
 	opt->debug = FALSE;
-	opt->debug_level = 0;
+	opt->debug_level = 1;
 	opt->use_ip = FALSE;
 	opt->ip_addr = "127.0.0.1";
 	opt->ip_port = 5010;
