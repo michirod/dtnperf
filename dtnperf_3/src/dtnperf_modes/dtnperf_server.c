@@ -249,6 +249,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	pthread_mutex_init (&mutexdata, NULL);
 	pthread_create(&file_exp_timer, NULL, file_expiration_timer, NULL);
 
+	printf("DTNperf Server started\n Waiting for bundles...\n");
 
 
 	if ((debug) && (debug_level > 0))

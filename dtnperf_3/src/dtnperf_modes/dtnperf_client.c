@@ -771,6 +771,13 @@ void * send_bundles(void * opt)
 		// wait for the semaphore
 		sem_wait(&window);
 
+		if (perf_opt->op_mode == 'T') 	// TIME MODE
+		{								// force re-check of condition after the semaphore
+			gettimeofday(&now, NULL);
+			if (now.tv_sec > end.tv_sec)
+				break;
+		}
+
 		// Send the bundle
 		if (debug)
 			printf("sending the bundle...");

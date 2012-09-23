@@ -182,6 +182,10 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	pthread_mutex_init (&mutexdata, NULL);
 	pthread_create(&session_exp_timer, NULL, session_expiration_timer, (void *) parameters);
 
+	if (!dedicated_monitor)
+		printf("DTNperf Monitor started\n Waiting for bundles...\n");
+
+
 	// start infinite loop
 	while(1)
 	{
@@ -345,6 +349,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		{
 			// mark start time
 			start = current;
+			char * ptr;
 			filename_len = strlen(relative_source_addr.uri) - strlen("dtn://") + 15;
 			filename = (char *) malloc(filename_len);
 			memset(filename, 0, filename_len);
@@ -352,6 +357,13 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			strtok(temp, "/");
 			sprintf(filename, "%lu_", relative_creation_timestamp.secs);
 			strcat(filename, strtok(NULL, "/"));
+
+			// remove .dtn suffix from the filename
+			ptr = strstr(filename, ".dtn");
+			if (ptr != NULL)
+				ptr[0] = '\0';
+
+			// add .csv extension
 			strcat(filename, ".csv");
 			full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(filename) + 2);
 			sprintf(full_filename, "%s/%s", perf_opt->logs_dir, filename);
