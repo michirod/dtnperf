@@ -383,7 +383,7 @@ int get_bundle_header_and_options(bp_bundle_object_t * bundle, HEADER_TYPE * hea
 	return 0;
 }
 
-bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
+bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f, u32_t payload_size)
 {
 	if (f == NULL)
 		return BP_ENULLPNTR;
@@ -397,7 +397,11 @@ bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 	result = prepare_payload_header_and_ack_options(opt, f);
 
 	// remaining = bundle_payload - HEADER_SIZE - BUNDLE_OPT_SIZE
-	remaining = opt->bundle_payload - HEADER_SIZE - BUNDLE_OPT_SIZE;
+	remaining = payload_size - HEADER_SIZE - BUNDLE_OPT_SIZE;
+
+	// minimum payload size is HEADER_SIZE + BUNDLE_OPT_SIZE
+	if (remaining < 0)
+		remaining = 0;
 
 	// fill remainig payload with a pattern
 	for (i = remaining; i > strlen(pattern); i -= strlen(pattern))

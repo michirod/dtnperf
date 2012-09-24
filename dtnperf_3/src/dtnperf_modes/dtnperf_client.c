@@ -508,7 +508,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	else // Time and Data mode
 	{
-		error = prepare_generic_payload(perf_opt, stream);
+		error = prepare_generic_payload(perf_opt, stream, perf_opt->bundle_payload);
 		if (error != BP_SUCCESS)
 		{
 			fprintf(stderr, "error preparing payload: %s\n", bp_strerror(error));
@@ -759,6 +759,17 @@ void * send_bundles(void * opt)
 			error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd,
 					transfer_filename, transfer_filedim, &eof_reached);
 			close_payload_stream_write(&bundle, stream);
+		}
+
+		// prepare payload if last bundle of DATA MODE
+		if (perf_opt->op_mode == 'D')
+		{
+			if (sent_bundles == tot_bundles - 1 && perf_opt->data_qty % perf_opt->bundle_payload != 0)
+			{
+				open_payload_stream_write(bundle, &stream);
+				prepare_generic_payload(perf_opt, stream, perf_opt->data_qty % perf_opt->bundle_payload);
+				close_payload_stream_write(&bundle, stream);
+			}
 		}
 
 		// window debug
