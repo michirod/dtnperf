@@ -1176,6 +1176,7 @@ void print_client_usage(char* progname)
 			" -R, --received              Enable request for bundle status received report\n"
 			" -u, --nofragment            Disable bundle fragmentation.\n"
 			" -p, --payload <size[B|k|M]> Size of bundle payloads; B = Bytes, k = kBytes, M = MBytes. Default= 'k' (kB). Note: following the SI and the IEEE standards 1 MB=10^6 bytes.\n"
+			"                             Min payload size is %d bytes in TIME and DATA mode. In FILE mode it depends on filename length.\n"
 			" -M, --memory                Store the bundle into memory instead of file (if payload < 50KB).\n"
 			" -L, --log[=log_filename]    Create a log file. Default log filename is %s\n"
 			"     --ip-addr <addr>        Ip address of the bp daemon api. Default is 127.0.0.1\n"
@@ -1189,7 +1190,7 @@ void print_client_usage(char* progname)
 			"     --ack-priority[=val]    Force server to set bundle ack priority as the one of client bundles or as the val provided\n"
 			" -v, --verbose               Print some information messages during the execution.\n"
 			" -h, --help                  This help.\n",
-			LOG_FILENAME);
+			(int) (HEADER_SIZE + BUNDLE_OPT_SIZE), LOG_FILENAME);
 	fprintf(stderr, "\n");
 	exit(1);
 }
