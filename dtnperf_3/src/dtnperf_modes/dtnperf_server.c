@@ -739,12 +739,11 @@ void print_server_usage(char * progname)
 			" -s, --stop             Stop a demonized instance of server.\n"
 			"     --ip-addr <addr>   Ip address of the bp daemon api. Default: 127.0.0.1\n"
 			"     --ip-port <port>   Ip port of the bp daemon api. Default: 5010\n"
-			"     --ddir <dir>       Destination directory of bundles (if not using -M), if dir is not indicated assume %s .\n"
 			"     --fdir <dir>       Destination directory of transfered files. Default is %s .\n"
-			"     --debug[=level]    Debug messages [0-1], if level is not indicated level = 1.\n"
+			"     --debug[=level]    Debug messages [1-2], if level is not indicated level = 1.\n"
 			" -M, --memory           Save bundles into memory.\n"
-			" -e, --expiration <sec> Bundle acks expiration time (s). Default is 3600\n"
-			" -P, --priority <val>   Bundle acks priority [bulk|normal|expedited|reserved]. Default: normal\n"
+			" -l, --lifetime <sec>   Bundle acks lifetime (s). Default is 3600\n"
+			" -p, --priority <val>   Bundle acks priority [bulk|normal|expedited|reserved]. Default: normal\n"
 			"     --acks-to-mon      Send bundle acks to the monitor too\n"
 			" -v, --verbose          Print some information message during the execution.\n"
 			" -h, --help             This help.\n",
@@ -770,9 +769,9 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"help", no_argument, 0, 'h'},
 				{"verbose", no_argument, 0, 'v'},
 				{"memory", no_argument, 0, 'M'},
-				{"expiration", required_argument, 0, 'e'},
+				{"lifetime", required_argument, 0, 'l'},
 				{"debug", optional_argument, 0, 33}, 			// 33 because D is for data mode
-				{"priority", required_argument, 0, 'P'},
+				{"priority", required_argument, 0, 'p'},
 				{"ddir", required_argument, 0, 34},
 				{"fdir", required_argument, 0, 39},
 				{"acks-to-mon", no_argument, 0, 35},		// server only option
@@ -785,7 +784,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 
 		};
 		int option_index = 0;
-		c = getopt_long(argc, argv, "hvMe:P:ao:s", long_options, &option_index);
+		c = getopt_long(argc, argv, "hvMl:p:ao:s", long_options, &option_index);
 
 		switch (c)
 		{
@@ -803,11 +802,11 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			perf_opt->payload_type = BP_PAYLOAD_MEM;
 			break;
 
-		case 'e':
+		case 'l':
 			conn_opt->expiration = atoi(optarg);
 			break;
 
-		case 'P':
+		case 'p':
 			if (!strcasecmp(optarg, "bulk"))   {
 				conn_opt->priority = BP_PRIORITY_BULK;
 			} else if (!strcasecmp(optarg, "normal")) {
@@ -826,8 +825,8 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			perf_opt->debug = TRUE;
 			if (optarg != NULL){
 				int debug_level = atoi(optarg);
-				if (debug_level >= 0 && debug_level <= 2)
-					perf_opt->debug_level = atoi(optarg);
+				if (debug_level >= 1 && debug_level <= 2)
+					perf_opt->debug_level = atoi(optarg) - 1;
 				else {
 					fprintf(stderr, "wrong --debug argument\n");
 					exit(1);
@@ -890,11 +889,13 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			break;
 
 		case '?':
+			fprintf(stderr, "Unknown option: %c\n", optopt);
+			exit(1);
 			break;
 
 		case (char)(-1):
-					done = 1;
-		break;
+			done = 1;
+			break;
 
 		default:
 			// getopt already prints an error message for unknown option characters

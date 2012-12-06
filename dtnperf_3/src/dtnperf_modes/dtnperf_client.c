@@ -1169,28 +1169,29 @@ void print_client_usage(char* progname)
 			" -T, --time <seconds>        Time-mode: seconds of transmission.\n"
 			" -D, --data <num[B|k|M]>     Data-mode: bytes to transmit; B = Bytes, k = kBytes, M = MBytes. Default 'M' (MB). Note: following the SI and the IEEE standards 1 MB=10^6 bytes\n"
 			" -F, --file <filename>       File-mode: file to transfer\n"
-			" -w, --window <size>         Size of DTNperf transmission window, i.e. max number of bundles \"in flight\" (not still ACKed by a server ack); default: 1.\n"
-			" -r, --rate <rate[k|M|b]>    Bitrate of transmission. k = kbit/s, M = Mbit/s, b = bundles/s. Default is kb/s\n"
+			" -W, --window <size>         Size of DTNperf transmission window, i.e. max number of bundles \"in flight\" (not still ACKed by a server ack); default: 1.\n"
+			" -R, --rate <rate[k|M|b]>    Bitrate of transmission. k = kbit/s, M = Mbit/s, b = bundles/s. Default is kb/s\n"
 			" -C, --custody               Enable both custody transfer and \"custody accepted\" status reports.\n"
 			" -f, --forwarded             Enable request for bundle status forwarded report\n"
-			" -R, --received              Enable request for bundle status received report\n"
-			" -u, --nofragment            Disable bundle fragmentation.\n"
-			" -p, --payload <size[B|k|M]> Size of bundle payloads; B = Bytes, k = kBytes, M = MBytes. Default= 'k' (kB). Note: following the SI and the IEEE standards 1 MB=10^6 bytes.\n"
+			" -r, --received              Enable request for bundle status received report\n"
+			" -N, --nofragment            Disable bundle fragmentation.\n"
+			" -P, --payload <size[B|k|M]> Size of bundle payloads; B = Bytes, k = kBytes, M = MBytes. Default= 'k' (kB). Note: following the SI and the IEEE standards 1 MB=10^6 bytes.\n"
 			"                             Min payload size is %d bytes in TIME and DATA mode. In FILE mode it depends on filename length.\n"
 			" -M, --memory                Store the bundle into memory instead of file (if payload < 50KB).\n"
 			" -L, --log[=log_filename]    Create a log file. Default log filename is %s\n"
+			"     --log-dir <dir>         Directory where the client (and the internal monitor) saves the log file. Default is %s\n"
 			"     --ip-addr <addr>        Ip address of the bp daemon api. Default is 127.0.0.1\n"
 			"     --ip-port <port>        Ip port of the bp daemon api. Default is 5010\n"
-			"     --debug[=level]         Debug messages [0-1], if level is not indicated level = 1.\n"
-			" -e, --expiration <time>     Bundles expiration time (s). Default is 3600\n"
-			" -P, --priority <val>        Bundles priority [bulk|normal|expedited|reserved]. Default is normal\n"
-			"     --ack-to-mon            Force server to send bundle acks to the monitor\n"
+			"     --debug[=level]         Debug messages [1-2], if level is not indicated level = 2.\n"
+			" -l, --lifetime <time>       Bundles lifetime (s). Default is 3600\n"
+			" -p, --priority <val>        Bundles priority [bulk|normal|expedited|reserved]. Default is normal\n"
+			"     --ack-to-mon            Force server to send bundle acks to the monitor indipendently of server settings\n"
 			"     --no-ack-to-mon         Force server to NOT send bundle acks to the monitor\n"
-			"     --ack-exp               Force server to set bundle ack expiration time to the same value of the data bundles sent by the client\n"
+			"     --ack-lifetime          Force server to set bundle ack lifetime time to the same value of the data bundles sent by the client\n"
 			"     --ack-priority[=val]    Force server to set bundle ack priority as the one of client bundles or as the val provided\n"
 			" -v, --verbose               Print some information messages during the execution.\n"
 			" -h, --help                  This help.\n",
-			(int) (HEADER_SIZE + BUNDLE_OPT_SIZE), LOG_FILENAME);
+			(int) (HEADER_SIZE + BUNDLE_OPT_SIZE), LOG_FILENAME, LOGS_DIR_DEFAULT);
 	fprintf(stderr, "\n");
 	exit(1);
 }
@@ -1211,34 +1212,35 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"verbose", no_argument, 0, 'v'},
 				{"memory", no_argument, 0, 'M'},
 				{"custody", no_argument, 0, 'C'},
-				{"window", required_argument, 0, 'w'},
+				{"window", required_argument, 0, 'W'},
 				{"destination", required_argument, 0, 'd'},
 				{"monitor", required_argument, 0, 'm'},
 				{"exitinterval", required_argument, 0, 'i'},			// interval before exit
 				{"time", required_argument, 0, 'T'},			// time mode
 				{"data", required_argument, 0, 'D'},			// data mode
 				{"file", required_argument, 0, 'F'},			// file mode
-				{"payload", required_argument, 0, 'p'},
-				{"expiration", required_argument, 0, 'e'},
-				{"rate", required_argument, 0, 'r'},
+				{"payload", required_argument, 0, 'P'},
+				{"lifetime", required_argument, 0, 'l'},
+				{"rate", required_argument, 0, 'R'},
 				{"debug", optional_argument, 0, 33}, 				// 33 because D is for data mode
-				{"priority", required_argument, 0, 'P'},
-				{"nofragment", no_argument, 0, 'u'},
-				{"received", no_argument, 0, 'R'},
+				{"priority", required_argument, 0, 'p'},
+				{"nofragment", no_argument, 0, 'N'},
+				{"received", no_argument, 0, 'r'},
 				{"forwarded", no_argument, 0, 'f'},
 				{"log", optional_argument, 0, 'L'},				// create log file
+				{"ldir", required_argument, 0, 40},
 				{"ip-addr", required_argument, 0, 37},
 				{"ip-port", required_argument, 0, 38},
 				{"ack-to-mon", no_argument, 0, 44},			// force server to send acks to monitor
 				{"no-ack-to-mon", no_argument, 0, 45},		// force server to NOT send acks to monitor
-				{"ack-exp", no_argument, 0, 46}	,			// set server ack expiration equal to client bundles
+				{"ack-lifetime", no_argument, 0, 46}	,			// set server ack expiration equal to client bundles
 				{"ack-priority", optional_argument, 0, 47},	// set server ack priority as indicated or equal to client bundles
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
 		};
 
 		int option_index = 0;
-		c = getopt_long(argc, argv, "hvMCw:d:m:i:T:D:F:p:e:r:P:uRfL::", long_options, &option_index);
+		c = getopt_long(argc, argv, "hvMCW:d:m:i:T:D:F:P:l:R:p:NrfL::", long_options, &option_index);
 
 		switch (c)
 		{
@@ -1261,7 +1263,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			conn_opt->custody_receipts = 1;
 			break;
 
-		case 'w':
+		case 'W':
 			perf_opt->congestion_ctrl = 'w';
 			perf_opt->window = atoi(optarg);
 			w = TRUE;
@@ -1317,7 +1319,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			}
 			break;
 
-		case 'p':
+		case 'P':
 			perf_opt->p_arg = optarg;
 			perf_opt->data_unit = find_data_unit(perf_opt->p_arg);
 			switch (perf_opt->data_unit)
@@ -1339,11 +1341,11 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			}
 			break;
 
-		case 'e':
+		case 'l':
 			conn_opt->expiration = atoi(optarg);
 			break;
 
-		case 'r':
+		case 'R':
 			perf_opt->rate_arg = strdup(optarg);
 			perf_opt->rate_unit = find_rate_unit(perf_opt->rate_arg);
 			perf_opt->rate = atoi(perf_opt->rate_arg);
@@ -1351,7 +1353,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			r = TRUE;
 			break;
 
-		case 'P':
+		case 'p':
 			if (!strcasecmp(optarg, "bulk"))   {
 				conn_opt->priority = BP_PRIORITY_BULK;
 			} else if (!strcasecmp(optarg, "normal")) {
@@ -1366,7 +1368,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			}
 			break;
 
-		case 'u':
+		case 'N':
 			conn_opt->disable_fragmentation = TRUE;
 			break;
 
@@ -1374,7 +1376,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			conn_opt->forwarding_receipts = TRUE;
 			break;
 
-		case 'R':
+		case 'r':
 			conn_opt->receive_receipts = TRUE;
 			break;
 
@@ -1384,12 +1386,16 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				perf_opt->log_filename = strdup(optarg);
 			break;
 
+		case 40:
+			perf_opt->logs_dir = strdup(optarg);
+			break;
+
 		case 33: // debug
 			perf_opt->debug = TRUE;
 			if (optarg){
 				int debug_level = atoi(optarg);
-				if (debug_level >= 0 && debug_level <= 2)
-					perf_opt->debug_level = atoi(optarg);
+				if (debug_level >= 1 && debug_level <= 2)
+					perf_opt->debug_level = atoi(optarg) - 1;
 				else {
 					fprintf(stderr, "wrong --debug argument\n");
 					exit(1);
@@ -1413,8 +1419,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			perf_opt->ip_port = atoi(optarg);
 			perf_opt->use_ip = TRUE;
 			break;
-		case '?':
-			break;
+
 
 		case 44:
 			perf_opt->bundle_ack_options.ack_to_mon = ATM_FORCE_YES;
@@ -1449,10 +1454,14 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			}
 			break;
 
+		case '?':
+			fprintf(stderr, "Unknown option: %c\n", optopt);
+			exit(1);
+			break;
 
 		case (char)(-1):
-																									done = 1;
-		break;
+			done = 1;																					done = 1;
+			break;
 
 		default:
 			// getopt already prints an error message for unknown option characters

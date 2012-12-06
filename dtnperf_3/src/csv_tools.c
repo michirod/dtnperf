@@ -35,11 +35,11 @@ void csv_print_status_report_timestamps_header(FILE * file)
 {
 	char buf[300];
 	memset(buf, 0, 300);
-	strcat(buf, "STATUS_DELIVERED_TIMESTAMP;SEQNO;");
-	strcat(buf, "STATUS_CUSTODY_ACCEPTED_TIMESTAMP;SEQNO;");
-	strcat(buf, "STATUS_RECEIVED_TIMESTAMP;SEQNO;");
-	strcat(buf, "STATUS_FORWARDED_TIMESTAMP;SEQNO;");
-	strcat(buf, "STATUS_DELETED_TIMESTAMP;SEQNO;");
+	strcat(buf, "STATUS_DELIVERED_TIMESTAMP;");
+	strcat(buf, "STATUS_CUSTODY_ACCEPTED_TIMESTAMP;");
+	strcat(buf, "STATUS_RECEIVED_TIMESTAMP;");
+	strcat(buf, "STATUS_FORWARDED_TIMESTAMP;");
+	strcat(buf, "STATUS_DELETED_TIMESTAMP;");
 
 	// not useful for now
 	// strcat(buf, "STATUS_ACKED_BY_APP_TIMESTAMP;SEQNO;");
@@ -53,41 +53,41 @@ void csv_print_status_report_timestamps(FILE * file, bp_bundle_status_report_t s
 	memset(buf1, 0, 256);
 
 	if (status_report.flags & BP_STATUS_DELIVERED)
-		sprintf(buf2, "%lu;%lu;", status_report.delivery_ts.secs, status_report.delivery_ts.seqno);
+		sprintf(buf2, "%lu;", status_report.delivery_ts.secs);
 	else
-		sprintf(buf2, " ; ;");
+		sprintf(buf2, "; ");
 	strcat(buf1, buf2);
 
 	if (status_report.flags & BP_STATUS_CUSTODY_ACCEPTED)
-		sprintf(buf2, "%lu;%lu;", status_report.custody_ts.secs, status_report.custody_ts.seqno);
+		sprintf(buf2, "%lu;", status_report.custody_ts.secs);
 	else
-		sprintf(buf2, " ; ;");
+		sprintf(buf2, " ;");
 	strcat(buf1, buf2);
 
 	if (status_report.flags & BP_STATUS_RECEIVED)
-		sprintf(buf2, "%lu;%lu;", status_report.receipt_ts.secs, status_report.receipt_ts.seqno);
+		sprintf(buf2, "%lu;", status_report.receipt_ts.secs);
 	else
-		sprintf(buf2, " ; ;");
+		sprintf(buf2, " ;");
 	strcat(buf1, buf2);
 
 	if (status_report.flags & BP_STATUS_FORWARDED)
-		sprintf(buf2, "%lu;%lu;", status_report.forwarding_ts.secs, status_report.forwarding_ts.seqno);
+		sprintf(buf2, "%lu;", status_report.forwarding_ts.secs);
 	else
-		sprintf(buf2, " ; ;");
+		sprintf(buf2, " ;");
 	strcat(buf1, buf2);
 
 	if (status_report.flags & BP_STATUS_DELETED)
-		sprintf(buf2, "%lu;%lu;", status_report.deletion_ts.secs, status_report.deletion_ts.seqno);
+		sprintf(buf2, "%lu;", status_report.deletion_ts.secs);
 	else
-		sprintf(buf2, " ; ;");
+		sprintf(buf2, " ;");
 	strcat(buf1, buf2);
 
 	// not useful for now
 	/*
 	if (status_report.flags & BP_STATUS_ACKED_BY_APP)
-		sprintf(buf2, "%lu;%lu;", status_report.ack_by_app_ts.secs, status_report.ack_by_app_ts.seqno);
+		sprintf(buf2, "%lu;", status_report.ack_by_app_ts.secs);
 	else
-		sprintf(buf2, " ; ;");
+		sprintf(buf2, " ;");
 	strcat(buf1, buf2);
 	*/
 

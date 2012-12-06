@@ -643,8 +643,8 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 				perf_opt->debug = TRUE;
 				if (optarg != NULL){
 					int debug_level = atoi(optarg);
-					if (debug_level >= 0 && debug_level <= 2)
-						perf_opt->debug_level = atoi(optarg);
+					if (debug_level >= 1 && debug_level <= 2)
+						perf_opt->debug_level = atoi(optarg) -1;
 					else {
 						fprintf(stderr, "wrong --debug argument\n");
 						exit(1);
@@ -665,7 +665,7 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 				perf_opt->use_ip = TRUE;
 				break;
 
-			case 39:
+			case 40:
 				perf_opt->logs_dir = strdup(optarg);
 				break;
 
@@ -698,8 +698,8 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 				break;
 
 			case (char)(-1):
-						done = 1;
-			break;
+				done = 1;
+				break;
 
 			default:
 				// getopt already prints an error message for unknown option characters

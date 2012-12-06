@@ -28,18 +28,18 @@
 // dir where are saved transfered files
 #define FILE_DIR_DEFAULT "~/dtnperf/files/"
 
-// dir where are saved monitor logs
-#define LOGS_DIR_DEFAULT "~/dtnperf/logs/"
+// dir where are saved client and monitor logs
+#define LOGS_DIR_DEFAULT "."
 
 // source file for bundle in client with use_file option
 #define SOURCE_FILE "dtnperfbuf.src"
 
 // default client log filename
-#define LOG_FILENAME "~/dtnperf/log"
+#define LOG_FILENAME "dtnperf_client.log"
 
 // output file: stdin and stderr redirect here if daemon is TRUE;
-#define SERVER_OUTPUT_FILE "server_output.txt"
-#define MONITOR_OUTPUT_FILE "monitor_output.txt"
+#define SERVER_OUTPUT_FILE "dtnperf_server.log"
+#define MONITOR_OUTPUT_FILE "dtnperf_monitor.log"
 
 /*
  * FIXED SIZE HEADERS
