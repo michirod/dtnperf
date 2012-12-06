@@ -747,7 +747,7 @@ void print_server_usage(char * progname)
 			"     --acks-to-mon      Send bundle acks to the monitor too\n"
 			" -v, --verbose          Print some information message during the execution.\n"
 			" -h, --help             This help.\n",
-			SERVER_OUTPUT_FILE, BUNDLE_DIR_DEFAULT, FILE_DIR_DEFAULT);
+			SERVER_OUTPUT_FILE, FILE_DIR_DEFAULT);
 	fprintf(stderr, "\n");
 	exit(1);
 }

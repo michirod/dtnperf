@@ -147,6 +147,7 @@ int main(int argc, char ** argv)
 
 void print_usage(char* progname){
 	fprintf(stderr, "\n");
+	fprintf(stderr, "DTNperf version %s\n", DTNPERF_VERSION);
 	fprintf(stderr, "SYNTAX: %s <operative mode> [options]\n", progname);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "operative modes:\n");
