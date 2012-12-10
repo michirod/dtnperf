@@ -43,7 +43,7 @@ void csv_print_status_report_timestamps_header(FILE * file)
 	strcat(buf, "DELETED_TIMESTAMP;");
 
 	// not useful for now
-	// strcat(buf, "STATUS_ACKED_BY_APP_TIMESTAMP");
+	// strcat(buf, "ACKED_BY_APP_TIMESTAMP");
 
 	// status report reason
 	strcat(buf, "REASON;");
