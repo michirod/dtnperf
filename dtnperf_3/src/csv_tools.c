@@ -35,14 +35,17 @@ void csv_print_status_report_timestamps_header(FILE * file)
 {
 	char buf[300];
 	memset(buf, 0, 300);
-	strcat(buf, "STATUS_DELIVERED_TIMESTAMP;");
-	strcat(buf, "STATUS_CUSTODY_ACCEPTED_TIMESTAMP;");
-	strcat(buf, "STATUS_RECEIVED_TIMESTAMP;");
-	strcat(buf, "STATUS_FORWARDED_TIMESTAMP;");
-	strcat(buf, "STATUS_DELETED_TIMESTAMP;");
+	strcat(buf, "DELIVERED_TIMESTAMP;");
+	strcat(buf, "CUSTODY_ACCEPTED_TIMESTAMP;");
+	strcat(buf, "RECEIVED_TIMESTAMP;");
+	strcat(buf, "FORWARDED_TIMESTAMP;");
+	strcat(buf, "DELETED_TIMESTAMP;");
 
 	// not useful for now
-	// strcat(buf, "STATUS_ACKED_BY_APP_TIMESTAMP;SEQNO;");
+	// strcat(buf, "STATUS_ACKED_BY_APP_TIMESTAMP");
+
+	// status report reason
+	strcat(buf, "REASON;");
 
 	fwrite(buf, strlen(buf), 1, file);
 }
@@ -90,6 +93,10 @@ void csv_print_status_report_timestamps(FILE * file, bp_bundle_status_report_t s
 		sprintf(buf2, " ;");
 	strcat(buf1, buf2);
 	*/
+
+	// status report reason
+	sprintf(buf2, "%s;", bp_status_report_reason_to_str(status_report.reason));
+	strcat(buf1, buf2);
 
 	fwrite(buf1, strlen(buf1), 1, file);
 }
