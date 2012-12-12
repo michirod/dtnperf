@@ -96,7 +96,7 @@ void csv_print_status_report_timestamps(FILE * file, al_bp_bundle_status_report_
 	*/
 
 	// status report reason
-	strcat(buf1, bp_status_report_reason_to_str(status_report.reason));
+	strcat(buf1, al_bp_status_report_reason_to_str(status_report.reason));
 	strcat(buf1, ";");
 
 	fwrite(buf1, strlen(buf1), 1, file);

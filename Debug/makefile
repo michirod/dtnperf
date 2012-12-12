@@ -24,19 +24,19 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: dtnperf_3
+all: dtnperf_3_vION
 
 # Tool invocations
-dtnperf_3: $(OBJS) $(USER_OBJS)
+dtnperf_3_vION: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: Cross GCC Linker'
-	gcc -L/home/michele/Dropbox/workspace/bp_abstraction_layer/Debug -L/home/michele/Dropbox/git/bp-abstraction-layer/bp_abstraction_layer/Debug -pthread -o "dtnperf_3" $(OBJS) $(USER_OBJS) $(LIBS)
+	gcc -L/home/michele/Dropbox/workspace/bp_abstraction_layer/Debug -L/home/michele/Dropbox/git/bp-abstraction-layer/bp_abstraction_layer/Debug -pthread -o "dtnperf_3_vION" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES) dtnperf_3
+	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES) dtnperf_3_vION
 	-@echo ' '
 
 .PHONY: all clean dependents
