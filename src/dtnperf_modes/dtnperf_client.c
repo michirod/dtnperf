@@ -216,10 +216,12 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		}
 		else
 			strncpy(perf_opt->mon_eid, local_eid.uri, strlen(local_eid.uri));
+
 	}
 	// if isn't CBHE Format append monitor demux string to replyto eid
 	if(strncmp(perf_opt->mon_eid,"ipn",3) != 0)
 		strcat(perf_opt->mon_eid, MON_EP_STRING);
+
 	// parse
 	error = al_bp_parse_eid_string(&mon_eid, perf_opt->mon_eid);
 	if (error != BP_SUCCESS)
@@ -256,9 +258,12 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			mon_params.client_id = getpid();
 			mon_params.perf_g_opt = perf_g_opt;
 			printf("there is not a monitor on this endpoint.\n");
-			sprintf(temp1, "%s_%d", mon_eid.uri, mon_params.client_id);
+			// if isn't CBHE Format append monitor demux string to replyto eid
+			if(strncmp(perf_opt->mon_eid,"ipn",3) != 0)
+				sprintf(temp1, "%s_%d", mon_eid.uri, mon_params.client_id);
+			else
+				sprintf(temp1, "%s", mon_eid.uri);
 			al_bp_parse_eid_string(&mon_eid, temp1);
-
 			// start dedicated monitor
 			if ((monitor_pid = fork()) == 0)
 			{
@@ -1269,6 +1274,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 'W':
 			perf_opt->congestion_ctrl = 'w';
 			perf_opt->window = atoi(optarg);
+			printf("window ok");
 			w = TRUE;
 			break;
 
@@ -1353,6 +1359,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			perf_opt->rate_unit = find_rate_unit(perf_opt->rate_arg);
 			perf_opt->rate = atoi(perf_opt->rate_arg);
 			perf_opt->congestion_ctrl = 'r';
+			printf("rate ok");
 			r = TRUE;
 			break;
 
