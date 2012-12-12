@@ -257,6 +257,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	// start infinite loop
 	while(1)
 	{
+		printf("qui qui\n");
 		// create a bundle object
 		if ((debug) && (debug_level > 0))
 			printf("[debug] initiating memory for bundles...\n");
@@ -269,13 +270,14 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		}
 		if(debug && debug_level > 0)
 			printf("done\n");
-
+		printf("\tqui dopo bundle\n");
 		// reset file transfer indicators
 		is_file_transfer_bundle = FALSE;
 
 		// wait until receive a bundle
 		if ((debug) && (debug_level > 0))
 			printf("[debug] waiting for bundles...\n");
+		printf("\tricezione bundle\n");
 		error = al_bp_bundle_receive(handle, bundle_object, pl_location, -1);
 		if (error != BP_SUCCESS)
 		{
@@ -286,7 +288,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		}
 		if ((debug) && (debug_level > 0))
 			printf(" bundle received\n");
-
+		printf("\tbundlericevuto\n");
 		// find payload size
 		if ((debug) && (debug_level > 0))
 			printf("[debug] calculating bundle payload size...");
@@ -494,6 +496,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				|| (bundle_ack_options.ack_to_mon == ATM_FORCE_YES);
 		if (send_ack_to_client || send_ack_to_monitor)
 		{
+
 			// create bundle ack to send
 			if ((debug) && (debug_level > 0))
 				printf("[debug] initiating memory for bundle ack...");
@@ -678,10 +681,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 		// free memory for bundle
 		al_bp_bundle_free(&bundle_object);
+
 		free(pl_filename);
 		pl_filename_len = 0;
 
-
+		printf("fine while\n");
 	}// while(1)
 
 	al_bp_close(handle);

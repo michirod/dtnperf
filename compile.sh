@@ -24,7 +24,7 @@
 #d'Amico Compile
 if [ $# -ne 3 ]; then
 	echo "use ./compile <al_bpdir> <dtn2dir> <iondir>"
-	echo "	<al_bpdir> directory of Abstraction Layer Bundle Protocol Library and Src"
+	echo "	<al_bpdir> directory of Abstraction Layer Bundle Protocol"
 	echo "	<dtn2>     directory of DTN2 Implementation"
 	echo "	<iondir>   directory of ION Implementation"
 	exit
@@ -34,5 +34,5 @@ AL_BPDIR=$1
 DTN2DIR=$2
 IONDIR=$3
 #Compile command
-gcc -o dtnperf -L/usr/local/lib -L$AL_BPDIR -I$AL_BPDIR/src/bp_implementations -I$AL_BPDIR/src -I$DTN2DIR -I$DTN2DIR/applib -I$IONDIR/include -I$IONDIR/library -O3 -Wall src/*.c src/dtnperf_modes/*.c -fmessage-length=0 -lbp_abstraction_layer -ldtnapi -lbp -lici -lpthread
+gcc -o dtnperf -L/usr/local/lib -L$AL_BPDIR -I$AL_BPDIR/src/bp_implementations -I$AL_BPDIR/src -I$DTN2DIR -I$DTN2DIR/applib -I$IONDIR/include -I$IONDIR/library  src/*.c src/dtnperf_modes/*.c -fmessage-length=0 -lal_bp -ldtnapi -lbp -lici -lpthread
 
