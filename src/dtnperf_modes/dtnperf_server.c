@@ -529,7 +529,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 			if(debug && debug_level > 0)
 				printf("done\n");
-
+			printf("\tyes\n");
 			// setting the bundle ack payload
 			if ((debug) && (debug_level > 0))
 				printf("[debug] setting the payload of the bundle ack...");
