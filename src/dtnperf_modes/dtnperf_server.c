@@ -674,13 +674,13 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 					printf(" bundle ack sent to monitor\n");
 			}
 			//free memory for bundle ack
-			al_bp_bundle_free(&bundle_ack_object);
+			//al_bp_bundle_free(&bundle_ack_object);
 			free(pl_buffer);
 			pl_buffer_size = 0;
 		}
 
 		// free memory for bundle
-		al_bp_bundle_free(&bundle_object);
+	//	al_bp_bundle_free(&bundle_object);
 
 		free(pl_filename);
 		pl_filename_len = 0;
