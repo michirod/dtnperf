@@ -700,8 +700,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	free(source_file);
 	free(transfer_filename);
 	free(send_info);
-	al_bp_bundle_free(&bundle);
-	al_bp_bundle_free(&bundle_stop);
+//	al_bp_bundle_free(&bundle);
+//	al_bp_bundle_free(&bundle_stop);
 
 
 	if (perf_opt->create_log)
@@ -983,7 +983,7 @@ void * congestion_control(void * opt)
 			sched_yield();
 		} // end while(n_bundles)
 
-		al_bp_bundle_free(&ack);
+		//al_bp_bundle_free(&ack);
 	}
 	else if (perf_opt->congestion_ctrl == 'r') // Rate based congestion control
 	{
@@ -1107,7 +1107,7 @@ void * wait_for_sigint(void * arg)
 		printf("done.\n");
 
 
-		al_bp_bundle_free(&bundle_force_stop);
+		//al_bp_bundle_free(&bundle_force_stop);
 	}
 
 	process_interrupted = TRUE;
@@ -1169,7 +1169,7 @@ void print_client_usage(char* progname)
 {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "DtnPerf3 client mode\n");
-	fprintf(stderr, "SYNTAX: %s %s -d <dest_eid> <[-T <s> | -D <num> | -F <filename>]> [-w <size> | -r <rate>] [options]\n", progname, CLIENT_STRING);
+	fprintf(stderr, "SYNTAX: %s %s -d <dest_eid> <[-T <s> | -D <num> | -F <filename>]> [-W <size> | -R <rate>] [options]\n", progname, CLIENT_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
 			" -d, --destination <eid>     Destination eid (required).\n"
@@ -1274,7 +1274,6 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 'W':
 			perf_opt->congestion_ctrl = 'w';
 			perf_opt->window = atoi(optarg);
-			printf("window ok");
 			w = TRUE;
 			break;
 
@@ -1359,7 +1358,6 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			perf_opt->rate_unit = find_rate_unit(perf_opt->rate_arg);
 			perf_opt->rate = atoi(perf_opt->rate_arg);
 			perf_opt->congestion_ctrl = 'r';
-			printf("rate ok");
 			r = TRUE;
 			break;
 
