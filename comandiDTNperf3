@@ -1,0 +1,9 @@
+#MONITOR
+./dtnperf_vION --monitor  --debug=1 -v 
+#CLIENT
+	TEMPO
+./dtnperf_vION --client -d ipn:1.2000 -T2 -W 5 --debug=1 -l 20 -v
+	DATA CON MONITOR E RCV STATUS REPORT
+./dtnperf_vION --client -d ipn:1.2000 -m ipn:1.1000 -D2M -R 3b -r --debug=1 -l 20 -v	
+#SERVER
+./dtnperf_vION --server --debug=1 -l20 -v
