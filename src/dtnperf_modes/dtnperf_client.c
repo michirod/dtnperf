@@ -528,11 +528,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	// close the stream
 	close_payload_stream_write(&bundle, stream);
-	if(bundle.payload->location == BP_PAYLOAD_MEM)
-		printf("bundle payload: %s %d",bundle.payload->buf.buf_val,bundle.payload->buf.buf_len);
-	else
-		printf("bundle payload: %s %d",bundle.payload->filename.filename_val,bundle.payload->filename.filename_len);
-
 
 	if(debug)
 		printf("[debug] payload prepared\n");
@@ -700,7 +695,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	free(source_file);
 	free(transfer_filename);
 	free(send_info);
-//	al_bp_bundle_free(&bundle);
+	al_bp_bundle_free(&bundle);
 //	al_bp_bundle_free(&bundle_stop);
 
 

@@ -492,9 +492,12 @@ al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char 
 	timestamp_seqno = (uint32_t) ack.bundle_creation_ts.seqno;
 	fwrite(&timestamp_secs, 1, sizeof(uint32_t), buf_stream);
 	fwrite(&timestamp_seqno, 1, sizeof(uint32_t), buf_stream);
+	//printf("\tIN prepare_server_ack_payload: buf %s - buf_size: %d \n",buf,buf_size);
 	fclose(buf_stream);
+	printf("\tIN prepare_server_ack_payload: buf %s - buf_size: %d \n",buf,buf_size);
 	*payload = (char*)malloc(buf_size);
 	memcpy(*payload, buf, buf_size);
+	printf("\tIN prepare_server_ack_payload: payload %s\n",*payload);
 	*payload_size = buf_size;
 	free(buf);
 	return BP_SUCCESS;

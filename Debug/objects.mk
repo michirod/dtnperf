@@ -4,5 +4,5 @@
 
 USER_OBJS :=
 
-LIBS := -l"" -l""
+LIBS := -lbp_abstraction_layer
 
