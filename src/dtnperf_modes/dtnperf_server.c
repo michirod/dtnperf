@@ -257,10 +257,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	// start infinite loop
 	while(1)
 	{
-		printf("qui qui\n");
+
 		// create a bundle object
 		if ((debug) && (debug_level > 0))
 			printf("[debug] initiating memory for bundles...\n");
+
 		error = al_bp_bundle_create(&bundle_object);
 		if (error != BP_SUCCESS)
 		{
@@ -270,14 +271,14 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		}
 		if(debug && debug_level > 0)
 			printf("done\n");
-		printf("\tqui dopo bundle\n");
+
 		// reset file transfer indicators
 		is_file_transfer_bundle = FALSE;
 
 		// wait until receive a bundle
 		if ((debug) && (debug_level > 0))
 			printf("[debug] waiting for bundles...\n");
-		printf("\tricezione bundle\n");
+
 		error = al_bp_bundle_receive(handle, bundle_object, pl_location, -1);
 		if (error != BP_SUCCESS)
 		{
@@ -288,7 +289,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		}
 		if ((debug) && (debug_level > 0))
 			printf(" bundle received\n");
-		printf("\tbundlericevuto\n");
+
 		// find payload size
 		if ((debug) && (debug_level > 0))
 			printf("[debug] calculating bundle payload size...");
@@ -521,6 +522,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			if ((debug) && (debug_level > 0))
 				printf("[debug] preparing the payload of the bundle ack...");
 			error = prepare_server_ack_payload(server_ack_payload, &pl_buffer, &pl_buffer_size);
+			printf("\tIN ServerMAIN: pl_buffer %s\n",pl_buffer);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
@@ -529,7 +531,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 			if(debug && debug_level > 0)
 				printf("done\n");
-			printf("\tyes\n");
+
 			// setting the bundle ack payload
 			if ((debug) && (debug_level > 0))
 				printf("[debug] setting the payload of the bundle ack...");
@@ -674,18 +676,18 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 					printf(" bundle ack sent to monitor\n");
 			}
 			//free memory for bundle ack
-			//al_bp_bundle_free(&bundle_ack_object);
+			al_bp_bundle_free(&bundle_ack_object);
 			free(pl_buffer);
 			pl_buffer_size = 0;
+
 		}
 
 		// free memory for bundle
-	//	al_bp_bundle_free(&bundle_object);
+		al_bp_bundle_free(&bundle_object);
 
 		free(pl_filename);
 		pl_filename_len = 0;
 
-		printf("fine while\n");
 	}// while(1)
 
 	al_bp_close(handle);
