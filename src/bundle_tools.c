@@ -6,8 +6,8 @@
 
 
 // static variables for stream operations
-static char * buffer;
-static u32_t buffer_len;
+static char * buffer = NULL;
+static u32_t buffer_len = 0;
 
 
 /* ----------------------------------------------
@@ -235,7 +235,6 @@ int close_payload_stream_write(al_bp_bundle_object_t * bundle, FILE *f)
 	al_bp_bundle_get_payload_location(*bundle, &pl_location);
 
 	fclose(f);
-
 	if (pl_location == BP_PAYLOAD_MEM)
 	{
 		al_bp_bundle_set_payload_mem(bundle, buffer, buffer_len);
@@ -492,12 +491,9 @@ al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char 
 	timestamp_seqno = (uint32_t) ack.bundle_creation_ts.seqno;
 	fwrite(&timestamp_secs, 1, sizeof(uint32_t), buf_stream);
 	fwrite(&timestamp_seqno, 1, sizeof(uint32_t), buf_stream);
-	//printf("\tIN prepare_server_ack_payload: buf %s - buf_size: %d \n",buf,buf_size);
 	fclose(buf_stream);
-	printf("\tIN prepare_server_ack_payload: buf %s - buf_size: %d \n",buf,buf_size);
 	*payload = (char*)malloc(buf_size);
 	memcpy(*payload, buf, buf_size);
-	printf("\tIN prepare_server_ack_payload: payload %s\n",*payload);
 	*payload_size = buf_size;
 	free(buf);
 	return BP_SUCCESS;
