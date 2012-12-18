@@ -425,7 +425,7 @@ al_bp_error_t prepare_force_stop_bundle(al_bp_bundle_object_t * start, al_bp_end
 	al_bp_bundle_set_delivery_opts(start, opts);
 	al_bp_bundle_set_expiration(start, expiration);
 	al_bp_bundle_set_priority(start, priority);
-
+	printf("IN prepare_force_stop_bundle: %lu\n",buffer_len);
 	return BP_SUCCESS;
 }
 
@@ -449,7 +449,7 @@ al_bp_error_t prepare_stop_bundle(al_bp_bundle_object_t * stop, al_bp_endpoint_i
 	al_bp_bundle_set_delivery_opts(stop, opts);
 	al_bp_bundle_set_expiration(stop, expiration);
 	al_bp_bundle_set_priority(stop, priority);
-
+	printf("IN prepare_stop_bundle: %lu\n",buffer_len);
 	return BP_SUCCESS;
 }
 
