@@ -1159,6 +1159,7 @@ void print_final_report(FILE * f)
 	fprintf(f, "\nSent %d bundles, total sent data = %.3f %s\n", sent_bundles, sent, sent_unit);
 	fprintf(f, "Total execution time = %.1f\n", total_secs);
 	fprintf(f, "Goodput = %.3f %s\n", goodput, gput_unit);
+	fprintf(f,"\n\tCiao\n");
 }
 
 void print_client_usage(char* progname)
