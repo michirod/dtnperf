@@ -438,6 +438,7 @@ al_bp_error_t prepare_stop_bundle(al_bp_bundle_object_t * stop, al_bp_endpoint_i
 	uint32_t buf;
 	al_bp_bundle_delivery_opts_t opts = BP_DOPTS_NONE;
 	al_bp_bundle_set_payload_location(stop, BP_PAYLOAD_MEM);
+	printf("In prepare_stop_bundle Prima della Open\n");
 	open_payload_stream_write(*stop, &stop_stream);
 	fwrite(&stop_header, HEADER_SIZE, 1, stop_stream);
 	buf = htonl(sent_bundles);
