@@ -522,7 +522,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			if ((debug) && (debug_level > 0))
 				printf("[debug] preparing the payload of the bundle ack...");
 			error = prepare_server_ack_payload(server_ack_payload, &pl_buffer, &pl_buffer_size);
-			printf("\tIN ServerMAIN: pl_buffer %s\n",pl_buffer);
+			printf("\tIN ServerMAIN: pl_buffer %d\n",pl_buffer_size);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
@@ -657,6 +657,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				if ((debug) && (debug_level > 0))
 					printf(" bundle ack sent to client\n");
 			}
+			printf("Send bundle to client ok\n");
 
 			// send the bundle ack to the monitor
 			if (send_ack_to_monitor)
@@ -675,6 +676,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				if ((debug) && (debug_level > 0))
 					printf(" bundle ack sent to monitor\n");
 			}
+
 			//free memory for bundle ack
 			al_bp_bundle_free(&bundle_ack_object);
 			free(pl_buffer);

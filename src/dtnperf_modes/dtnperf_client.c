@@ -588,7 +588,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	pthread_mutex_destroy(&mutexdata);
 	sem_destroy(&window);
 	pthread_cond_destroy(&cond_ackreceiver);
-
+	sleep(2);
 	// if user sent Ctrl+C to the client,
 	// let the wait_for_signal thread to terminate the execution
 	if (process_interrupted)
@@ -611,11 +611,10 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if(perf_opt->create_log)
 		print_final_report(log_file);
 
-	printf("Qui\n");
 	// fill the stop bundle
 	prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority, sent_bundles);
 	al_bp_bundle_set_source(&bundle_stop, local_eid);
-	printf("No Dopo\n");
+
 	// send stop bundle to monitor
 	if (debug)
 		printf("sending the stop bundle to the monitor...");
@@ -696,9 +695,11 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	free(source_file);
 	free(transfer_filename);
 	free(send_info);
+	sleep(2);
 	al_bp_bundle_free(&bundle);
-//	al_bp_bundle_free(&bundle_stop);
-
+	sleep(2);
+	al_bp_bundle_free(&bundle_stop);
+	sleep(2);
 
 	if (perf_opt->create_log)
 		printf("\nClient log saved: %s\n", perf_opt->log_filename);
@@ -1159,7 +1160,6 @@ void print_final_report(FILE * f)
 	fprintf(f, "\nSent %d bundles, total sent data = %.3f %s\n", sent_bundles, sent, sent_unit);
 	fprintf(f, "Total execution time = %.1f\n", total_secs);
 	fprintf(f, "Goodput = %.3f %s\n", goodput, gput_unit);
-	fprintf(f,"\n\tCiao\n");
 }
 
 void print_client_usage(char* progname)
