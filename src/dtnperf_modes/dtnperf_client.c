@@ -783,7 +783,7 @@ void * send_bundles(void * opt)
 					transfer_filename, transfer_filedim, &eof_reached);
 			close_payload_stream_write(&bundle, stream);
 		}
-
+		printf("QUI\n");
 		// window debug
 		if ((debug) && (debug_level > 1))
 		{
