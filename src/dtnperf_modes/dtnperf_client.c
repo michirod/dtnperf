@@ -783,7 +783,7 @@ void * send_bundles(void * opt)
 					transfer_filename, transfer_filedim, &eof_reached);
 			close_payload_stream_write(&bundle, stream);
 		}
-		printf("QUI\n");
+
 		// window debug
 		if ((debug) && (debug_level > 1))
 		{
@@ -800,7 +800,7 @@ void * send_bundles(void * opt)
 
 		if (perf_opt->congestion_ctrl == 'w')
 			pthread_mutex_lock(&mutexdata);
-
+		printf("QUI\n");
 		if ((error = al_bp_bundle_send(handle, regid, &bundle)) != 0)
 		{
 			fprintf(stderr, "error sending bundle: %d (%s)\n", error, al_bp_strerror(error));
@@ -808,6 +808,7 @@ void * send_bundles(void * opt)
 				fprintf(log_file, "error sending bundle: %d (%s)\n", error, al_bp_strerror(error));
 			client_clean_exit(1);
 		}
+		printf("QUI DOPO SEND\n");
 		if ((error = al_bp_bundle_get_id(bundle, &bundle_id)) != 0)
 		{
 			fprintf(stderr, "error getting bundle id: %s\n", al_bp_strerror(error));
