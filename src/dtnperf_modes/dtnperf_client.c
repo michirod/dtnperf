@@ -634,7 +634,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		printf("\nWaiting for dedicated monitor to stop...\n");
 		wait(&monitor_status);
 	}
-
+	printf("Sleep..\n");
+	sleep(10);
 
 	// Close the BP handle --
 	if ((debug) && (debug_level > 0))
@@ -695,11 +696,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	free(source_file);
 	free(transfer_filename);
 	free(send_info);
-	sleep(2);
 	al_bp_bundle_free(&bundle);
-	sleep(2);
 	al_bp_bundle_free(&bundle_stop);
-	sleep(2);
 
 	if (perf_opt->create_log)
 		printf("\nClient log saved: %s\n", perf_opt->log_filename);
