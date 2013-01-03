@@ -779,7 +779,7 @@ void * send_bundles(void * opt)
 					transfer_filename, transfer_filedim, &eof_reached);
 			close_payload_stream_write(&bundle, stream);
 		}
-
+		printf("Si ferma qui\n");
 		// window debug
 		if ((debug) && (debug_level > 1))
 		{
@@ -789,7 +789,7 @@ void * send_bundles(void * opt)
 		}
 		// wait for the semaphore
 		sem_wait(&window);
-
+		printf("No qui\n");
 		// Send the bundle
 		if (debug)
 			printf("sending the bundle...");
@@ -804,7 +804,7 @@ void * send_bundles(void * opt)
 				fprintf(log_file, "error sending bundle: %d (%s)\n", error, al_bp_strerror(error));
 			client_clean_exit(1);
 		}
-
+		printf("Inviato\n");
 		if ((error = al_bp_bundle_get_id(bundle, &bundle_id)) != 0)
 		{
 			fprintf(stderr, "error getting bundle id: %s\n", al_bp_strerror(error));
@@ -832,7 +832,6 @@ void * send_bundles(void * opt)
 
 		// Increment sent_bundles
 		++sent_bundles;
-		printf("Qui errore\n");
 		if ((debug) && (debug_level > 0))
 			printf("\t[debug send thread] now bundles_sent is %d\n", sent_bundles);
 		if (create_log)
@@ -840,7 +839,6 @@ void * send_bundles(void * opt)
 		// Increment data_qty
 		al_bp_bundle_get_payload_size(bundle, &actual_payload);
 		sent_data += actual_payload;
-		printf("Forse qui\n");
 		if (perf_opt->op_mode == 'T')	// TIME MODE
 		{								// update time and condition
 			gettimeofday(&now, NULL);
@@ -850,7 +848,6 @@ void * send_bundles(void * opt)
 		{								// update condition
 			condition = sent_bundles < tot_bundles;
 		}
-		printf("End while\n");
 	} // while
 
 	if ((debug) && (debug_level > 0))
