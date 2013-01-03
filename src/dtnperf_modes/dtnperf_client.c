@@ -778,8 +778,13 @@ void * send_bundles(void * opt)
 			error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd,
 					transfer_filename, transfer_filedim, &eof_reached);
 			close_payload_stream_write(&bundle, stream);
+			//Test
+			 open_payload_stream_read(bundle, &stream);
+			 uint16_t tmp = 0;
+			 fread(&tmp,sizeof(uint16_t),1,stream);
+			 close_payload_stream_read(stream);
 		}
-		printf("Si ferma qui\n");
+
 		// window debug
 		if ((debug) && (debug_level > 1))
 		{
@@ -789,7 +794,7 @@ void * send_bundles(void * opt)
 		}
 		// wait for the semaphore
 		sem_wait(&window);
-		printf("No qui\n");
+
 		// Send the bundle
 		if (debug)
 			printf("sending the bundle...");
@@ -804,7 +809,6 @@ void * send_bundles(void * opt)
 				fprintf(log_file, "error sending bundle: %d (%s)\n", error, al_bp_strerror(error));
 			client_clean_exit(1);
 		}
-		printf("Inviato\n");
 		if ((error = al_bp_bundle_get_id(bundle, &bundle_id)) != 0)
 		{
 			fprintf(stderr, "error getting bundle id: %s\n", al_bp_strerror(error));
