@@ -612,8 +612,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	// fill the stop bundle
 	prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority, sent_bundles);
-	printf("Bundle Stop len: %lu\n",bundle_stop.payload->buf.buf_len);
-	printf("Bundle Stop dest: %s\n",bundle_stop.spec->dest.uri);
 	al_bp_bundle_set_source(&bundle_stop, local_eid);
 
 	// send stop bundle to monitor
@@ -635,8 +633,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		printf("\nWaiting for dedicated monitor to stop...\n");
 		wait(&monitor_status);
 	}
-	printf("Sleep..\n");
-	sleep(10);
 
 	// Close the BP handle --
 	if ((debug) && (debug_level > 0))
@@ -653,6 +649,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	{
 		bp_handle_open = FALSE;
 	}
+
 	// Unregister Local Eid
 	if (al_bp_unregister(handle,regid,local_eid) != BP_SUCCESS)
 	{
@@ -713,7 +710,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 /**
  * Client Threads code
- */
+ **/
 void * send_bundles(void * opt)
 {
 	dtnperf_options_t *perf_opt = ((dtnperf_global_options_t *)(opt))->perf_opt;
@@ -835,7 +832,7 @@ void * send_bundles(void * opt)
 
 		// Increment sent_bundles
 		++sent_bundles;
-
+		printf("Qui errore\n");
 		if ((debug) && (debug_level > 0))
 			printf("\t[debug send thread] now bundles_sent is %d\n", sent_bundles);
 		if (create_log)
@@ -843,7 +840,7 @@ void * send_bundles(void * opt)
 		// Increment data_qty
 		al_bp_bundle_get_payload_size(bundle, &actual_payload);
 		sent_data += actual_payload;
-
+		printf("Forse qui\n");
 		if (perf_opt->op_mode == 'T')	// TIME MODE
 		{								// update time and condition
 			gettimeofday(&now, NULL);
@@ -853,6 +850,7 @@ void * send_bundles(void * opt)
 		{								// update condition
 			condition = sent_bundles < tot_bundles;
 		}
+		printf("End while\n");
 	} // while
 
 	if ((debug) && (debug_level > 0))
