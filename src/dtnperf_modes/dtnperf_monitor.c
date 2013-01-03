@@ -240,9 +240,6 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			printf("\n");
 		}
 
-		printf("Payload len: %lu\n",bundle_object.payload->buf.buf_len);
-
-
 		// get bundle CREATION TIMESTAMP
 		if ((debug) && (debug_level > 0))
 			printf("[debug]\tgetting bundle creation timestamp...");
