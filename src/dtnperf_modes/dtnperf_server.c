@@ -93,7 +93,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	if (debug)
 	{
 		printf("\nOptions;\n");
-		printf("\tendpoint		 : %s\n", SERV_EP_STRING);
+		printf("\tendpoint		 : %s\n", SERV_EP_NUM_SERVICE);
 		printf("\tsave bundles to: %s\n", perf_opt->use_file ? "file":"memory");
 		printf("\tdestination dir: %s\n", perf_opt->dest_dir);
 		printf("\tsend acks      : %s\n", perf_opt->no_acks ? "no":"yes");
@@ -479,7 +479,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 					printf("Transfer Completed\n");
 			}
 		}
-
 		// get bundle expiration time and priority
 		if (bundle_ack_options.set_ack_expiration)
 		{

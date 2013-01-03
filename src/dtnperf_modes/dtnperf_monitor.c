@@ -373,7 +373,6 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 					ptr[0] = '\0';
 			}
 			strcat(filename, ".csv");
-
 			full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(filename) + 2);
 			sprintf(full_filename, "%s/%s", perf_opt->logs_dir, filename);
 			file = fopen(full_filename, "w");

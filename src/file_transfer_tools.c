@@ -162,7 +162,6 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 
 	// read file fragment offset
 	fread(&offset, sizeof(offset), 1, pl_stream);
-
 	// read remaining file fragment
 	transfer = (char*) malloc(transfer_len);
 	if (fread(transfer, transfer_len, 1, pl_stream) != 1)
@@ -197,7 +196,6 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	// if transfer completed return 1
 	if (info->bytes_recvd >= info->file_dim)
 		return 1;
-
 	return 0;
 
 }
@@ -224,7 +222,6 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	al_bp_bundle_get_creation_timestamp(*bundle, &timestamp);
 	al_bp_bundle_get_expiration(*bundle, &expiration);
 	al_bp_bundle_get_payload_size(*bundle, &pl_size);
-
 	// create stream from incoming bundle payload
 	if (open_payload_stream_read(*bundle, &pl_stream) < 0)
 		return -1;
@@ -237,7 +234,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	{
 		// get filename len
 		result = fread(&filename_len, sizeof(filename_len), 1, pl_stream);
-
+		printf("filename_len: %hu\n",filename_len);
 		// get filename
 		filename = (char *) malloc(filename_len + 1);
 		memset(filename, 0, filename_len + 1);
@@ -248,7 +245,6 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 
 		//get file size
 		fread(&file_dim, sizeof(file_dim), 1, pl_stream);
-
 		// create destination dir for file
 		strncpy(temp, client_eid.uri, strlen(client_eid.uri) + 1);
 		strtok(temp, "/");
@@ -262,10 +258,8 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 
 		// create file transfer info object
 		info = file_transfer_info_create(client_eid, filename_len, filename, full_dir, file_dim, timestamp.secs, expiration);
-
 		// insert info into info list
 		file_transfer_info_put(info_list, info);
-
 		free(full_dir);
 
 	}
@@ -325,13 +319,13 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 
 	// write filename length
 	fwrite(&filename_len, sizeof(filename_len), 1, f);
-
+	printf("filename_len: %hu\n",filename_len);
 	// write filename
 	fwrite(filename, filename_len, 1, f);
-
+	printf("filename: %s\n",filename);
 	//write file size
 	fwrite(&file_dim, sizeof(file_dim), 1, f);
-
+	printf("filedim: %u\n",file_dim);
 	// get size of fragment and allocate fragment
 	fragment_len = get_file_fragment_size(opt->bundle_payload, filename_len);
 	fragment = (char *) malloc(fragment_len);
