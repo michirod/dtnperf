@@ -316,16 +316,12 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 
 	// prepare header and congestion control
 	result = prepare_payload_header_and_ack_options(opt, f);
-
 	// write filename length
 	fwrite(&filename_len, sizeof(filename_len), 1, f);
-	printf("filename_len: %hu\n",filename_len);
 	// write filename
 	fwrite(filename, filename_len, 1, f);
-	printf("filename: %s\n",filename);
 	//write file size
 	fwrite(&file_dim, sizeof(file_dim), 1, f);
-	printf("filedim: %u\n",file_dim);
 	// get size of fragment and allocate fragment
 	fragment_len = get_file_fragment_size(opt->bundle_payload, filename_len);
 	fragment = (char *) malloc(fragment_len);
