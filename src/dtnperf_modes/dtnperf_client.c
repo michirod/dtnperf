@@ -781,8 +781,9 @@ void * send_bundles(void * opt)
 			//Test
 			 open_payload_stream_read(bundle, &stream);
 			 uint16_t tmp = 0;
-			 fread(&tmp,sizeof(uint16_t),1,stream);
+			 fread(&tmp, sizeof(tmp), 1, stream);
 			 close_payload_stream_read(stream);
+			 printf("\tTMP: %hu\n\n",tmp);
 		}
 
 		// window debug
