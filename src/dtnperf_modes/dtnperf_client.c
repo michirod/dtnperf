@@ -577,7 +577,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	pthread_cond_init(&cond_ackreceiver, NULL);
 	pthread_mutex_init (&mutexdata, NULL);
 
-	printf("\t\topn: %d\n",perf_g_opt->perf_opt->debug_level);
 	pthread_create(&sender, NULL, send_bundles, (void*)perf_g_opt);
 	pthread_create(&cong_ctrl, NULL, congestion_control, (void*)perf_g_opt);
 	pthread_create(&wait_for_signal, NULL, wait_for_sigint, (void*) client_demux_string);
