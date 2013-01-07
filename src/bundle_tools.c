@@ -94,16 +94,23 @@ int is_in_info(send_information_t* send_info, al_bp_timestamp_t bundle_timestamp
     static int last_collected = -1;
     for (i = (last_collected + 1); i < window; i++)
     {
-        if ((send_info[i].bundle_id.creation_ts.secs == bundle_timestamp.secs) && (send_info[i].bundle_id.creation_ts.seqno == bundle_timestamp.seqno))
-        {
+    	 printf("isInInfo: sendInfo: %lu %lu \n",send_info[i].bundle_id.creation_ts.secs,send_info[i].bundle_id.creation_ts.seqno);
+    	 printf("isInInfo: bundleAck: %lu %lu \n",bundle_timestamp.secs,bundle_timestamp.seqno);
+       // if ((send_info[i].bundle_id.creation_ts.secs == bundle_timestamp.secs) && (send_info[i].bundle_id.creation_ts.seqno == bundle_timestamp.seqno))
+    	 if ((send_info[i].bundle_id.creation_ts.secs == bundle_timestamp.secs))
+    	 {
             last_collected = i;
             return i;
         }
     }
     for (i = 0; i <= last_collected; i++)
     {
-        if ((send_info[i].bundle_id.creation_ts.secs == bundle_timestamp.secs) && (send_info[i].bundle_id.creation_ts.seqno == bundle_timestamp.seqno))
-        {
+    	printf("isInInfo: sendInfo: %lu %lu \n",send_info[i].bundle_id.creation_ts.secs,send_info[i].bundle_id.creation_ts.seqno);
+    	printf("isInInfo: bundleAck: %lu %lu \n",bundle_timestamp.secs,bundle_timestamp.seqno);
+
+    	//if ((send_info[i].bundle_id.creation_ts.secs == bundle_timestamp.secs) && (send_info[i].bundle_id.creation_ts.seqno == bundle_timestamp.seqno))
+    	 if ((send_info[i].bundle_id.creation_ts.secs == bundle_timestamp.secs))
+    	{
             last_collected = i;
             return i;
         }
@@ -513,6 +520,7 @@ al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t
 		{
 			fread(reported_eid->uri, eid_len, 1, pl_stream);
 			reported_eid->uri[eid_len] = '\0';
+
 		}
 		else
 			fseek(pl_stream, eid_len, SEEK_CUR);
