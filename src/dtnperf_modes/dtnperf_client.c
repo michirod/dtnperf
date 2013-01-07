@@ -577,7 +577,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	pthread_cond_init(&cond_ackreceiver, NULL);
 	pthread_mutex_init (&mutexdata, NULL);
 
-
+	printf("\t\topn: %d\n",perf_g_opt->perf_opt->debug_level);
 	pthread_create(&sender, NULL, send_bundles, (void*)perf_g_opt);
 	pthread_create(&cong_ctrl, NULL, congestion_control, (void*)perf_g_opt);
 	pthread_create(&wait_for_signal, NULL, wait_for_sigint, (void*) client_demux_string);
@@ -898,7 +898,6 @@ void * congestion_control(void * opt)
 	if (perf_opt->congestion_ctrl == 'w') // window based congestion control
 	{
 		al_bp_bundle_create(&ack);
-
 		while ((close_ack_receiver == 0) || (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit))
 		{
 			// if there are no bundles without ack, wait
@@ -911,7 +910,6 @@ void * congestion_control(void * opt)
 				sched_yield();
 				continue;
 			}
-
 			// Wait for the reply
 			if ((debug) && (debug_level > 0))
 				printf("\t[debug cong crtl] waiting for the reply...\n");
@@ -926,7 +924,6 @@ void * congestion_control(void * opt)
 					fprintf(log_file, "error getting server ack: %d (%s)\n", error, al_bp_strerror(al_bp_errno(handle)));
 				client_clean_exit(1);
 			}
-
 			// Check if is actually a server ack bundle
 			get_bundle_header_and_options(&ack, &ack_header, NULL);
 			if (ack_header != DSA_HEADER)
@@ -954,7 +951,7 @@ void * congestion_control(void * opt)
 					fprintf(log_file, "error getting info from ack: %s\n", al_bp_strerror(error));
 				client_clean_exit(1);
 			}
-			if ((debug) && (debug_level > 1))
+			if ((debug) && (debug_level > 0))
 				printf("\t[debug cong crtl] ack received timestamp: %lu %lu\n", reported_timestamp.secs, reported_timestamp.seqno);
 			position = is_in_info(send_info, reported_timestamp, perf_opt->window);
 			if (position < 0)
