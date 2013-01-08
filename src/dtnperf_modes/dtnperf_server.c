@@ -424,8 +424,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 
 			printf ("--------------------------------------\n");
-		}
-
+		};
 		// get bundle header and options
 		if ((debug) && (debug_level > 0))
 			printf("[debug]\tgetting bundle header and options...");
