@@ -227,14 +227,13 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		return -1;
 
 	// skip header and congestion control char
-	fseek(pl_stream, HEADER_SIZE + 1, SEEK_SET);
+	fseek(pl_stream, HEADER_SIZE + BUNDLE_OPT_SIZE, SEEK_SET);
 
 	info = file_transfer_info_get(info_list, client_eid);
 	if (info == NULL) // this is the first bundle
 	{
 		// get filename len
 		result = fread(&filename_len, sizeof(filename_len), 1, pl_stream);
-		printf("filename_len: %hu\n",filename_len);
 		// get filename
 		filename = (char *) malloc(filename_len + 1);
 		memset(filename, 0, filename_len + 1);
@@ -242,15 +241,23 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		if(result < 1 )
 			perror("fread");
 		filename[filename_len] = '\0';
-
 		//get file size
 		fread(&file_dim, sizeof(file_dim), 1, pl_stream);
 		// create destination dir for file
 		strncpy(temp, client_eid.uri, strlen(client_eid.uri) + 1);
-		strtok(temp, "/");
-		eid = strtok(NULL, "/");
+		// if is a URI endpoint remove service tag
+		if(strncmp(temp,"ipn",3) !=0 )
+		{
+			strtok(temp, "/");
+			eid = strtok(NULL, "/");
+		}
+		else
+		{
+			eid = (char *) malloc(sizeof(char)*256);
+			strcpy(eid,temp);
+		}
 		full_dir = (char*) malloc(strlen(dir) + strlen(eid) + 20);
-		sprintf(full_dir, "%s/%s/", dir, eid);
+		sprintf(full_dir, "%s%s/", dir, eid);
 		sprintf(temp, "mkdir -p %s", full_dir);
 		system(temp);
 		sprintf(temp, "%lu_", timestamp.secs);
@@ -261,7 +268,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		// insert info into info list
 		file_transfer_info_put(info_list, info);
 		free(full_dir);
-
+		free(eid);
 	}
 	else  // first bundle of transfer already received
 	{
@@ -276,9 +283,11 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	// assemble file
 	result = assemble_file(info, pl_stream, pl_size, timestamp.secs, expiration);
 	close_payload_stream_read(pl_stream);
-
-	if (result < 0) // error
+	if (result < 0)
+	{// error
+		printf("errore assemble file\n");
 		return result;
+	}
 	if (result == 1) // transfer completed
 	{
 		printf("Successfully transfered file: %s%s\n", info->full_dir, info->filename);
@@ -295,7 +304,7 @@ u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len)
 {
 	u32_t result;
 	// file fragment size is payload without header, congestion ctrl char and offset
-	result = payload_size - (HEADER_SIZE + 1 + sizeof(uint32_t));
+	result = payload_size - (HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(uint32_t));
 	// ... without filename_len, filename, file_size
 	result -= (filename_len + sizeof(filename_len) + sizeof(uint32_t));
 	return result;
