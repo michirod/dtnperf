@@ -777,12 +777,10 @@ void * send_bundles(void * opt)
 			error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd,
 					transfer_filename, transfer_filedim, &eof_reached);
 			close_payload_stream_write(&bundle, stream);
-			//Test
-			 open_payload_stream_read(bundle, &stream);
-			 uint16_t tmp = 0;
-			 fread(&tmp, sizeof(tmp), 1, stream);
-			 close_payload_stream_read(stream);
-			 printf("\tTMP: %hu\n\n",tmp);
+			if(bundle.payload->location != BP_PAYLOAD_MEM)
+				printf("\t\tBundle Len:%lu\n",bundle.payload->filename.filename_len);
+			else
+				printf("\t\tBundle Len:%lu\n",bundle.payload->buf.buf_len);
 		}
 
 		// window debug
