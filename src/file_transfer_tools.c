@@ -104,6 +104,7 @@ file_transfer_info_t *  file_transfer_info_get(file_transfer_info_list_t * list,
 	item = file_transfer_info_get_list_item(list, client);
 	if (item != NULL)
 	{
+		printf("\n\tEXP: %lu\n\n",item->info->expiration);
 		return item->info;
 	}
 	return NULL;
@@ -253,8 +254,8 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		}
 		else
 		{
-			eid = (char *) malloc(sizeof(char)*256);
-			strcpy(eid,temp);
+			strtok(temp, ":");
+			eid = strtok(NULL, "");
 		}
 		full_dir = (char*) malloc(strlen(dir) + strlen(eid) + 20);
 		sprintf(full_dir, "%s%s/", dir, eid);
@@ -268,7 +269,6 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		// insert info into info list
 		file_transfer_info_put(info_list, info);
 		free(full_dir);
-		free(eid);
 	}
 	else  // first bundle of transfer already received
 	{
@@ -278,16 +278,12 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		// skip file_size
 		fseek(pl_stream, sizeof(file_dim), SEEK_CUR);
 
-
 	}
 	// assemble file
 	result = assemble_file(info, pl_stream, pl_size, timestamp.secs, expiration);
 	close_payload_stream_read(pl_stream);
-	if (result < 0)
-	{// error
-		printf("errore assemble file\n");
+	if (result < 0)// error
 		return result;
-	}
 	if (result == 1) // transfer completed
 	{
 		printf("Successfully transfered file: %s%s\n", info->full_dir, info->filename);
@@ -334,12 +330,10 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	// get size of fragment and allocate fragment
 	fragment_len = get_file_fragment_size(opt->bundle_payload, filename_len);
 	fragment = (char *) malloc(fragment_len);
-
 	// get offset of fragment
 	offset = lseek(fd, 0, SEEK_CUR);
 	// write offset in the bundle
 	fwrite(&offset, sizeof(offset), 1, f);
-
 	// read fragment from file
 	bytes_read = read(fd, fragment, fragment_len);
 	if (bytes_read < fragment_len) // reached EOF
