@@ -748,6 +748,7 @@ void print_server_usage(char * progname)
 			" -l, --lifetime <sec>   Bundle acks lifetime (s). Default is 3600\n"
 			" -p, --priority <val>   Bundle acks priority [bulk|normal|expedited|reserved]. Default: normal\n"
 			"     --acks-to-mon      Send bundle acks to the monitor too\n"
+			"     --eid [URI|CBHE]   Set type of eid format. CBHE only for ION implementation. Default: URI\n",
 			" -v, --verbose          Print some information message during the execution.\n"
 			" -h, --help             This help.\n",
 			SERVER_OUTPUT_FILE, FILE_DIR_DEFAULT);

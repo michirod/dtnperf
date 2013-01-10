@@ -602,7 +602,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	gettimeofday(&end, NULL);
 
 	if ((debug) && (debug_level > 0))
-		printf(" end.tv_sec = %u sec\n", (u_int)end.tv_sec);
+		printf(" end.tv_sec = %u secs\n", (u_int)end.tv_sec);
 
 	// Print final report
 	print_final_report(NULL);
@@ -730,9 +730,9 @@ void * send_bundles(void * opt)
 	gettimeofday(&start, NULL);
 
 	if ((debug) && (debug_level > 0))
-		printf(" start.tv_sec = %d sec\n", (u_int)start.tv_sec);
+		printf(" start.tv_sec = %d secs\n", (u_int)start.tv_sec);
 	if (create_log)
-		fprintf(log_file, " start.tv_sec = %d sec\n", (u_int)start.tv_sec);
+		fprintf(log_file, " start.tv_sec = %d secs\n", (u_int)start.tv_sec);
 
 	if (perf_opt->op_mode == 'T')		// TIME MODE
 	{									// Calculate end-time
@@ -746,10 +746,10 @@ void * send_bundles(void * opt)
 		end.tv_sec = start.tv_sec + perf_opt->transmission_time;
 
 		if ((debug) && (debug_level > 0))
-			printf(" end.tv_sec = %d sec\n", (u_int)end.tv_sec);
+			printf(" end.tv_sec = %d secs\n", (u_int)end.tv_sec);
 
 		if (create_log)
-			fprintf(log_file, " end.tv_sec = %d sec\n", (u_int)end.tv_sec);
+			fprintf(log_file, " end.tv_sec = %d secs\n", (u_int)end.tv_sec);
 	}
 
 	if ((debug) && (debug_level > 0))
@@ -803,7 +803,6 @@ void * send_bundles(void * opt)
 				fprintf(log_file, "error sending bundle: %d (%s)\n", error, al_bp_strerror(error));
 			client_clean_exit(1);
 		}
-		sleep(1);
 		if ((error = al_bp_bundle_get_id(bundle, &bundle_id)) != 0)
 		{
 			fprintf(stderr, "error getting bundle id: %s\n", al_bp_strerror(error));
@@ -887,7 +886,7 @@ void * congestion_control(void * opt)
 	int position = -1;
 
 	if (debug && debug_level > 0)
-		printf("[debug cong crtl] congestion control = %c\n", perf_opt->congestion_ctrl);
+		printf("[debug cong ctrl] congestion control = %c\n", perf_opt->congestion_ctrl);
 
 	if (perf_opt->congestion_ctrl == 'w') // window based congestion control
 	{
@@ -906,7 +905,7 @@ void * congestion_control(void * opt)
 			}
 			// Wait for the reply
 			if ((debug) && (debug_level > 0))
-				printf("\t[debug cong crtl] waiting for the reply...\n");
+				printf("\t[debug cong ctrl] waiting for the reply...\n");
 
 			if ((error = al_bp_bundle_receive(handle, ack, BP_PAYLOAD_MEM, count_info(send_info, perf_opt->window) == 0 ? perf_opt->wait_before_exit : -1)) != BP_SUCCESS)
 			{
@@ -934,7 +933,7 @@ void * congestion_control(void * opt)
 
 			gettimeofday(&ack_recvd, NULL);
 			if ((debug) && (debug_level > 0))
-				printf("\t[debug cong crtl] ack received\n");
+				printf("\t[debug cong ctrl] ack received\n");
 
 			// Get ack infos
 			error = get_info_from_ack(&ack, NULL, &reported_timestamp);
@@ -946,7 +945,7 @@ void * congestion_control(void * opt)
 				client_clean_exit(1);
 			}
 			if ((debug) && (debug_level > 0))
-				printf("\t[debug cong crtl] ack received timestamp: %lu %lu\n", reported_timestamp.secs, reported_timestamp.seqno);
+				printf("\t[debug cong ctrl] ack received timestamp: %lu %lu\n", reported_timestamp.secs, reported_timestamp.seqno);
 			position = is_in_info(send_info, reported_timestamp, perf_opt->window);
 			if (position < 0)
 			{
@@ -957,13 +956,13 @@ void * congestion_control(void * opt)
 			}
 			remove_from_info(send_info, position);
 			if ((debug) && (debug_level > 0))
-				printf("\t[debug cong crtl] ack validated\n");
+				printf("\t[debug cong ctrl] ack validated\n");
 			sem_post(&window);
 			if ((debug) && (debug_level > 1))
 			{
 				int cur;
 				sem_getvalue(&window, &cur);
-				printf("\t[debug cong crtl] window is %d\n", cur);
+				printf("\t[debug cong ctrl] window is %d\n", cur);
 			}
 
 			pthread_mutex_unlock(&mutexdata);
@@ -995,7 +994,7 @@ void * congestion_control(void * opt)
 		}
 
 		if (debug)
-			printf("[debug cong crtl] wait time for each bundle: %.4f sec\n", interval_secs);
+			printf("[debug cong ctrl] wait time for each bundle: %.4f secs\n", interval_secs);
 
 		pthread_mutex_lock(&mutexdata);
 		while(close_ack_receiver == 0)
@@ -1005,7 +1004,7 @@ void * congestion_control(void * opt)
 			//pthread_yield();
 			sched_yield();
 			if (debug && debug_level > 0)
-				printf("[debug cong crtl] increased window size\n");
+				printf("[debug cong ctrl] increased window size\n");
 			pthread_sleep(interval_secs);
 			pthread_mutex_lock(&mutexdata);
 		}
@@ -1148,7 +1147,7 @@ void print_final_report(FILE * f)
 	else
 		gput_unit = "bit/sec";
 
-	fprintf(f, "\nSent %d bundles, total sent data = %.3f %s\n", sent_bundles, sent, sent_unit);
+	fprintf(f, "\nBundles sent = %d , total data sent = %.3f %s\n", sent_bundles, sent, sent_unit);
 	fprintf(f, "Total execution time = %.1f\n", total_secs);
 	fprintf(f, "Goodput = %.3f %s\n", goodput, gput_unit);
 }
@@ -1182,7 +1181,7 @@ void print_client_usage(char* progname)
 			" -l, --lifetime <time>       Bundles lifetime (s). Default is 3600\n"
 			" -p, --priority <val>        Bundles priority [bulk|normal|expedited|reserved]. Default is normal\n"
 			"     --ack-to-mon            Force server to send bundle acks to the monitor indipendently of server settings\n"
-			"     --no-ack-to-mon         Force server to NOT send bundle acks to the monitor\n"
+			"     --no-ack-to-mon         Force server to not to send bundle acks to the monitor\n"
 			"     --ack-lifetime          Force server to set bundle ack lifetime time to the same value of the data bundles sent by the client\n"
 			"     --ack-priority[=val]    Force server to set bundle ack priority as the one of client bundles or as the val provided\n"
 			" -v, --verbose               Print some information messages during the execution.\n"
