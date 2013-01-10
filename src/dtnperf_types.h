@@ -18,6 +18,11 @@ typedef enum {
 	DTNPERF_CLIENT_MONITOR
 } dtnperf_mode_t;
 
+typedef enum {
+	URI = 1,
+	CBHE
+} dtnperf_eid_format_t;
+
 // server ack to monitor options
 typedef enum {
 	ATM_NORMAL = 0x0,
