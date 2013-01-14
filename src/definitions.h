@@ -23,7 +23,7 @@
 #define MONITOR_STRING "--monitor"
 
 // dir where are saved incoming bundles
-#define BUNDLE_DIR_DEFAULT "~/dtnperf/bundles/"
+#define BUNDLE_DIR_DEFAULT "/tmp/"
 
 // dir where are saved transfered files
 #define FILE_DIR_DEFAULT "~/dtnperf/files/"
