@@ -24,6 +24,8 @@ pthread_mutex_t mutexdata;
 
 file_transfer_info_list_t file_transfer_info_list;
 al_bp_handle_t handle;
+al_bp_reg_id_t regid;
+al_bp_endpoint_id_t local_eid;
 
 // flags to exit cleanly
 boolean_t bp_handle_open;
@@ -41,9 +43,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
 	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
 
-	al_bp_endpoint_id_t local_eid;
 	al_bp_reg_info_t reginfo;
-	al_bp_reg_id_t regid;
 	al_bp_bundle_payload_location_t pl_location;
 	al_bp_endpoint_id_t bundle_source_addr;
 	al_bp_endpoint_id_t bundle_dest_addr;
@@ -93,7 +93,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	if (debug)
 	{
 		printf("\nOptions;\n");
-		printf("\tendpoint		 : %s\n", SERV_EP_NUM_SERVICE);
+		printf("\tendpoint		 : %s\n", al_bp_get_implementation() == BP_ION ? SERV_EP_NUM_SERVICE : SERV_EP_STRING);
 		printf("\tsave bundles to: %s\n", perf_opt->use_file ? "file":"memory");
 		printf("\tdestination dir: %s\n", perf_opt->dest_dir);
 		printf("\tsend acks      : %s\n", perf_opt->no_acks ? "no":"yes");
@@ -194,7 +194,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	//build a local eid
 	if(debug && debug_level > 0)
 		printf("[debug] building a local eid...");
-	al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
+
+	if(al_bp_get_implementation() == BP_ION)
+		al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
+	else if(al_bp_get_implementation() == BP_DTN)
+		al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
+
 	if(debug && debug_level > 0)
 		printf("done\n");
 	if (debug)
@@ -690,6 +695,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	}// while(1)
 
 	al_bp_close(handle);
+	al_bp_unregister(handle,regid,local_eid);
 	bp_handle_open = FALSE;
 
 
@@ -945,7 +951,10 @@ void server_clean_exit(int status)
 	}
 
 	if (bp_handle_open)
+	{
 		al_bp_close(handle);
+		al_bp_unregister(handle,regid,local_eid);
+	}
 	printf("DTNperf server: Exit.\n");
 	exit(status);
 }
