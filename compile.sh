@@ -12,12 +12,14 @@ if [ $# -eq 3 ] ; then
 		AL_BPDIR=$3
 		DTN2DIR=$2
 		gcc -o dtnperf_vION -L/usr/local/lib -L$AL_BPDIR -I$AL_BPDIR/src/bp_implementations -I$AL_BPDIR/src -I$DTN2DIR -I$DTN2DIR/applib src/*.c src/dtnperf_modes/*.c -fmessage-length=0 -lal_bp -ldtnapi -lpthread
+		cp dtnperf_vION /bin
 		exit
 	fi
 	if [ $1 = ION ] ; then
 		AL_BPDIR=$3
 		IONDIR=$2
 		gcc -o dtnperf_vION -L/usr/local/lib -L$AL_BPDIR -I$AL_BPDIR/src/bp_implementations -I$AL_BPDIR/src -I$IONDIR/include -I$IONDIR/library src/*.c src/dtnperf_modes/*.c  -fmessage-length=0 -lal_bp -lbp -lici -lpthread
+		cp dtnperf_vION /bin
 		exit
 	fi
 fi
@@ -26,6 +28,7 @@ if [ $# -eq 4 -a $1 = BOTH ] ; then
 	DTN2DIR=$3
 	IONDIR=$4
 	gcc -o dtnperf_vION -L/usr/local/lib -L$AL_BPDIR -I$AL_BPDIR/src/bp_implementations -I$AL_BPDIR/src -I$DTN2DIR -I$DTN2DIR/applib -I$IONDIR/include -I$IONDIR/library  src/*.c src/dtnperf_modes/*.c -fmessage-length=0 -lal_bp -ldtnapi -lbp -lici -lpthread
+	cp dtnperf_vION /bin
 	exit
 fi
 echo "No Compile"

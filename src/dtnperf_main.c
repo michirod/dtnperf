@@ -272,7 +272,7 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->rate_unit = 'b';
 	opt->wait_before_exit = 0;
 	opt->bundle_payload = DEFAULT_PAYLOAD;
-	opt->payload_type = BP_PAYLOAD_FILE;
+	opt->payload_type = BP_PAYLOAD_MEM;
 	opt->dest_dir = BUNDLE_DIR_DEFAULT;
 	opt->file_dir = FILE_DIR_DEFAULT;
 	opt->create_log = FALSE;
