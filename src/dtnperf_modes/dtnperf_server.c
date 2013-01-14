@@ -93,13 +93,14 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	if (debug)
 	{
 		printf("\nOptions;\n");
-		printf("\tendpoint		 : %s\n", al_bp_get_implementation() == BP_ION ? SERV_EP_NUM_SERVICE : SERV_EP_STRING);
-		printf("\tsave bundles to: %s\n", perf_opt->use_file ? "file":"memory");
-		printf("\tdestination dir: %s\n", perf_opt->dest_dir);
-		printf("\tsend acks      : %s\n", perf_opt->no_acks ? "no":"yes");
+		printf("\tendpoint:\t%s\n", al_bp_get_implementation() == BP_ION ? SERV_EP_NUM_SERVICE : SERV_EP_STRING);
+		printf("\tsave bundles to:\t%s\n", perf_opt->use_file ? "file":"memory");
+		if(perf_opt->use_file)
+			printf("\tdestination dir:\t%s\n", perf_opt->dest_dir);
+		printf("\tsend acks:\t%s\n", perf_opt->no_acks ? "no":"yes");
 		if (!perf_opt->no_acks)
 		{
-			printf("\tsend acks to monitor: %s\n", perf_opt->acks_to_mon ? "yes":"no");
+			//printf("\tsend acks to monitor: %s\n", perf_opt->acks_to_mon ? "yes":"no");
 			printf("\tacks expiration time: %d\n", (int) conn_opt->expiration);
 			char * prior;
 			switch(conn_opt->priority.priority)
@@ -750,11 +751,11 @@ void print_server_usage(char * progname)
 			"     --ip-port <port>   Ip port of the bp daemon api. Default: 5010\n"
 			"     --fdir <dir>       Destination directory of transfered files. Default is %s .\n"
 			"     --debug[=level]    Debug messages [1-2], if level is not indicated level = 1.\n"
-			" -M, --memory           Save bundles into memory.\n"
+			" -M, --memory         	 Save bundles into memory.\n"
 			" -l, --lifetime <sec>   Bundle acks lifetime (s). Default is 3600\n"
 			" -p, --priority <val>   Bundle acks priority [bulk|normal|expedited|reserved]. Default: normal\n"
-			"     --acks-to-mon      Send bundle acks to the monitor too\n"
-			"     --eid [URI|CBHE]   Set type of eid format. CBHE only for ION implementation. Default: URI\n",
+			//"     --acks-to-mon      Send bundle acks to the monitor too\n"
+			//"     --eid [URI|CBHE]   Set type of eid format. CBHE only for ION implementation. Default: URI\n",
 			" -v, --verbose          Print some information message during the execution.\n"
 			" -h, --help             This help.\n",
 			SERVER_OUTPUT_FILE, FILE_DIR_DEFAULT);
