@@ -23,6 +23,8 @@ pthread_mutex_t mutexdata;
 
 session_list_t * session_list;
 al_bp_handle_t handle;
+al_bp_reg_id_t regid;
+al_bp_endpoint_id_t local_eid;
 
 // flags to exit cleanly
 boolean_t dedicated_monitor;
@@ -40,9 +42,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	dtnperf_options_t * perf_opt = parameters->perf_g_opt->perf_opt;
 
 	al_bp_error_t error;
-	al_bp_endpoint_id_t local_eid;
 	al_bp_reg_info_t reginfo;
-	al_bp_reg_id_t regid;
 	al_bp_bundle_object_t bundle_object;
 	al_bp_bundle_status_report_t * status_report;
 	al_bp_endpoint_id_t bundle_source_addr;
@@ -137,7 +137,12 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		sprintf(temp, "%s_%d", MON_EP_STRING, parameters->client_id);
 	else
 		sprintf(temp, "%s", MON_EP_STRING);
-	al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Monitor-CBHE",NULL);
+
+	if(al_bp_get_implementation() == BP_ION)
+		al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Monitor-CBHE",NULL);
+	if(al_bp_get_implementation() == BP_DTN)
+		al_bp_build_local_eid(handle, &local_eid, MON_EP_STRING,"Monitor-DTN",NULL);
+
 	if(debug && debug_level > 0)
 		printf("done\n");
 	if (debug)
@@ -469,6 +474,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 	session_list_destroy(session_list);
 	al_bp_close(handle);
+	al_bp_unregister(handle,regid,local_eid);
 	bp_handle_open = FALSE;
 }
 // end monitor code
@@ -575,7 +581,10 @@ void monitor_clean_exit(int status)
 
 	// close bp_handle
 	if (bp_handle_open)
+	{
 		al_bp_close(handle);
+		al_bp_unregister(handle,regid,local_eid);
+	}
 	printf("Dtnperf Monitor: exit.\n");
 	exit(status);
 }
