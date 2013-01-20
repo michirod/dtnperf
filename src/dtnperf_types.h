@@ -60,7 +60,7 @@ typedef struct dtnperf_options
 	char dest_eid[AL_BP_MAX_ENDPOINT_ID];	// destination eid
 	char mon_eid[AL_BP_MAX_ENDPOINT_ID];	// monitor eid
 	char op_mode;    		// operative mode (T = time_mode, D = data_mode, F = file_mode) [D]
-	unsigned long data_qty;	// data to be transmitted (bytes) [0]
+	double data_qty;	// data to be transmitted (bytes) [0]
 	char * D_arg;			// arguments of -D option
 	char * F_arg;			// argument of -F option (filename)
 	char * p_arg;			// arguments of -p option
@@ -69,10 +69,10 @@ typedef struct dtnperf_options
 	char congestion_ctrl;	// w = window based, r = rate based [w]
 	int window;				// transmission window (bundles) [1]
 	char * rate_arg;		// argument of -r option
-	long rate;				// transmission rate [0]
+	double rate;				// transmission rate [0]
 	char rate_unit;			// b = bit/sec; B = bundle/sec [b]
 	int wait_before_exit;	// additional interval before exit [0]
-	long bundle_payload;  	// quantity of data (in bytes) to send (-p option) [DEFAULT_PAYLOAD]
+	double bundle_payload;  	// quantity of data (in bytes) to send (-p option) [DEFAULT_PAYLOAD]
 	dtnperf_bundle_ack_options_t bundle_ack_options; // options to send to the server
 	al_bp_bundle_payload_location_t payload_type;	// the type of data source for the bundle [DTN_PAYLOAD_FILE]
 	boolean_t create_log;	// create log file [FALSE]
