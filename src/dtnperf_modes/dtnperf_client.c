@@ -81,6 +81,7 @@ al_bp_endpoint_id_t dest_eid;
 al_bp_endpoint_id_t mon_eid;
 al_bp_bundle_object_t bundle;
 al_bp_bundle_object_t ack;
+al_bp_implementation_t bp_implementation;
 
 dtnperf_options_t * perf_opt;
 dtnperf_connection_options_t * conn_opt;
@@ -122,6 +123,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	perf_opt->log_filename = correct_dirname(perf_opt->log_filename);
 	source_file = (char*) malloc(strlen(SOURCE_FILE) + 7);
 	sprintf(source_file, "%s_%d", SOURCE_FILE, getpid());
+	bp_implementation = al_bp_get_implementation();
 
 	// Create a new log file
 	if (create_log)
@@ -285,7 +287,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	reginfo.flags = BP_REG_DEFER;
 	reginfo.regid = BP_REGID_NONE;
 	reginfo.expiration = 0;
-	if ((error = al_bp_register(&handle, &reginfo, &regid)) != 0)
+	error = al_bp_register(&handle, &reginfo, &regid);
+	if ( (error == BP_SUCCESS && bp_implementation == BP_DTN)
+			|| (bp_implementation == BP_ION && (error == BP_EBUSY || error == BP_EPARSEEID)))
 	{
 		fflush(stdout);
 		fprintf(stderr, "error creating registration: %d (%s)\n",
