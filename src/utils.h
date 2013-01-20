@@ -10,8 +10,8 @@ char* get_filename(char* s);
 void pattern(char *outBuf, int inBytes);
 
 
-long mega2byte(long n);
-long kilo2byte(long n);
+long mega2byte(double n);
+long kilo2byte(double n);
 double byte2mega(long n);
 double byte2kilo(long n);
 char find_data_unit(const char *inarg);

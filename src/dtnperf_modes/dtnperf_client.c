@@ -312,9 +312,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		perf_opt->use_file = 1;
 		perf_opt->bundle_payload = BP_PAYLOAD_FILE;
 		if (verbose)
-			printf("Payload %ld > %d: Using file instead of memory\n", perf_opt->bundle_payload, MAX_MEM_PAYLOAD);
+			printf("Payload %f > %d: Using file instead of memory\n", perf_opt->bundle_payload, MAX_MEM_PAYLOAD);
 		if (create_log)
-			fprintf(log_file, "Payload %ld > %d: Using file instead of memory\n", perf_opt->bundle_payload, MAX_MEM_PAYLOAD);
+			fprintf(log_file, "Payload %f > %d: Using file instead of memory\n", perf_opt->bundle_payload, MAX_MEM_PAYLOAD);
 	}
 
 	/* ------------------------------------------------------------------------------
@@ -343,9 +343,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		if (create_log)
 			fprintf(log_file, "Working in Data_Mode\n");
 		if (verbose)
-			printf("requested transmission of %ld bytes of data\n", perf_opt->data_qty);
+			printf("requested transmission of %f bytes of data\n", perf_opt->data_qty);
 		if (create_log)
-			fprintf(log_file, "requested transmission of %ld bytes of data\n", perf_opt->data_qty);
+			fprintf(log_file, "requested transmission of %f bytes of data\n", perf_opt->data_qty);
 	}
 	else if (perf_opt->op_mode == 'F') // File mode
 	{
@@ -379,14 +379,14 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	else
 	{
 		if (verbose)
-			printf("\trate is %ld %c\n", perf_opt->rate, perf_opt->rate_unit);
+			printf("\trate is %f %c\n", perf_opt->rate, perf_opt->rate_unit);
 		if (create_log)
-			fprintf(log_file, "\trate is %ld %c\n", perf_opt->rate, perf_opt->rate_unit);
+			fprintf(log_file, "\trate is %f %c\n", perf_opt->rate, perf_opt->rate_unit);
 	}
 	if (verbose)
-		printf("payload is %ld bytes\n", perf_opt->bundle_payload);
+		printf("payload is %f bytes\n", perf_opt->bundle_payload);
 	if (create_log)
-		fprintf(log_file, "payload is %ld bytes\n", perf_opt->bundle_payload);
+		fprintf(log_file, "payload is %f bytes\n", perf_opt->bundle_payload);
 
 
 	sent_bundles = 0;
@@ -1293,17 +1293,17 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			switch (perf_opt->data_unit)
 			{
 			case 'B':
-				perf_opt->data_qty = atol(perf_opt->D_arg);
+				perf_opt->data_qty = atof(perf_opt->D_arg);
 				break;
 			case 'k':
-				perf_opt->data_qty = kilo2byte(atol(perf_opt->D_arg));
+				perf_opt->data_qty = kilo2byte(atof(perf_opt->D_arg));
 				break;
 			case 'M':
-				perf_opt->data_qty = mega2byte(atol(perf_opt->D_arg));
+				perf_opt->data_qty = mega2byte(atof(perf_opt->D_arg));
 				break;
 			default:
 				printf("\nWARNING: (-D option) invalid data unit, assuming 'M' (MBytes)\n\n");
-				perf_opt->data_qty = mega2byte(atol(perf_opt->D_arg));
+				perf_opt->data_qty = mega2byte(atof(perf_opt->D_arg));
 				break;
 			}
 			break;
@@ -1324,18 +1324,18 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			switch (perf_opt->data_unit)
 			{
 			case 'B':
-				perf_opt->bundle_payload = atol(perf_opt->p_arg);
+				perf_opt->bundle_payload = atof(perf_opt->p_arg);
 				break;
 			case 'k':
-				perf_opt->bundle_payload = kilo2byte(atol(perf_opt->p_arg));
+				perf_opt->bundle_payload = kilo2byte(atof(perf_opt->p_arg));
 				break;
 			case 'M':
-				perf_opt->bundle_payload = mega2byte(atol(perf_opt->p_arg));
+				perf_opt->bundle_payload = mega2byte(atof(perf_opt->p_arg));
 
 				break;
 			default:
 				printf("\nWARNING: (-p option) invalid data unit, assuming 'K' (KBytes)\n\n");
-				perf_opt->bundle_payload = kilo2byte(atol(perf_opt->p_arg));
+				perf_opt->bundle_payload = kilo2byte(atof(perf_opt->p_arg));
 				break;
 			}
 			break;
@@ -1347,7 +1347,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 'R':
 			perf_opt->rate_arg = strdup(optarg);
 			perf_opt->rate_unit = find_rate_unit(perf_opt->rate_arg);
-			perf_opt->rate = atoi(perf_opt->rate_arg);
+			perf_opt->rate = atof(perf_opt->rate_arg);
 			perf_opt->congestion_ctrl = 'r';
 			r = TRUE;
 			break;
@@ -1519,7 +1519,7 @@ void check_options(dtnperf_global_options_t * global_options)
 	// checks on values
 	if ((perf_opt->op_mode == 'D') && (perf_opt->data_qty <= 0))
 	{
-		fprintf(stderr, "\nSYNTAX ERROR: (-D option) you should send a positive number of MBytes (%ld)\n\n",
+		fprintf(stderr, "\nSYNTAX ERROR: (-D option) you should send a positive number of MBytes (%f)\n\n",
 				perf_opt->data_qty);
 		exit(2);
 	}
@@ -1534,7 +1534,7 @@ void check_options(dtnperf_global_options_t * global_options)
 		if (perf_opt->bundle_payload <= ILLEGAL_PAYLOAD)
 		{
 			perf_opt->bundle_payload = DEFAULT_PAYLOAD;
-			fprintf(stderr, "\nWARNING (a): bundle payload set to %ld bytes\n", perf_opt->bundle_payload);
+			fprintf(stderr, "\nWARNING (a): bundle payload set to %f bytes\n", perf_opt->bundle_payload);
 			fprintf(stderr, "(use_file && op_mode=='T' + payload <= %d)\n\n", ILLEGAL_PAYLOAD);
 		}
 	}
@@ -1544,21 +1544,21 @@ void check_options(dtnperf_global_options_t * global_options)
 				|| ((perf_opt->bundle_payload > perf_opt->data_qty)	&& (perf_opt->data_qty > 0)))
 		{
 			perf_opt->bundle_payload = perf_opt->data_qty;
-			fprintf(stderr, "\nWARNING (b): bundle payload set to %ld bytes\n", perf_opt->bundle_payload);
-			fprintf(stderr, "(use_file && op_mode=='D' + payload <= %d or > %ld)\n\n", ILLEGAL_PAYLOAD, perf_opt->data_qty);
+			fprintf(stderr, "\nWARNING (b): bundle payload set to %f bytes\n", perf_opt->bundle_payload);
+			fprintf(stderr, "(use_file && op_mode=='D' + payload <= %d or > %f)\n\n", ILLEGAL_PAYLOAD, perf_opt->data_qty);
 		}
 	}
 
 	if (perf_opt->bundle_payload <= ILLEGAL_PAYLOAD)
 	{
 		perf_opt->bundle_payload = DEFAULT_PAYLOAD;
-		fprintf(stderr, "\nWARNING: bundle payload set to %ld bytes\n\n", perf_opt->bundle_payload);
+		fprintf(stderr, "\nWARNING: bundle payload set to %f bytes\n\n", perf_opt->bundle_payload);
 
 	}
 	if ((!perf_opt->use_file) && (perf_opt->bundle_payload > MAX_MEM_PAYLOAD))
 	{
 		perf_opt->bundle_payload = MAX_MEM_PAYLOAD;
-		fprintf(stderr, "\nWARNING: MAX_MEM_PAYLOAD = %d\nbundle payload set to max: %ld bytes\n", MAX_MEM_PAYLOAD, perf_opt->bundle_payload);
+		fprintf(stderr, "\nWARNING: MAX_MEM_PAYLOAD = %d\nbundle payload set to max: %f bytes\n", MAX_MEM_PAYLOAD, perf_opt->bundle_payload);
 	}
 
 	if ((!perf_opt->use_file) && (perf_opt->op_mode == 'D'))
@@ -1566,7 +1566,7 @@ void check_options(dtnperf_global_options_t * global_options)
 		if (perf_opt->data_qty <= MAX_MEM_PAYLOAD)
 		{
 			perf_opt->bundle_payload = perf_opt->data_qty;
-			fprintf(stderr, "\nWARNING (c1): bundle payload set to %ld bytes\n", perf_opt->bundle_payload);
+			fprintf(stderr, "\nWARNING (c1): bundle payload set to %f bytes\n", perf_opt->bundle_payload);
 			fprintf(stderr, "(!use_file + payload <= %d + data_qty <= %d + op_mode=='D')\n\n",
 					ILLEGAL_PAYLOAD, MAX_MEM_PAYLOAD);
 		}
@@ -1575,7 +1575,7 @@ void check_options(dtnperf_global_options_t * global_options)
 			perf_opt->bundle_payload = MAX_MEM_PAYLOAD;
 			fprintf(stderr, "(!use_file + payload <= %d + data_qty > %d + op_mode=='D')\n",
 					ILLEGAL_PAYLOAD, MAX_MEM_PAYLOAD);
-			fprintf(stderr, "\nWARNING (c2): bundle payload set to %ld bytes\n\n", perf_opt->bundle_payload);
+			fprintf(stderr, "\nWARNING (c2): bundle payload set to %f bytes\n\n", perf_opt->bundle_payload);
 		}
 	}
 
