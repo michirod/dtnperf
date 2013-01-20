@@ -7,7 +7,7 @@
  *
  * Converts MBytes into Bytes
  * ------------------------------------------ */
-long mega2byte(long n)
+long mega2byte(double n)
 {
     return (n * 1000 *1000);
 } // end mega2byte
@@ -17,7 +17,7 @@ long mega2byte(long n)
  *
  * Converts KBytes into Bytes
  * ------------------------------------------ */
-long kilo2byte(long n)
+long kilo2byte(double n)
 {
     return (n * 1000);
 } // end kilo2byte
