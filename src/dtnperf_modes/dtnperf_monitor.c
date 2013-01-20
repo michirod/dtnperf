@@ -25,6 +25,8 @@ session_list_t * session_list;
 al_bp_handle_t handle;
 al_bp_reg_id_t regid;
 al_bp_endpoint_id_t local_eid;
+al_bp_implementation_t bp_implementation;
+
 
 // flags to exit cleanly
 boolean_t dedicated_monitor;
@@ -66,6 +68,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	/* ------------------------
 	 * initialize variables
 	 * ------------------------ */
+	bp_implementation = al_bp_get_implementation();
 	boolean_t debug = perf_opt->debug;
 	int debug_level = perf_opt->debug_level;
 
@@ -138,9 +141,9 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	else
 		sprintf(temp, "%s", MON_EP_STRING);
 
-	if(al_bp_get_implementation() == BP_ION)
+	if(bp_implementation == BP_ION)
 		al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Monitor-CBHE",NULL);
-	if(al_bp_get_implementation() == BP_DTN)
+	if(bp_implementation == BP_DTN)
 		al_bp_build_local_eid(handle, &local_eid, MON_EP_STRING,"Monitor-DTN",NULL);
 
 	if(debug && debug_level > 0)
@@ -152,7 +155,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	if(debug && debug_level > 0)
 		printf("[debug] checking for existing registration...");
 	error = al_bp_find_registration(handle, &local_eid, &regid);
-	if (error == BP_SUCCESS)
+	if ( (error == BP_SUCCESS && bp_implementation == BP_DTN)
+			|| (bp_implementation == BP_ION && (error == BP_EBUSY || error == BP_EPARSEEID)))
 	{
 		fflush(stdout);
 		fprintf(stderr, "error: there is a registration with the same eid.\n");
@@ -474,7 +478,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 	session_list_destroy(session_list);
 	al_bp_close(handle);
-	al_bp_unregister(handle,regid,local_eid);
+	//al_bp_unregister(handle,regid,local_eid);
 	bp_handle_open = FALSE;
 }
 // end monitor code
@@ -583,7 +587,7 @@ void monitor_clean_exit(int status)
 	if (bp_handle_open)
 	{
 		al_bp_close(handle);
-		al_bp_unregister(handle,regid,local_eid);
+		//al_bp_unregister(handle,regid,local_eid);
 	}
 	printf("Dtnperf Monitor: exit.\n");
 	exit(status);
