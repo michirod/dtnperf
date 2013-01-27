@@ -103,10 +103,7 @@ file_transfer_info_t *  file_transfer_info_get(file_transfer_info_list_t * list,
 	file_transfer_info_list_item_t * item;
 	item = file_transfer_info_get_list_item(list, client);
 	if (item != NULL)
-	{
-		printf("\n\tEXP: %lu\n\n",item->info->expiration);
 		return item->info;
-	}
 	return NULL;
 }
 
@@ -195,19 +192,22 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	info->last_bundle_time = timestamp_secs;
 
 	// if transfer completed return 1
-	if (info->bytes_recvd >= info->file_dim)
+	if (info->bytes_recvd >= info->file_dim){
+		printf("\n\t\tCOMPLETATO\n");
 		return 1;
+	}
 	return 0;
 
 }
 
 int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		al_bp_bundle_object_t * bundle,
+		al_bp_timeval_t expiration_setted,
 		char * dir)
 {
 	al_bp_endpoint_id_t client_eid;
 	al_bp_timestamp_t timestamp;
-	al_bp_timeval_t expiration;
+	al_bp_timeval_t expiration = expiration_setted;
 	file_transfer_info_t * info;
 	FILE * pl_stream;
 	int result;
@@ -221,7 +221,8 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	// get info from bundle
 	al_bp_bundle_get_source(*bundle, &client_eid);
 	al_bp_bundle_get_creation_timestamp(*bundle, &timestamp);
-	al_bp_bundle_get_expiration(*bundle, &expiration);
+	if(al_bp_get_implementation() != BP_ION)
+		al_bp_bundle_get_expiration(*bundle, &expiration);
 	al_bp_bundle_get_payload_size(*bundle, &pl_size);
 	// create stream from incoming bundle payload
 	if (open_payload_stream_read(*bundle, &pl_stream) < 0)

@@ -72,6 +72,7 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 
 int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		al_bp_bundle_object_t * bundle,
+		al_bp_timeval_t expiration_setted,
 		char * dir);
 
 u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len);
