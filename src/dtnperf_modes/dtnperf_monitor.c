@@ -25,8 +25,6 @@ session_list_t * session_list;
 al_bp_handle_t handle;
 al_bp_reg_id_t regid;
 al_bp_endpoint_id_t local_eid;
-al_bp_implementation_t bp_implementation;
-
 
 // flags to exit cleanly
 boolean_t dedicated_monitor;
@@ -68,7 +66,6 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	/* ------------------------
 	 * initialize variables
 	 * ------------------------ */
-	bp_implementation = al_bp_get_implementation();
 	boolean_t debug = perf_opt->debug;
 	int debug_level = perf_opt->debug_level;
 
@@ -141,9 +138,9 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	else
 		sprintf(temp, "%s", MON_EP_STRING);
 
-	if(bp_implementation == BP_ION)
+	if(perf_opt->bp_implementation == BP_ION)
 		al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Monitor-CBHE",NULL);
-	if(bp_implementation == BP_DTN)
+	if(perf_opt->bp_implementation == BP_DTN)
 		al_bp_build_local_eid(handle, &local_eid, MON_EP_STRING,"Monitor-DTN",NULL);
 
 	if(debug && debug_level > 0)
@@ -155,8 +152,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	if(debug && debug_level > 0)
 		printf("[debug] checking for existing registration...");
 	error = al_bp_find_registration(handle, &local_eid, &regid);
-	if ( (error == BP_SUCCESS && bp_implementation == BP_DTN)
-			|| (bp_implementation == BP_ION && (error == BP_EBUSY || error == BP_EPARSEEID)))
+	if ( (error == BP_SUCCESS && perf_opt->bp_implementation == BP_DTN)
+			|| (perf_opt->bp_implementation == BP_ION && (error == BP_EBUSY || error == BP_EPARSEEID)))
 	{
 		fflush(stdout);
 		fprintf(stderr, "error: there is a registration with the same eid.\n");
@@ -272,13 +269,20 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// get bundle EXPIRATION TIME
 		if ((debug) && (debug_level > 0))
 			printf("[debug]\tgetting bundle expiration time...");
-		error = al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
-		if (error != BP_SUCCESS)
+		if(perf_opt->bp_implementation == BP_DTN)
 		{
-			fflush(stdout);
-			fprintf(stderr, "error getting bundle expiration time: %s\n",
-					al_bp_strerror(error));
-			monitor_clean_exit(1);
+			error = al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
+			if (error != BP_SUCCESS)
+			{
+				fflush(stdout);
+				fprintf(stderr, "error getting bundle expiration time: %s\n",
+						al_bp_strerror(error));
+				monitor_clean_exit(1);
+			}
+		}
+		else if(perf_opt->bp_implementation == BP_ION)
+		{
+			bundle_expiration = perf_opt->expiration_session;
 		}
 		if ((debug) && (debug_level > 0))
 		{
@@ -610,8 +614,9 @@ void print_monitor_usage(char * progname)
 			" -a, --daemon           Start the monitor as a daemon. Output is redirected to %s .\n"
 			" -o, --output <file>    Change the default output file (only with -a option).\n"
 			" -s, --stop             Stop a demonized instance of monitor.\n"
-			"     --ip-addr <addr>   Ip address of the bp daemon api. Default: 127.0.0.1\n"
-			"     --ip-port <port>   Ip port of the bp daemon api. Default: 5010\n"
+			" -l, --lifetime <s>     Max idle time of log files (s) (in ION). Default: 3600"
+			"     --ip-addr <addr>   Ip address of the bp daemon api. Default: 127.0.0.1 (Only in DTN2)\n"
+			"     --ip-port <port>   Ip port of the bp daemon api. Default: 5010 (Only in DTN2)\n"
 			"     --ldir <dir>       Logs directory. Default: %s .\n"
 			"     --debug[=level]    Debug messages [0-1], if level is not indicated level = 1.\n"
 			" -v, --verbose          Print some information message during the execution.\n"
@@ -640,6 +645,7 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 					{"ldir", required_argument, 0, 40},
 					{"ip-addr", required_argument, 0, 37},
 					{"ip-port", required_argument, 0, 38},
+					{"lifetime", required_argument,0,'l'},
 					{"daemon", no_argument, 0, 'a'},
 					{"output", required_argument, 0, 'o'},
 					{"stop", no_argument, 0, 's'},
@@ -658,6 +664,11 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 
 			case 'v':
 				perf_opt->verbose = TRUE;
+				break;
+
+			case 'l':
+				if(al_bp_get_implementation() != BP_ION)
+					perf_opt->expiration_session = atoi(optarg);
 				break;
 
 			case 33: // debug
