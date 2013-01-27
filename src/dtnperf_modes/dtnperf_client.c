@@ -1186,7 +1186,7 @@ void print_client_usage(char* progname)
 			" -p, --priority <val>        Bundles priority [bulk|normal|expedited|reserved]. Default is normal\n"
 			"     --ack-to-mon            Force server to send bundle acks to the monitor indipendently of server settings\n"
 			"     --no-ack-to-mon         Force server to not to send bundle acks to the monitor\n"
-			"     --ack-lifetime          Force server to set bundle ack lifetime time to the same value of the data bundles sent by the client\n"
+			"     --ack-lifetime          Force server to set bundle ack lifetime time to the same value of the data bundles sent by the client. Not valid for ION's implementation\n"
 			"     --ack-priority[=val]    Force server to set bundle ack priority as the one of client bundles or as the val provided\n"
 			" -v, --verbose               Print some information messages during the execution.\n"
 			" -h, --help                  This help.\n",
@@ -1429,7 +1429,8 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			break;
 
 		case 46:
-			perf_opt->bundle_ack_options.set_ack_expiration = TRUE;
+			if(bp_implementation != BP_ION)
+				perf_opt->bundle_ack_options.set_ack_expiration = TRUE;
 			break;
 
 		case 47:
