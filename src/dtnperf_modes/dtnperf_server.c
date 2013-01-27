@@ -473,7 +473,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			pthread_mutex_lock(&mutexdata);
 
 			indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
-					&bundle_object, perf_opt->file_dir);
+					&bundle_object,conn_opt->expiration ,perf_opt->file_dir);
 
 			pthread_mutex_unlock(&mutexdata);
 			sched_yield();
@@ -724,7 +724,7 @@ void * file_expiration_timer(void * opt)
 		for(item = file_transfer_info_list.first; item != NULL; item = next)
 		{
 			next = item->next;
-/*			if (item->info->last_bundle_time + item->info->expiration < current_dtn_time)
+			if (item->info->last_bundle_time + item->info->expiration < current_dtn_time)
 			{
 				char* filename = (char*) malloc(item->info->filename_len + strlen(item->info->full_dir) +1);
 				strcpy(filename, item->info->full_dir);
@@ -734,7 +734,7 @@ void * file_expiration_timer(void * opt)
 				printf("Eliminated file %s because timer has expired\n", filename);
 				file_transfer_info_list_item_delete(&file_transfer_info_list, item);
 				free(filename);
-			}*/
+			}
 		}
 		pthread_mutex_unlock(&mutexdata);
 		sched_yield();
@@ -757,7 +757,7 @@ void print_server_usage(char * progname)
 			"     --fdir <dir>       Destination directory of transfered files. Default is %s .\n"
 			"     --debug[=level]    Debug messages [1-2], if level is not indicated level = 1.\n"
 			" -M, --memory         	 Save bundles into memory.\n"
-			" -l, --lifetime <sec>   Bundle acks lifetime (s). Default is 3600\n"
+			" -l, --lifetime <sec>   Bundle acks lifetime (s). Max idle time for ongoing file transfers (in ION). Default is 3600.\n"
 			" -p, --priority <val>   Bundle acks priority [bulk|normal|expedited|reserved]. Default: normal\n"
 			//"     --acks-to-mon      Send bundle acks to the monitor too\n"
 			//"     --eid [URI|CBHE]   Set type of eid format. CBHE only for ION implementation. Default: URI\n",
