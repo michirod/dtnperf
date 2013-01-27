@@ -46,6 +46,7 @@ typedef struct dtnperf_bundle_ack_options
 typedef struct dtnperf_options
 {
 	//general options
+	al_bp_implementation_t bp_implementation; // Bundle Protocol implementation
 	boolean_t verbose;		// if true, execution becomes verbose [FALSE]
 	boolean_t debug;		// if true, debug messages are shown [FALSE]
 	int debug_level;		// set the debug level 0|1|2 [0]
@@ -84,6 +85,7 @@ typedef struct dtnperf_options
 	boolean_t no_acks;		// do not send ACKs (for retro-compatibility purpose)
 	//monitor options
 	char * logs_dir;		// dir where are saved monitor logs [LOGS_DIR_DEFAULT]
+	int expiration_session; // expiration time of session Client-Server [3600]
 
 } dtnperf_options_t;
 

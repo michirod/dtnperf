@@ -26,7 +26,6 @@ file_transfer_info_list_t file_transfer_info_list;
 al_bp_handle_t handle;
 al_bp_reg_id_t regid;
 al_bp_endpoint_id_t local_eid;
-al_bp_implementation_t bp_implementation;
 
 // flags to exit cleanly
 boolean_t bp_handle_open;
@@ -90,14 +89,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		setlinebuf(stderr);
 	}
 
-	// get the implementation for future use
-	bp_implementation =  al_bp_get_implementation();
-
 	// show requested options (debug)
 	if (debug)
 	{
 		printf("\nOptions;\n");
-		printf("\tendpoint:\t%s\n", bp_implementation == BP_ION ? SERV_EP_NUM_SERVICE : SERV_EP_STRING);
+		printf("\tendpoint:\t%s\n", perf_opt->bp_implementation == BP_ION ? SERV_EP_NUM_SERVICE : SERV_EP_STRING);
 		printf("\tsave bundles to:\t%s\n", perf_opt->use_file ? "file":"memory");
 		if(perf_opt->use_file)
 			printf("\tdestination dir:\t%s\n", perf_opt->dest_dir);
@@ -200,9 +196,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	if(debug && debug_level > 0)
 		printf("[debug] building a local eid...");
 
-	if(bp_implementation == BP_ION)
+	if(perf_opt->bp_implementation == BP_ION)
 		al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
-	else if(bp_implementation == BP_DTN)
+	else if(perf_opt->bp_implementation == BP_DTN)
 		al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
 
 	if(debug && debug_level > 0)
@@ -214,8 +210,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	if(debug && debug_level > 0)
 		printf("[debug] checking for existing registration...");
 	error = al_bp_find_registration(handle, &local_eid, &regid);
-	if ( (error == BP_SUCCESS && bp_implementation == BP_DTN)
-			|| (bp_implementation == BP_ION && (error == BP_EBUSY || error == BP_EPARSEEID)))
+	if ( (error == BP_SUCCESS && perf_opt->bp_implementation == BP_DTN)
+			|| (perf_opt->bp_implementation == BP_ION && (error == BP_EBUSY || error == BP_EPARSEEID)))
 	{
 		fflush(stdout);
 		fprintf(stderr, "error: there is a registration with the same eid.\n");
