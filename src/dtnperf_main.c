@@ -246,6 +246,7 @@ void init_dtnperf_global_options(dtnperf_global_options_t *opt, dtnperf_options_
 
 void init_dtnperf_options(dtnperf_options_t *opt)
 {
+	opt->bp_implementation = al_bp_get_implementation();
 	opt->verbose = FALSE;
 	opt->debug = FALSE;
 	opt->debug_level = 0;
@@ -280,6 +281,7 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->acks_to_mon = FALSE;
 	opt->no_acks = FALSE;
 	opt->logs_dir = LOGS_DIR_DEFAULT;
+	opt->expiration_session = 3600;
 	opt->bundle_ack_options.ack_to_client = TRUE;
 	opt->bundle_ack_options.ack_to_mon = ATM_NORMAL;;
 	opt->bundle_ack_options.set_ack_expiration = FALSE;
