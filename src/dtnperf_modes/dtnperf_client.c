@@ -215,7 +215,16 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			strncpy(perf_opt->mon_eid, local_eid.uri, ptr - local_eid.uri);
 		}
 		else
-			strncpy(perf_opt->mon_eid, local_eid.uri, strlen(local_eid.uri));
+		{
+			char * ptr, * temp;
+			temp = (char *) malloc(sizeof(char)*AL_BP_MAX_ENDPOINT_ID);
+			strcpy(temp,local_eid.uri);
+			ptr = strtok(temp , ".");
+			sprintf(temp,"%s.%s",ptr,MON_EP_NUM_SERVICE);
+			printf("PTR: %s - tmp: %s -LOCAL: %s\n",ptr,local_eid.uri,temp);
+			strncpy(perf_opt->mon_eid, temp, strlen(temp));
+			free(temp);
+		}
 
 	}
 	// if isn't CBHE Format append monitor demux string to replyto eid
@@ -246,7 +255,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		if(debug && debug_level > 0)
 			printf("[debug] checking for existing monitor on this endpoint...\n");
 		error = al_bp_find_registration(handle, &mon_eid, &regid);
-		if (error == BP_SUCCESS)
+		if ( (error == BP_SUCCESS && perf_opt->bp_implementation == BP_DTN)
+					|| (perf_opt->bp_implementation == BP_ION && (error == BP_EBUSY || error == BP_EPARSEEID)))
 		{
 			dedicated_monitor = FALSE;
 			printf("there is already a monitor on this endpoint.\n");
@@ -615,6 +625,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority, sent_bundles);
 	al_bp_bundle_set_source(&bundle_stop, local_eid);
 
+	printf("BUNDLE STOP TO MONITOR\n");
 	// send stop bundle to monitor
 	if (debug)
 		printf("sending the stop bundle to the monitor...");
@@ -627,7 +638,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	if (debug)
 		printf("done.\n");
-
+	printf("BUNDLE STOP TO MONITOR SENT\n");
 	// waiting monitor stops
 	if (dedicated_monitor)
 	{
