@@ -329,7 +329,6 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		pthread_mutex_lock(&mutexdata);
 
 		session = NULL;
-		write(1,"BUNDLE RECEIVED",14);
 		switch (bundle_type)
 		{
 		case STATUS_REPORT:
