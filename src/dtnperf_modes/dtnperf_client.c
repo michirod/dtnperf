@@ -221,7 +221,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			strcpy(temp,local_eid.uri);
 			ptr = strtok(temp , ".");
 			sprintf(temp,"%s.%s",ptr,MON_EP_NUM_SERVICE);
-			printf("PTR: %s - tmp: %s -LOCAL: %s\n",ptr,local_eid.uri,temp);
 			strncpy(perf_opt->mon_eid, temp, strlen(temp));
 			free(temp);
 		}
