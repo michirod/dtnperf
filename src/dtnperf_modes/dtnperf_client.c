@@ -624,7 +624,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority, sent_bundles);
 	al_bp_bundle_set_source(&bundle_stop, local_eid);
 
-	printf("BUNDLE STOP TO MONITOR\n");
 	// send stop bundle to monitor
 	if (debug)
 		printf("sending the stop bundle to the monitor...");
@@ -637,7 +636,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	if (debug)
 		printf("done.\n");
-	printf("BUNDLE STOP TO MONITOR SENT\n");
+
 	// waiting monitor stops
 	if (dedicated_monitor)
 	{
