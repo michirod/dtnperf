@@ -716,7 +716,6 @@ void * file_expiration_timer(void * opt)
 
 	while(1)
 	{
-		pthread_sleep(10);
 		current_dtn_time = get_current_dtn_time();
 
 		pthread_mutex_lock(&mutexdata);
