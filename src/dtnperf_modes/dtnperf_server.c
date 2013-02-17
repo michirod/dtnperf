@@ -618,8 +618,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("[debug] setting expiration time of the bundle ack...");
 			}
 			if (bundle_ack_options.set_ack_expiration)
+			{
 				al_bp_bundle_set_expiration(& bundle_ack_object, bundle_expiration);
+			}
 			else
+				if(conn_opt->expiration == 0)
+					conn_opt->expiration = 3600;
 				al_bp_bundle_set_expiration(& bundle_ack_object, conn_opt->expiration);
 			if (error != BP_SUCCESS)
 			{
@@ -712,7 +716,7 @@ void * file_expiration_timer(void * opt)
 
 	while(1)
 	{
-		//pthread_sleep(10);
+		pthread_sleep(10);
 		current_dtn_time = get_current_dtn_time();
 
 		pthread_mutex_lock(&mutexdata);
