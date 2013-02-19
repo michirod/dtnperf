@@ -467,7 +467,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("[debug]\tprocessing file transfer bundle...");
 
 			pthread_mutex_lock(&mutexdata);
-
+			//set exipiration for ION
+			if(perf_opt->bp_implementation == BP_ION)
+				conn_opt->expiration = 3600;
 			indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
 					&bundle_object,conn_opt->expiration ,perf_opt->file_dir);
 
