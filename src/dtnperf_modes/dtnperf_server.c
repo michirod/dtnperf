@@ -725,7 +725,6 @@ void * file_expiration_timer(void * opt)
 		for(item = file_transfer_info_list.first; item != NULL; item = next)
 		{
 			next = item->next;
-			printf("\n\t\t%lu < %lu\n",(item->info->last_bundle_time + item->info->expiration),current_dtn_time);
 			if (item->info->last_bundle_time + item->info->expiration < current_dtn_time)
 			{
 				char* filename = (char*) malloc(item->info->filename_len + strlen(item->info->full_dir) +1);

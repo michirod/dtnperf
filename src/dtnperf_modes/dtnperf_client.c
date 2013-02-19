@@ -814,6 +814,7 @@ void * send_bundles(void * opt)
 				fprintf(log_file, "error sending bundle: %d (%s)\n", error, al_bp_strerror(error));
 			client_clean_exit(1);
 		}
+		sleep(1);
 		if ((error = al_bp_bundle_get_id(bundle, &bundle_id)) != 0)
 		{
 			fprintf(stderr, "error getting bundle id: %s\n", al_bp_strerror(error));
