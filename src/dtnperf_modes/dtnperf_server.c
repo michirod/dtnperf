@@ -723,7 +723,7 @@ void * file_expiration_timer(void * opt)
 		for(item = file_transfer_info_list.first; item != NULL; item = next)
 		{
 			next = item->next;
-/*			if (item->info->last_bundle_time + item->info->expiration < current_dtn_time)
+			if (item->info->last_bundle_time + item->info->expiration < current_dtn_time)
 			{
 				char* filename = (char*) malloc(item->info->filename_len + strlen(item->info->full_dir) +1);
 				strcpy(filename, item->info->full_dir);
@@ -733,7 +733,7 @@ void * file_expiration_timer(void * opt)
 				printf("Eliminated file %s because timer has expired\n", filename);
 				file_transfer_info_list_item_delete(&file_transfer_info_list, item);
 				free(filename);
-			}*/
+			}
 		}
 		pthread_mutex_unlock(&mutexdata);
 		sched_yield();
