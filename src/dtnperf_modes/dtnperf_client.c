@@ -858,7 +858,6 @@ void * send_bundles(void * opt)
 			condition = sent_bundles < tot_bundles;
 		}
 	} // while
-	sleep(1);
 	if ((debug) && (debug_level > 0))
 		printf("[debug send thread] ...out from loop\n");
 	if (create_log)
