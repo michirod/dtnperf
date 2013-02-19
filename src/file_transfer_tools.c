@@ -191,7 +191,7 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	info->expiration = expiration;
 	info->last_bundle_time = timestamp_secs;
 
-	printf("\t\tRECV: %lu - TOT: %lu\n",info->bytes_recvd,info->file_dim);
+	printf("\n\tRECV: %lu - TOT: %lu\n",info->bytes_recvd,info->file_dim);
 	// if transfer completed return 1
 	if (info->bytes_recvd >= info->file_dim){
 		printf("\n\t\tCOMPLETATO\n");
