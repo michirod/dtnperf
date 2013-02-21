@@ -806,7 +806,6 @@ void * send_bundles(void * opt)
 
 		if (perf_opt->congestion_ctrl == 'w')
 			pthread_mutex_lock(&mutexdata);
-
 		if ((error = al_bp_bundle_send(handle, regid, &bundle)) != 0)
 		{
 			fprintf(stderr, "error sending bundle: %d (%s)\n", error, al_bp_strerror(error));
@@ -1069,10 +1068,13 @@ void * wait_for_sigint(void * arg)
 		if ((perf_opt->debug) && (perf_opt->debug_level > 0))
 			printf("[debug] opening a new connection to local BP daemon...");
 
-		if (perf_opt->use_ip)
-			error = al_bp_open_with_ip(perf_opt->ip_addr,perf_opt->ip_port,&force_stop_handle);
-		else
-			error = al_bp_open(&force_stop_handle);
+		if(perf_opt->bp_implementation == BP_DTN)
+		{
+			if (perf_opt->use_ip)
+				error = al_bp_open_with_ip(perf_opt->ip_addr,perf_opt->ip_port,&force_stop_handle);
+			else
+				error = al_bp_open(&force_stop_handle);
+		}
 
 		if (error != BP_SUCCESS)
 		{
@@ -1093,7 +1095,11 @@ void * wait_for_sigint(void * arg)
 
 		// send force_stop bundle to monitor
 		printf("Sending the force stop bundle to the monitor...");
-		if ((error = al_bp_bundle_send(force_stop_handle, regid, &bundle_force_stop)) != 0)
+		if(perf_opt->bp_implementation == BP_DTN)
+			error = al_bp_bundle_send(force_stop_handle, regid, &bundle_force_stop);
+		else if(perf_opt->bp_implementation == BP_ION)
+			error = al_bp_bundle_send(handle, regid, &bundle_force_stop);
+		if ((error) != 0)
 		{
 			fprintf(stderr, "error sending the force stop bundle: %d (%s)\n", error, al_bp_strerror(error));
 			if (perf_opt->create_log)
@@ -1104,7 +1110,7 @@ void * wait_for_sigint(void * arg)
 		printf("done.\n");
 
 
-		//al_bp_bundle_free(&bundle_force_stop);
+		al_bp_bundle_free(&bundle_force_stop);
 	}
 
 	process_interrupted = TRUE;
@@ -1308,9 +1314,11 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				perf_opt->data_qty = mega2byte(atof(perf_opt->D_arg));
 				break;
 			default:
-				printf("\nWARNING: (-D option) invalid data unit, assuming 'M' (MBytes)\n\n");
-				perf_opt->data_qty = mega2byte(atof(perf_opt->D_arg));
-				break;
+				printf("\nERROR: (-D option) invalid data unit\n");
+				exit(1);
+//				printf("\nWARNING: (-D option) invalid data unit, assuming 'M' (MBytes)\n\n");
+//				perf_opt->data_qty = mega2byte(atof(perf_opt->D_arg));
+//				break;
 			}
 			break;
 
@@ -1340,9 +1348,11 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 
 				break;
 			default:
-				printf("\nWARNING: (-p option) invalid data unit, assuming 'K' (KBytes)\n\n");
-				perf_opt->bundle_payload = kilo2byte(atof(perf_opt->p_arg));
-				break;
+				printf("\nERROR: (-P option) invalid data unit\n");
+				exit(1);
+//				printf("\nWARNING: (-p option) invalid data unit, assuming 'K' (KBytes)\n\n");
+//				perf_opt->bundle_payload = kilo2byte(atof(perf_opt->p_arg));
+//				break;
 			}
 			break;
 

@@ -311,7 +311,6 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		else
 		{
 			get_bundle_header_and_options(&bundle_object, & bundle_header, NULL);
-
 			if (bundle_header == FORCE_STOP_HEADER)
 				bundle_type = CLIENT_FORCE_STOP;
 			else if (bundle_header == STOP_HEADER)
@@ -369,6 +368,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			memset(filename, 0, filename_len);
 			sprintf(filename, "%lu_", relative_creation_timestamp.secs);
 			strncpy(temp, relative_source_addr.uri, strlen(relative_source_addr.uri) + 1);
+			printf("relative_source_addr.uri: %s\n\n",relative_source_addr.uri);
 			if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
 			{
 				strtok(temp, ":");
@@ -377,7 +377,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			else
 			{
 				char * ptr;
-				strtok(temp, "/"); printf("temp: %s\n",temp);
+				strtok(temp, "/");
 				strcat(filename, strtok(NULL, "/"));
 				// remove .dtn suffix from the filename
 				ptr = strstr(filename, ".dtn");
@@ -495,7 +495,7 @@ void * session_expiration_timer(void * opt)
 
 	while(1)
 	{
-		pthread_sleep(5);
+		//pthread_sleep(5);
 		current_dtn_time = get_current_dtn_time();
 		gettimeofday(&current_time, NULL);
 
