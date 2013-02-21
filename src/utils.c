@@ -61,7 +61,7 @@ char find_data_unit(const char *inarg)
 
     if ((unit = strpbrk(inarg, unitArray)) == NULL)
     {
-        unit = "Z";
+    	unit = "Z";
     }
 
     if (unit[0] == 'K')
@@ -87,7 +87,7 @@ char find_rate_unit(const char *inarg)
 
     if ((ptr = strpbrk(inarg, unitArray)) == NULL)
     {
-    	printf("\nWARNING: (-r option) invalid rate unit, assuming 'k' (kb/s)\n\n");
+    	printf("\nWARNING: (-R option) invalid rate unit, assuming 'k' (kb/s)\n\n");
     	return 'k';
     }
 

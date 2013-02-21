@@ -191,7 +191,6 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	info->expiration = expiration;
 	info->last_bundle_time = timestamp_secs;
 
-	printf("\n\tRECV: %lu - TOT: %lu\n",info->bytes_recvd,info->file_dim);
 	// if transfer completed return 1
 	if (info->bytes_recvd >= info->file_dim)
 		return 1;
@@ -336,7 +335,7 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	fwrite(&offset, sizeof(offset), 1, f);
 	// read fragment from file
 	bytes_read = read(fd, fragment, fragment_len);
-	printf("\nBytes Read: %lu - Frag: %lu\n",bytes_read,fragment_len);
+
 	if (bytes_read < fragment_len) // reached EOF
 		*eof = TRUE;
 	else
