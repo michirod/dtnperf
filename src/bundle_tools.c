@@ -269,7 +269,7 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	default:
 		return BP_EINVAL;
 	}
-
+	printf("HEADER: %lu\n", header);
 	// options
 	options = 0;
 	// ack to client
@@ -309,7 +309,7 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 			break;
 		}
 	}
-
+	printf("OPT: %lu\n", options);
 	// write in payload
 	fwrite(&header, HEADER_SIZE, 1, f);
 	fwrite(&options, BUNDLE_OPT_SIZE, 1, f);
