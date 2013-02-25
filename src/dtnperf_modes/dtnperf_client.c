@@ -125,6 +125,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	//Print version
 	printf("\n******* Version: DTNper vION - 25 feb 2013 ********\n");
+	printf("******* 		Sleep  after al_bp_send 	 ********\n");
 
 	// Create a new log file
 	if (create_log)
@@ -816,6 +817,8 @@ void * send_bundles(void * opt)
 				fprintf(log_file, "error sending bundle: %d (%s)\n", error, al_bp_strerror(error));
 			client_clean_exit(1);
 		}
+
+		sleep(1);
 
 		if ((error = al_bp_bundle_get_id(bundle, &bundle_id)) != 0)
 		{
