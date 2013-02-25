@@ -43,14 +43,14 @@ int main(int argc, char ** argv)
 	monitor_parameters_t mon_params;
 	int fd, pid;
 
+	//Print version
+	printf("\n******* Version: DTNper vION - 25 feb 2013 ********");
+
 	// init options
 	init_dtnperf_global_options(&global_options, &perf_opt, &conn_opt);
 
 	// parse command line options
 	parse_options(argc, argv, &global_options);
-
-	//Print version
-	printf("\n******* Version: DTNper vION - 25 feb 2013 ********");
 
 	switch (global_options.mode)
 	{
