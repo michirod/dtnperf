@@ -306,11 +306,11 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			continue;
 		}
 		printf("STATUS REPORT\n");
-		printf("Delivery: %lu\n",status_report.delivery_ts.secs);
-		printf("receipt_ts: %lu\n",status_report.receipt_ts.secs);
-		printf("custody_ts: %lu\n",status_report.custody_ts.secs);
-		printf("forwarding_ts: %lu\n",status_report.forwarding_ts.secs);
-		printf("deletion_ts: %lu\n",status_report.deletion_ts.secs);
+		printf("Delivery: %lu\n",status_report->delivery_ts.secs);
+		printf("receipt_ts: %lu\n",status_report->receipt_ts.secs);
+		printf("custody_ts: %lu\n",status_report->custody_ts.secs);
+		printf("forwarding_ts: %lu\n",status_report->forwarding_ts.secs);
+		printf("deletion_ts: %lu\n",status_report->deletion_ts.secs);
 		if ((debug) && (debug_level > 0))
 			printf(" %s\n", status_report == NULL ? "no" : "yes");
 
