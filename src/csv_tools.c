@@ -57,6 +57,7 @@ void csv_print_status_report_timestamps(FILE * file, al_bp_bundle_status_report_
 	memset(buf1, 0, 256);
 
 	printf("STATUS REPORT -- bbb\n");
+	printf("FLAG: %d",status_report.flags);
 	printf("Delivery: %lu\n",status_report.delivery_ts.secs);
 	printf("receipt_ts: %lu\n",status_report.receipt_ts.secs);
 	printf("custody_ts: %lu\n",status_report.custody_ts.secs);
