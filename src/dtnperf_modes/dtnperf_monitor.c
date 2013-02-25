@@ -305,12 +305,6 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 					error, al_bp_strerror(al_bp_errno(handle)));
 			continue;
 		}
-		printf("STATUS REPORT\n");
-		printf("Delivery: %lu\n",status_report->delivery_ts.secs);
-		printf("receipt_ts: %lu\n",status_report->receipt_ts.secs);
-		printf("custody_ts: %lu\n",status_report->custody_ts.secs);
-		printf("forwarding_ts: %lu\n",status_report->forwarding_ts.secs);
-		printf("deletion_ts: %lu\n",status_report->deletion_ts.secs);
 		if ((debug) && (debug_level > 0))
 			printf(" %s\n", status_report == NULL ? "no" : "yes");
 
@@ -456,7 +450,12 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			csv_print_eid(file, relative_source_addr);
 			csv_print_timestamp(file, relative_creation_timestamp);
 		}
-
+		printf("STATUS REPORT\n");
+		printf("Delivery: %lu\n",status_report->delivery_ts.secs);
+		printf("receipt_ts: %lu\n",status_report->receipt_ts.secs);
+		printf("custody_ts: %lu\n",status_report->custody_ts.secs);
+		printf("forwarding_ts: %lu\n",status_report->forwarding_ts.secs);
+		printf("deletion_ts: %lu\n",status_report->deletion_ts.secs);
 		// print status report infos in csv log
 		if (bundle_type == STATUS_REPORT)
 		{
