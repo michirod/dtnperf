@@ -450,7 +450,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			csv_print_eid(file, relative_source_addr);
 			csv_print_timestamp(file, relative_creation_timestamp);
 		}
-		printf("STATUS REPORT\n");
+		printf("STATUS REPORT -- a\n");
 		printf("Delivery: %lu\n",status_report->delivery_ts.secs);
 		printf("receipt_ts: %lu\n",status_report->receipt_ts.secs);
 		printf("custody_ts: %lu\n",status_report->custody_ts.secs);
