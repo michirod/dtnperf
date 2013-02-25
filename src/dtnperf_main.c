@@ -43,9 +43,6 @@ int main(int argc, char ** argv)
 	monitor_parameters_t mon_params;
 	int fd, pid;
 
-	//Print version
-	printf("\n******* Version: DTNper vION - 25 feb 2013 ********");
-
 	// init options
 	init_dtnperf_global_options(&global_options, &perf_opt, &conn_opt);
 
