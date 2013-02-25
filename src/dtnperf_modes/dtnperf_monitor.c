@@ -78,7 +78,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	session_list = session_list_create();
 
 	//Print version
-	printf("\n******* Version: DTNper vION - 25 feb 2013 ********");
+	printf("\n******* Version: DTNper vION - 25 feb 2013 ********\n");
 
 	// set out buffer size if daemon
 	if (perf_opt->daemon)

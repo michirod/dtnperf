@@ -124,7 +124,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	sprintf(source_file, "%s_%d", SOURCE_FILE, getpid());
 
 	//Print version
-	printf("\n******* Version: DTNper vION - 25 feb 2013 ********");
+	printf("\n******* Version: DTNper vION - 25 feb 2013 ********\n");
 
 	// Create a new log file
 	if (create_log)

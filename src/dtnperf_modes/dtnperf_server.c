@@ -80,7 +80,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	bp_handle_open = FALSE;
 
 	//Print version
-	printf("\n******* Version: DTNper vION - 25 feb 2013 ********");
+	printf("\n******* Version: DTNper vION - 25 feb 2013 ********\n");
 
 	// initialize structures for file transfers
 	file_transfer_info_list = file_transfer_info_list_create();
