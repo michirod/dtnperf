@@ -124,8 +124,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	sprintf(source_file, "%s_%d", SOURCE_FILE, getpid());
 
 	//Print version
-	printf("\n******* Version: DTNper vION - 25 feb 2013 ********\n");
+	printf("\n******* Version: DTNper vION - 26 feb 2013 ********\n");
 	printf("******* 		Sleep  after al_bp_send 	 ********\n");
+	printf("******* 		 lifetime default 60s   	 ********\n");
 
 	// Create a new log file
 	if (create_log)
@@ -1201,7 +1202,7 @@ void print_client_usage(char* progname)
 			"     --ip-addr <addr>        Ip address of the bp daemon api. Default is 127.0.0.1\n"
 			"     --ip-port <port>        Ip port of the bp daemon api. Default is 5010\n"
 			"     --debug[=level]         Debug messages [1-2], if level is not indicated level = 2.\n"
-			" -l, --lifetime <time>       Bundles lifetime (s). Default is 3600\n"
+			" -l, --lifetime <time>       Bundles lifetime (s). Default is 60\n"
 			" -p, --priority <val>        Bundles priority [bulk|normal|expedited|reserved]. Default is normal\n"
 			"     --ack-to-mon            Force server to send bundle acks to the monitor indipendently of server settings\n"
 			"     --no-ack-to-mon         Force server to not to send bundle acks to the monitor\n"
