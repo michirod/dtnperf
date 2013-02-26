@@ -77,11 +77,6 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	status_report = NULL;
 	session_list = session_list_create();
 
-	//Print version
-	printf("\n******* Version: DTNper vION - 26 feb 2013 ********\n");
-	printf("******* 		 lifetime default 60s   	 ********\n");
-	printf("******* 	AL conversion Payload in Memory  ********\n");
-
 	// set out buffer size if daemon
 	if (perf_opt->daemon)
 	{
