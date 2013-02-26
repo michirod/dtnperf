@@ -123,11 +123,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	source_file = (char*) malloc(strlen(SOURCE_FILE) + 7);
 	sprintf(source_file, "%s_%d", SOURCE_FILE, getpid());
 
-	//Print version
-	printf("\n******* Version: DTNper vION - 26 feb 2013 ********\n");
-	printf("******* 		 lifetime default 60s   	 ********\n");
-	printf("******* 	AL conversion Payload in Memory  ********\n");
-
 	// Create a new log file
 	if (create_log)
 	{
@@ -459,6 +454,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		source_file_created = TRUE;
 
 		fclose(stream);
+
+		printf("\nSTAMPA FILE STREAM NAME: %s\n",source_file);
+
 
 		if ((debug) && (debug_level > 0))
 			printf(" done\n");

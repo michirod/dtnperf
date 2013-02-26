@@ -49,6 +49,11 @@ int main(int argc, char ** argv)
 	// parse command line options
 	parse_options(argc, argv, &global_options);
 
+	//Print version
+	printf("\n******* Version: DTNper vION - 26 feb 2013 ********\n");
+	printf("******* 		 lifetime default 60s   	 ********\n");
+	printf("******* \t 	Modifica Payload Buffer       ***********\n");
+
 	switch (global_options.mode)
 	{
 	case DTNPERF_SERVER:
