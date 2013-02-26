@@ -79,8 +79,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 	//Print version
 	printf("\n******* Version: DTNper vION - 26 feb 2013 ********\n");
-	printf("******* 		Sleep  after al_bp_send 	 ********\n");
 	printf("******* 		 lifetime default 60s   	 ********\n");
+	printf("******* 	AL conversion Payload in Memory  ********\n");
 
 	// set out buffer size if daemon
 	if (perf_opt->daemon)

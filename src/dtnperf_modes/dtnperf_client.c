@@ -125,8 +125,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	//Print version
 	printf("\n******* Version: DTNper vION - 26 feb 2013 ********\n");
-	printf("******* 		Sleep  after al_bp_send 	 ********\n");
 	printf("******* 		 lifetime default 60s   	 ********\n");
+	printf("******* 	AL conversion Payload in Memory  ********\n");
 
 	// Create a new log file
 	if (create_log)
@@ -624,7 +624,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	print_final_report(NULL);
 	if(perf_opt->create_log)
 		print_final_report(log_file);
-	printf("EXPIRATION: %lu\n",conn_opt->expiration);
+
 	// fill the stop bundle
 	prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority, sent_bundles);
 	al_bp_bundle_set_source(&bundle_stop, local_eid);
