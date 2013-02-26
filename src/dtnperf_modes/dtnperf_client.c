@@ -819,7 +819,7 @@ void * send_bundles(void * opt)
 			client_clean_exit(1);
 		}
 
-		sleep(1);
+		//sleep(1);
 
 		if ((error = al_bp_bundle_get_id(bundle, &bundle_id)) != 0)
 		{
