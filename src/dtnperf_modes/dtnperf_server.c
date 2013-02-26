@@ -80,8 +80,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	bp_handle_open = FALSE;
 
 	//Print version
-	printf("\n******* Version: DTNper vION - 25 feb 2013 ********\n");
+	printf("\n******* Version: DTNper vION - 26 feb 2013 ********\n");
 	printf("******* 		Sleep  after al_bp_send 	 ********\n");
+	printf("******* 		 lifetime default 60s   	 ********\n");
 
 	// initialize structures for file transfers
 	file_transfer_info_list = file_transfer_info_list_create();
@@ -473,7 +474,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			pthread_mutex_lock(&mutexdata);
 			//set exipiration for ION
 			if(perf_opt->bp_implementation == BP_ION)
-				conn_opt->expiration = 3600;
+				conn_opt->expiration = 60;
 			indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
 					&bundle_object,conn_opt->expiration ,perf_opt->file_dir);
 
@@ -629,7 +630,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 			else
 				if(conn_opt->expiration == 0)
-					conn_opt->expiration = 3600;
+					conn_opt->expiration = 60;
 				al_bp_bundle_set_expiration(& bundle_ack_object, conn_opt->expiration);
 			if (error != BP_SUCCESS)
 			{
@@ -762,7 +763,7 @@ void print_server_usage(char * progname)
 			"     --fdir <dir>       Destination directory of transfered files. Default is %s .\n"
 			"     --debug[=level]    Debug messages [1-2], if level is not indicated level = 1.\n"
 			" -M, --memory         	 Save bundles into memory.\n"
-			" -l, --lifetime <sec>   Bundle acks lifetime (s). Max idle time for ongoing file transfers (in ION). Default is 3600.\n"
+			" -l, --lifetime <sec>   Bundle acks lifetime (s). Max idle time for ongoing file transfers (in ION). Default is 60.\n"
 			" -p, --priority <val>   Bundle acks priority [bulk|normal|expedited|reserved]. Default: normal\n"
 			//"     --acks-to-mon      Send bundle acks to the monitor too\n"
 			//"     --eid [URI|CBHE]   Set type of eid format. CBHE only for ION implementation. Default: URI\n",

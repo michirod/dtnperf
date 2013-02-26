@@ -281,7 +281,7 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->acks_to_mon = FALSE;
 	opt->no_acks = FALSE;
 	opt->logs_dir = LOGS_DIR_DEFAULT;
-	opt->expiration_session = 3600;
+	opt->expiration_session = 60;
 	opt->bundle_ack_options.ack_to_client = TRUE;
 	opt->bundle_ack_options.ack_to_mon = ATM_NORMAL;;
 	opt->bundle_ack_options.set_ack_expiration = FALSE;
@@ -292,7 +292,7 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 
 void init_dtnperf_connection_options(dtnperf_connection_options_t* opt)
 {
-	opt->expiration = 3600;				// expiration time (sec) [3600]
+	opt->expiration = 60;				// expiration time (sec) [60]
 	opt->delivery_receipts = TRUE;		// request delivery receipts [1]
 	opt->forwarding_receipts = FALSE;   // request per hop departure [0]
 	opt->custody_transfer = FALSE;   	// request custody transfer [0]

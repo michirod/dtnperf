@@ -78,7 +78,9 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	session_list = session_list_create();
 
 	//Print version
-	printf("\n******* Version: DTNper vION - 25 feb 2013 ********\n");
+	printf("\n******* Version: DTNper vION - 26 feb 2013 ********\n");
+	printf("******* 		Sleep  after al_bp_send 	 ********\n");
+	printf("******* 		 lifetime default 60s   	 ********\n");
 
 	// set out buffer size if daemon
 	if (perf_opt->daemon)
@@ -616,7 +618,7 @@ void print_monitor_usage(char * progname)
 			" -a, --daemon           Start the monitor as a daemon. Output is redirected to %s .\n"
 			" -o, --output <file>    Change the default output file (only with -a option).\n"
 			" -s, --stop             Stop a demonized instance of monitor.\n"
-			" -l, --lifetime <s>     Max idle time of log files (s) (in ION). Default: 3600"
+			" -l, --lifetime <s>     Max idle time of log files (s) (in ION). Default: 60"
 			"     --ip-addr <addr>   Ip address of the bp daemon api. Default: 127.0.0.1 (Only in DTN2)\n"
 			"     --ip-port <port>   Ip port of the bp daemon api. Default: 5010 (Only in DTN2)\n"
 			"     --ldir <dir>       Logs directory. Default: %s .\n"
