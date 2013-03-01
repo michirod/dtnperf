@@ -20,8 +20,7 @@ void client_handler(int sig);
 void client_clean_exit(int status);
 
 //create payload function
-void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_log,
-						int num_bundle, boolean_t * eof_reached);
+void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_log, int num_bundle);
 
 //pthread functions
 void * send_bundles(void * opt);
