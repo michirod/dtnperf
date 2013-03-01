@@ -50,11 +50,12 @@ int main(int argc, char ** argv)
 	parse_options(argc, argv, &global_options);
 
 	//Print version
-	printf("\n******* Version: DTNper vION - 01 mar 2013 ********\n");
-	printf("******* lifetime default 60s ********\n");
-	printf("******* Header Log Status Report ***********\n");
-	printf("******* Deleted Status Report opts ***********\n");
-	printf("******* Dtnperfbuf in /tmp ***********\n");
+	printf("\n******* Version: DTNper vION - 01 mar 2013 ***********\n");
+	printf("******* Function Create and Fill Payload     ***********\n");
+	printf("******* lifetime default 60s                 ***********\n");
+	printf("******* Header Log Status Report             ***********\n");
+	printf("******* Deleted Status Report opts           ***********\n");
+	printf("******* Dtnperfbuf in /tmp                   ***********\n");
 
 	switch (global_options.mode)
 	{
