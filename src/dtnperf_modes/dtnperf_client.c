@@ -750,6 +750,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		free(source_file_abs);
 		free(source_file);
 	}
+	printf("OK");
 }
 
 
@@ -831,10 +832,10 @@ void * send_bundles(void * opt)
 		// Set Payload FILE MODE
 		if (perf_opt->op_mode == 'F')
 		{
-			char source_file_abs[256];
-			sprintf(source_file_abs, "%s_%d_%d", SOURCE_FILE, getpid(),sent_bundles);
+			char file[256];
+			sprintf(file, "%s_%d_%d", SOURCE_FILE, getpid(),sent_bundles);
 			if (perf_opt->use_file)
-				error = al_bp_bundle_set_payload_file(&bundle, source_file_abs, strlen(source_file_abs));
+				error = al_bp_bundle_set_payload_file(&bundle, file, strlen(source_file_abs));
 			else
 				error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
 		}
