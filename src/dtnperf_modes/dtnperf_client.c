@@ -99,7 +99,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	char temp1[256]; // buffer for different purpose
 	char temp2[256];
-	FILE * stream; // stream for preparing payolad
+//	FILE * stream; // stream for preparing payolad
 	al_bp_bundle_object_t bundle_stop;
 	monitor_parameters_t mon_params;
 
@@ -116,12 +116,12 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	log_open = FALSE;
 	bp_handle_open = FALSE;
 	source_file_created = FALSE;
-	stream = NULL;
+//	stream = NULL;
 	tot_bundles = 0;
 	process_interrupted = FALSE;
 	perf_opt->log_filename = correct_dirname(perf_opt->log_filename);
-	source_file = (char*) malloc(strlen(SOURCE_FILE) + 7);
-	sprintf(source_file, "%s_%d", SOURCE_FILE, getpid());
+//	source_file = (char*) malloc(strlen(SOURCE_FILE) + 7);
+//	sprintf(source_file, "%s_%d", SOURCE_FILE, getpid());
 
 	// Create a new log file
 	if (create_log)
@@ -431,42 +431,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	}
 
-
-	// Create the file
-	if (perf_opt->use_file)
-	{
-		// create the file
-		if ((debug) && (debug_level > 0))
-			printf("[debug] creating file %s...", source_file);
-
-		stream = fopen(source_file,	"wb");
-
-		if (stream == NULL)
-		{
-			fprintf(stderr, "ERROR: couldn't create file %s.\n \b Maybe you don't have permissions\n", source_file);
-
-			if (create_log)
-				fprintf(log_file, "ERROR: couldn't create file %s.\n \b Maybe you don't have permissions\n", source_file);
-
-			client_clean_exit(2);
-		}
-
-		source_file_created = TRUE;
-
-		fclose(stream);
-
-		if ((debug) && (debug_level > 0))
-			printf(" done\n");
-
-		// set the absolute path of the source file
-		char buf[256];
-	//	getcwd(buf, 256);
-		strcpy(buf, "/tmp/");
-		strcat(buf, source_file);
-		source_file_abs = malloc(strlen(buf) + 1);
-		strncpy(source_file_abs, buf, strlen(buf) + 1);
-	}
-	printf("source_file_abs: %s\n",source_file_abs);
 	// Create the bundle object
 	if ((debug) && (debug_level > 0))
 		printf("[debug] creating the bundle object...");
@@ -481,67 +445,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
-	// Fill the payload
-	if ((debug) && (debug_level > 0))
-		printf("[debug] filling payload...");
-
-	if (perf_opt->use_file)
-		error = al_bp_bundle_set_payload_file(&bundle, source_file_abs, strlen(source_file_abs));
-	else
-		error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
-	if (error != BP_SUCCESS)
-	{
-		fprintf(stderr, "ERROR: couldn't set bundle payload\n");
-
-		if (create_log)
-			fprintf(log_file, "ERROR: couldn't set bundle payload\n");
-		client_clean_exit(1);
-	}
-	if ((debug) && (debug_level > 0))
-		printf(" done\n");
-
-	// open payload stream in write mode
-	if (open_payload_stream_write(bundle, &stream) < 0)
-	{
-		fprintf(stderr, "ERROR: couldn't open payload stream in write mode\n");
-
-		if (create_log)
-			fprintf(log_file, "ERROR: couldn't open payload stream in write mode\n");
-
-		client_clean_exit(2);
-	}
-
-	// prepare the payload
-	if(perf_opt->op_mode == 'F') // File mode
-	{
-		// payload will be prepared into send_bundles() cycle
-
-		// open file to transfer in read mode
-		if ((transfer_fd = open(perf_opt->F_arg, O_RDONLY)) < 0)
-		{
-			fprintf(stderr, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
-			if (create_log)
-				fprintf(log_file, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
-			client_clean_exit(2);
-		}
-	}
-	else // Time and Data mode
-	{
-		error = prepare_generic_payload(perf_opt, stream);
-		if (error != BP_SUCCESS)
-		{
-			fprintf(stderr, "error preparing payload: %s\n", al_bp_strerror(error));
-			if (create_log)
-				fprintf(log_file, "error preparing payload: %s\n", al_bp_strerror(error));
-			client_clean_exit(1);
-		}
-	}
-
-	// close the stream
-	close_payload_stream_write(&bundle, stream);
-
-	if(debug)
-		printf("[debug] payload prepared\n");
 
 	// Create the array for the bundle send info (only for sliding window congestion control)
 	if (perf_opt->congestion_ctrl == 'w') {
@@ -598,6 +501,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	pthread_mutex_destroy(&mutexdata);
 	sem_destroy(&window);
 	pthread_cond_destroy(&cond_ackreceiver);
+
 	// if user sent Ctrl+C to the client,
 	// let the wait_for_signal thread to terminate the execution
 	if (process_interrupted)
@@ -698,10 +602,11 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			printf("[debug] removed file %s\n", source_file);
 		}
 	}
+
 	free((void*)buffer);
 	free(client_demux_string);
-	free(source_file_abs);
-	free(source_file);
+//	free(source_file_abs);
+//	free(source_file);
 	free(transfer_filename);
 	free(send_info);
 	al_bp_bundle_free(&bundle);
@@ -714,9 +619,137 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	exit(0);
 }
-
-
 // end client code
+
+/**
+ * Create and Fill Buffer File Payload
+ **/
+
+void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_log,
+						int num_bundle, boolean_t * eof_reached){
+	FILE * stream;
+	char * source_file;
+	char * source_file_abs;
+
+	source_file = (char*) malloc(strlen(SOURCE_FILE) + 7);
+	if(perf_opt->op_mode == 'F') // File mode
+		sprintf(source_file, "%s_%d_%d", SOURCE_FILE, getpid(),num_bundle);
+	else // Time and Data mode
+		sprintf(source_file, "%s_%d", SOURCE_FILE, getpid());
+
+	// Create the file
+	if (perf_opt->use_file)
+	{
+		// create the file
+		if ((debug) && (debug_level > 0))
+			printf("[debug] creating file %s...", source_file);
+
+		stream = fopen(source_file,	"wb");
+
+		if (stream == NULL)
+		{
+			fprintf(stderr, "ERROR: couldn't create file %s.\n \b Maybe you don't have permissions\n", source_file);
+
+			if (create_log)
+				fprintf(log_file, "ERROR: couldn't create file %s.\n \b Maybe you don't have permissions\n", source_file);
+
+			client_clean_exit(2);
+		}
+
+		source_file_created = TRUE;
+
+		fclose(stream);
+
+		if ((debug) && (debug_level > 0))
+			printf(" done\n");
+
+		// set the absolute path of the source file
+		char buf[256];
+	//	getcwd(buf, 256);
+		strcpy(buf, "/tmp/");
+		strcat(buf, source_file);
+		source_file_abs = malloc(strlen(buf) + 1);
+		strncpy(source_file_abs, buf, strlen(buf) + 1);
+		printf("source_file_abs: %s\n",source_file_abs);
+	}
+
+	// Fill the payload
+	if ((debug) && (debug_level > 0))
+		printf("[debug] filling payload...");
+
+	if (perf_opt->use_file)
+		error = al_bp_bundle_set_payload_file(&bundle, source_file_abs, strlen(source_file_abs));
+	else
+		error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
+	if (error != BP_SUCCESS)
+	{
+		fprintf(stderr, "ERROR: couldn't set bundle payload\n");
+
+		if (create_log)
+			fprintf(log_file, "ERROR: couldn't set bundle payload\n");
+		client_clean_exit(1);
+	}
+	if ((debug) && (debug_level > 0))
+		printf(" done\n");
+
+	// open payload stream in write mode
+	if (open_payload_stream_write(bundle, &stream) < 0)
+	{
+		fprintf(stderr, "ERROR: couldn't open payload stream in write mode\n");
+
+		if (create_log)
+			fprintf(log_file, "ERROR: couldn't open payload stream in write mode\n");
+
+		client_clean_exit(2);
+	}
+
+	// prepare the payload
+	if(perf_opt->op_mode == 'F') // File mode
+	{
+		// open file to transfer in read mode
+		if ((transfer_fd = open(perf_opt->F_arg, O_RDONLY)) < 0)
+		{
+			fprintf(stderr, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
+			if (create_log)
+				fprintf(log_file, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
+			client_clean_exit(2);
+		}
+		open_payload_stream_write(bundle, &stream);
+		error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd,
+				transfer_filename, transfer_filedim, eof_reached);
+		if(error != BP_SUCCESS)
+		{
+			fprintf(stderr, "error preparing file transfer payload\n");
+			if (create_log)
+				fprintf(log_file, "error preparing file transfer payload");
+			client_clean_exit(2);
+		}
+	}
+	else // Time and Data mode
+	{
+		error = prepare_generic_payload(perf_opt, stream);
+		if (error != BP_SUCCESS)
+		{
+			fprintf(stderr, "error preparing payload: %s\n", al_bp_strerror(error));
+			if (create_log)
+				fprintf(log_file, "error preparing payload: %s\n", al_bp_strerror(error));
+			client_clean_exit(1);
+		}
+	}
+
+	// close the stream
+	close_payload_stream_write(&bundle, stream);
+
+	if(debug)
+		printf("[debug] payload prepared\n");
+
+	if(perf_opt->op_mode == 'F')
+	{
+		free(source_file_abs);
+		free(source_file);
+	}
+}
+
 
 /**
  * Client Threads code
@@ -778,18 +811,20 @@ void * send_bundles(void * opt)
 		condition = sent_bundles < tot_bundles;
 	}
 
+	//Only for DATA e TIME MODE is the payload is the same for all bundle
+	if (perf_opt->op_mode == 'T' || perf_opt->op_mode == 'D')
+	{
+		create_fill_payload_buf(debug, debug_level, create_log, 0, (void *)0);
+	}
+
 	// send bundles loop
 	while (condition)				//LOOP
 	{
-		// prepare payload if FILE MODE
+		// prepare payload FILE MODE
 		if (perf_opt->op_mode == 'F')
 		{
-			open_payload_stream_write(bundle, &stream);
-			error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd,
-					transfer_filename, transfer_filedim, &eof_reached);
-			close_payload_stream_write(&bundle, stream);
+			create_fill_payload_buf(debug, debug_level, create_log, sent_bundles, &eof_reached);
 		}
-
 		// window debug
 		if ((debug) && (debug_level > 1))
 		{
