@@ -52,8 +52,8 @@ boolean_t process_interrupted;
 
 
 FILE * log_file = NULL;
-char * source_file_abs;				// absolute path of file SOURCE_FILE
-char * source_file;					// complete name of source file: SOURCE_FILE_pid
+char source_file_abs[256];				// absolute path of file SOURCE_FILE
+char source_file[256];					// complete name of source file: SOURCE_FILE_pid
 char * transfer_filename;			// basename of the file to transfer
 u32_t transfer_filedim;				// size of the file to transfer
 int transfer_fd;					// file descriptor
@@ -628,11 +628,11 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_log,
 						int num_bundle){
 	FILE * stream;
-	char * source_file;
-	char * source_file_abs;
+//	char * source_file;
+//	char * source_file_abs;
 	boolean_t eof_reached;
 
-	source_file = (char*) malloc(strlen(SOURCE_FILE) + 14);
+//	source_file = (char*) malloc(strlen(SOURCE_FILE) + 14);
 	if(perf_opt->op_mode == 'F') // File mode
 		sprintf(source_file, "%s_%d_%d", SOURCE_FILE, getpid(),num_bundle);
 	else // Time and Data mode
@@ -669,7 +669,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	//	getcwd(buf, 256);
 		strcpy(buf, "/tmp/");
 		strcat(buf, source_file);*/
-		source_file_abs = malloc(strlen(source_file) + 1);
+//		source_file_abs = (char *) malloc(strlen(source_file) + 1);
 		strncpy(source_file_abs, source_file, strlen(source_file) + 1);
 		printf("source_file_abs: %s\n",source_file_abs);
 	}
@@ -745,12 +745,11 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	if(debug)
 		printf("[debug] payload prepared\n");
 
-	printf("Here\n");
-	if(perf_opt->op_mode == 'F')
+/*	if(perf_opt->op_mode == 'F')
 	{
-		free(source_file_abs); printf("OK");
-		free(source_file); printf("OK");
-	}
+		free(source_file_abs);
+		free(source_file);
+	}*/
 
 }
 
@@ -766,7 +765,7 @@ void * send_bundles(void * opt)
 	boolean_t create_log = perf_opt->create_log;
 	boolean_t condition;
 	u32_t actual_payload;
-	FILE * stream;
+//	FILE * stream;
 
 	// Initialize timer
 	if ((debug) && (debug_level > 0))
