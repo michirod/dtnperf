@@ -747,10 +747,10 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 
 	if(perf_opt->op_mode == 'F')
 	{
-		free(source_file_abs);
-		free(source_file);
+		free(source_file_abs); printf("OK");
+		free(source_file); printf("OK");
 	}
-	printf("OK");
+
 }
 
 
