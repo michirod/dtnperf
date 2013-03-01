@@ -631,7 +631,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	char * source_file;
 	char * source_file_abs;
 
-	source_file = (char*) malloc(strlen(SOURCE_FILE) + 7);
+	source_file = (char*) malloc(strlen(SOURCE_FILE) + 14);
 	if(perf_opt->op_mode == 'F') // File mode
 		sprintf(source_file, "%s_%d_%d", SOURCE_FILE, getpid(),num_bundle);
 	else // Time and Data mode
