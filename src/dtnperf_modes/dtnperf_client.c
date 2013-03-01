@@ -461,7 +461,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		// set the absolute path of the source file
 		char buf[256];
 	//	getcwd(buf, 256);
-		strncpy(buf, "/tmp/",5);
+		strcpy(buf, "/tmp/");
 		strcat(buf, source_file);
 		source_file_abs = malloc(strlen(buf) + 1);
 		strncpy(source_file_abs, buf, strlen(buf) + 1);
