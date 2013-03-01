@@ -663,13 +663,13 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		if ((debug) && (debug_level > 0))
 			printf(" done\n");
 
-		// set the absolute path of the source file
+/*		// set the absolute path of the source file
 		char buf[256];
 	//	getcwd(buf, 256);
 		strcpy(buf, "/tmp/");
-		strcat(buf, source_file);
-		source_file_abs = malloc(strlen(buf) + 1);
-		strncpy(source_file_abs, buf, strlen(buf) + 1);
+		strcat(buf, source_file);*/
+		source_file_abs = malloc(strlen(source_file) + 1);
+		strncpy(source_file_abs, source_file, strlen(source_file) + 1);
 		printf("source_file_abs: %s\n",source_file_abs);
 	}
 

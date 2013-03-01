@@ -32,7 +32,7 @@
 #define LOGS_DIR_DEFAULT "."
 
 // source file for bundle in client with use_file option
-#define SOURCE_FILE "dtnperfbuf.src"
+#define SOURCE_FILE "/tmp/dtnperfbuf.src"
 
 // default client log filename
 #define LOG_FILENAME "dtnperf_client.log"
