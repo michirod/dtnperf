@@ -101,6 +101,7 @@ typedef struct dtnperf_connection_options
 		boolean_t custody_transfer;
 		boolean_t custody_receipts;
 		boolean_t receive_receipts;
+		boolean_t deleted_receipts;
 		boolean_t wait_for_report;
 		boolean_t disable_fragmentation;
 	} dtnperf_connection_options_t;
