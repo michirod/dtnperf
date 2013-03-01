@@ -626,10 +626,11 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
  **/
 
 void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_log,
-						int num_bundle, boolean_t eof_reached){
+						int num_bundle){
 	FILE * stream;
 	char * source_file;
 	char * source_file_abs;
+	boolean_t eof_reached;
 
 	source_file = (char*) malloc(strlen(SOURCE_FILE) + 14);
 	if(perf_opt->op_mode == 'F') // File mode
@@ -762,7 +763,6 @@ void * send_bundles(void * opt)
 	int debug_level = perf_opt->debug_level;
 	boolean_t create_log = perf_opt->create_log;
 	boolean_t condition;
-	boolean_t eof_reached;
 	u32_t actual_payload;
 	FILE * stream;
 
@@ -815,7 +815,7 @@ void * send_bundles(void * opt)
 	//Only for DATA e TIME MODE is the payload is the same for all bundle
 	if (perf_opt->op_mode == 'T' || perf_opt->op_mode == 'D')
 	{
-		create_fill_payload_buf(debug, debug_level, create_log, 0, (void *)0);
+		create_fill_payload_buf(debug, debug_level, create_log, 0);
 	}
 
 	// send bundles loop
@@ -824,7 +824,7 @@ void * send_bundles(void * opt)
 		// prepare payload FILE MODE
 		if (perf_opt->op_mode == 'F')
 		{
-			create_fill_payload_buf(debug, debug_level, create_log, sent_bundles, eof_reached);
+			create_fill_payload_buf(debug, debug_level, create_log, sent_bundles);
 		}
 		// window debug
 		if ((debug) && (debug_level > 1))
