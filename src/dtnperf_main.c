@@ -51,9 +51,10 @@ int main(int argc, char ** argv)
 
 	//Print version
 	printf("\n******* Version: DTNper vION - 01 mar 2013 ********\n");
-	printf("******* 		 lifetime default 60s   	 ********\n");
-	printf("******* \t Header Log Status Report       ***********\n");
-	printf("******* \t Deleted Status Report opts       ***********\n");
+	printf("******* lifetime default 60s ********\n");
+	printf("******* Header Log Status Report ***********\n");
+	printf("******* Deleted Status Report opts ***********\n");
+	printf("******* Dtnperfbuf in /tmp ***********\n");
 
 	switch (global_options.mode)
 	{
