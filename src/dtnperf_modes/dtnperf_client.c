@@ -1223,7 +1223,7 @@ void print_client_usage(char* progname)
 			" -C, --custody               Enable both custody transfer and \"custody accepted\" status reports.\n"
 			" -f, --forwarded             Enable request for bundle status forwarded report\n"
 			" -r, --received              Enable request for bundle status received report\n"
-			"     --del	                  Enable request for bundle status deleted report\n"
+			"     --del                   Enable request for bundle status deleted report\n"
 			" -N, --nofragment            Disable bundle fragmentation.\n"
 			" -P, --payload <size[B|k|M]> Size of bundle payloads; B = Bytes, k = kBytes, M = MBytes. Default= 'k' (kB). Note: following the SI and the IEEE standards 1 MB=10^6 bytes.\n"
 			"                             Min payload size is %d bytes in TIME and DATA mode. In FILE mode it depends on filename length.\n"
