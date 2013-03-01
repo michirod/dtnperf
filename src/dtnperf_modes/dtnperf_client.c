@@ -626,7 +626,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
  **/
 
 void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_log,
-						int num_bundle, boolean_t * eof_reached){
+						int num_bundle, boolean_t eof_reached){
 	FILE * stream;
 	char * source_file;
 	char * source_file_abs;
@@ -716,7 +716,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		}
 		open_payload_stream_write(bundle, &stream);
 		error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd,
-				transfer_filename, transfer_filedim, eof_reached);
+				transfer_filename, transfer_filedim, &eof_reached);
 		if(error != BP_SUCCESS)
 		{
 			fprintf(stderr, "error preparing file transfer payload\n");
@@ -724,6 +724,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 				fprintf(log_file, "error preparing file transfer payload");
 			client_clean_exit(2);
 		}
+		close(transfer_fd);
 	}
 	else // Time and Data mode
 	{
@@ -823,7 +824,7 @@ void * send_bundles(void * opt)
 		// prepare payload FILE MODE
 		if (perf_opt->op_mode == 'F')
 		{
-			create_fill_payload_buf(debug, debug_level, create_log, sent_bundles, &eof_reached);
+			create_fill_payload_buf(debug, debug_level, create_log, sent_bundles, eof_reached);
 		}
 		// window debug
 		if ((debug) && (debug_level > 1))
@@ -862,6 +863,7 @@ void * send_bundles(void * opt)
 			printf(" bundle sent\n");
 		if ((debug) && (debug_level > 0))
 			printf("\t[debug send thread] ");
+
 		printf("bundle sent timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
 		if (create_log)
 			fprintf(log_file, "\t bundle sent timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
