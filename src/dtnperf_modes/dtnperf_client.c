@@ -690,7 +690,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	if (perf_opt->use_file)
 	{
-		remove(source_file);
+	//	remove(source_file);
 		source_file_created = FALSE;
 
 		if (debug && debug > 1)
