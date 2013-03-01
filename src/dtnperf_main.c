@@ -50,9 +50,10 @@ int main(int argc, char ** argv)
 	parse_options(argc, argv, &global_options);
 
 	//Print version
-	printf("\n******* Version: DTNper vION - 26 feb 2013 ********\n");
+	printf("\n******* Version: DTNper vION - 01 mar 2013 ********\n");
 	printf("******* 		 lifetime default 60s   	 ********\n");
-	printf("******* \t 	Modifica Payload Buffer       ***********\n");
+	printf("******* \t Header Log Status Report       ***********\n");
+	printf("******* \t Deleted Status Report opts       ***********\n");
 
 	switch (global_options.mode)
 	{
@@ -303,6 +304,7 @@ void init_dtnperf_connection_options(dtnperf_connection_options_t* opt)
 	opt->custody_transfer = FALSE;   	// request custody transfer [0]
 	opt->custody_receipts = FALSE;   	// request per custodian receipts [0]
 	opt->receive_receipts = FALSE;   	// request per hop arrival receipt [0]
+	opt->deleted_receipts = FALSE;		// request per deleted bndl receipt [0]
 	opt->wait_for_report = TRUE;   		// wait for bundle status reports [1]
 	opt->disable_fragmentation = FALSE; //disable bundle fragmentation[0]
 	opt->priority.priority = BP_PRIORITY_NORMAL; // bundle priority [BP_PRIORITY_NORMAL]

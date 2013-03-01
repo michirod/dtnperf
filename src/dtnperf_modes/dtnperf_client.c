@@ -455,9 +455,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 		fclose(stream);
 
-		printf("\nSTAMPA FILE STREAM NAME: %s\n",source_file);
-
-
 		if ((debug) && (debug_level > 0))
 			printf(" done\n");
 
@@ -1191,6 +1188,7 @@ void print_client_usage(char* progname)
 			" -C, --custody               Enable both custody transfer and \"custody accepted\" status reports.\n"
 			" -f, --forwarded             Enable request for bundle status forwarded report\n"
 			" -r, --received              Enable request for bundle status received report\n"
+			"     --del					  Enable request for bundle status deleted report\n"
 			" -N, --nofragment            Disable bundle fragmentation.\n"
 			" -P, --payload <size[B|k|M]> Size of bundle payloads; B = Bytes, k = kBytes, M = MBytes. Default= 'k' (kB). Note: following the SI and the IEEE standards 1 MB=10^6 bytes.\n"
 			"                             Min payload size is %d bytes in TIME and DATA mode. In FILE mode it depends on filename length.\n"
@@ -1244,6 +1242,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"nofragment", no_argument, 0, 'N'},
 				{"received", no_argument, 0, 'r'},
 				{"forwarded", no_argument, 0, 'f'},
+				{"del", no_argument,0,48},					//request of bundle status deleted report
 				{"log", optional_argument, 0, 'L'},				// create log file
 				{"ldir", required_argument, 0, 40},
 				{"ip-addr", required_argument, 0, 37},
@@ -1475,7 +1474,9 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				}
 			}
 			break;
-
+		case 48:
+			conn_opt->deleted_receipts = TRUE;
+			break;
 		case '?':
 			fprintf(stderr, "Unknown option: %c\n", optopt);
 			exit(1);
