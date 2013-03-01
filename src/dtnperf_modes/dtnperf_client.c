@@ -52,8 +52,7 @@ boolean_t process_interrupted;
 
 
 FILE * log_file = NULL;
-char source_file_abs[256];				// absolute path of file SOURCE_FILE
-char source_file[256];					// complete name of source file: SOURCE_FILE_pid
+char source_file[256];					// complete name of source file: SOURCE_FILE_pid[_numBundle]
 char * transfer_filename;			// basename of the file to transfer
 u32_t transfer_filedim;				// size of the file to transfer
 int transfer_fd;					// file descriptor
@@ -628,14 +627,11 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_log,
 						int num_bundle){
 	FILE * stream;
-//	char * source_file;
-//	char * source_file_abs;
 	boolean_t eof_reached;
 
-//	source_file = (char*) malloc(strlen(SOURCE_FILE) + 14);
 	if(perf_opt->op_mode == 'F') // File mode
 		sprintf(source_file, "%s_%d_%d", SOURCE_FILE, getpid(),num_bundle);
-	else // Time and Data mode
+	else 						// Time and Data mode
 		sprintf(source_file, "%s_%d", SOURCE_FILE, getpid());
 
 	// Create the file
@@ -663,15 +659,6 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 
 		if ((debug) && (debug_level > 0))
 			printf(" done\n");
-
-/*		// set the absolute path of the source file
-		char buf[256];
-	//	getcwd(buf, 256);
-		strcpy(buf, "/tmp/");
-		strcat(buf, source_file);*/
-//		source_file_abs = (char *) malloc(strlen(source_file) + 1);
-		strncpy(source_file_abs, source_file, strlen(source_file) + 1);
-		printf("source_file_abs: %s\n",source_file_abs);
 	}
 
 	// Fill the payload
@@ -679,7 +666,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		printf("[debug] filling payload...");
 
 	if (perf_opt->use_file)
-		error = al_bp_bundle_set_payload_file(&bundle, source_file_abs, strlen(source_file_abs));
+		error = al_bp_bundle_set_payload_file(&bundle, source_file, strlen(source_file));
 	else
 		error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
 	if (error != BP_SUCCESS)
@@ -745,12 +732,6 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	if(debug)
 		printf("[debug] payload prepared\n");
 
-/*	if(perf_opt->op_mode == 'F')
-	{
-		free(source_file_abs);
-		free(source_file);
-	}*/
-
 }
 
 
@@ -765,7 +746,6 @@ void * send_bundles(void * opt)
 	boolean_t create_log = perf_opt->create_log;
 	boolean_t condition;
 	u32_t actual_payload;
-//	FILE * stream;
 
 	// Initialize timer
 	if ((debug) && (debug_level > 0))
@@ -832,10 +812,9 @@ void * send_bundles(void * opt)
 		// Set Payload FILE MODE
 		if (perf_opt->op_mode == 'F')
 		{
-			char file[256];
-			sprintf(file, "%s_%d_%d", SOURCE_FILE, getpid(),sent_bundles);
+			sprintf(source_file, "%s_%d_%d", SOURCE_FILE, getpid(),sent_bundles);
 			if (perf_opt->use_file)
-				error = al_bp_bundle_set_payload_file(&bundle, file, strlen(source_file_abs));
+				error = al_bp_bundle_set_payload_file(&bundle, source_file, strlen(source_file));
 			else
 				error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
 		}
