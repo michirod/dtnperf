@@ -817,14 +817,26 @@ void * send_bundles(void * opt)
 	{
 		create_fill_payload_buf(debug, debug_level, create_log, 0);
 	}
+	else //For FILE MODE created all the payload necessary
+	{
+		int i=0;
+		for (i=0; i<tot_bundles; i++){
+			create_fill_payload_buf(debug, debug_level, create_log, i);
+		}
+	}
 
 	// send bundles loop
 	while (condition)				//LOOP
 	{
-		// prepare payload FILE MODE
+		// Set Payload FILE MODE
 		if (perf_opt->op_mode == 'F')
 		{
-			create_fill_payload_buf(debug, debug_level, create_log, sent_bundles);
+			char source_file_abs[256];
+			sprintf(source_file_abs, "%s_%d_%d", SOURCE_FILE, getpid(),sent_bundles);
+			if (perf_opt->use_file)
+				error = al_bp_bundle_set_payload_file(&bundle, source_file_abs, strlen(source_file_abs));
+			else
+				error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
 		}
 		// window debug
 		if ((debug) && (debug_level > 1))
