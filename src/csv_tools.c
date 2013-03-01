@@ -36,17 +36,17 @@ void csv_print_status_report_timestamps_header(FILE * file)
 {
 	char buf[300];
 	memset(buf, 0, 300);
-	strcat(buf, "DELIVERED_TIMESTAMP;");
-	strcat(buf, "CUSTODY_ACCEPTED_TIMESTAMP;");
-	strcat(buf, "RECEIVED_TIMESTAMP;");
-	strcat(buf, "FORWARDED_TIMESTAMP;");
-	strcat(buf, "DELETED_TIMESTAMP;");
+	strcat(buf, "Dlv;");
+	strcat(buf, "Ct;");
+	strcat(buf, "Rcv;");
+	strcat(buf, "Fwd;");
+	strcat(buf, "Del;");
 
 	// not useful for now
 	// strcat(buf, "ACKED_BY_APP_TIMESTAMP");
 
 	// status report reason
-	strcat(buf, "REASON;");
+	strcat(buf, "Reason;");
 
 	fwrite(buf, strlen(buf), 1, file);
 }

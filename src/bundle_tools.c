@@ -154,7 +154,6 @@ void set_bp_options(al_bp_bundle_object_t *bundle, dtnperf_connection_options_t 
 	if (opt->custody_transfer)
 		dopts |= BP_DOPTS_CUSTODY;
 
-
 	// Custody receipts
 	if (opt->custody_receipts)
 		dopts |= BP_DOPTS_CUSTODY_RCPT;
@@ -163,8 +162,11 @@ void set_bp_options(al_bp_bundle_object_t *bundle, dtnperf_connection_options_t 
 	if (opt->receive_receipts)
 		dopts |= BP_DOPTS_RECEIVE_RCPT;
 
-	//Disable bundle fragmentation
+	// Deleted receipts
+	if (opt->deleted_receipts)
+		dopts |= BP_DOPTS_DELETE_RCPT;
 
+	//Disable bundle fragmentation
 	if (opt->disable_fragmentation)
 		dopts |= BP_DOPTS_DO_NOT_FRAGMENT;
 

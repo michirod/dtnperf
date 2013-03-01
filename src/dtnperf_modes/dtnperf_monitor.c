@@ -392,9 +392,9 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 					relative_creation_timestamp.secs, bundle_expiration);
 			session_put(session_list, session);
 			// write header in csv log file
-			fprintf(file,"Mon_RX_TIME;BSR_OR_ACK_SOURCE;BSR_OR_ACK_TIMESTAMP;BSR_OR_ACK_SEQNO;"
-								"TYPE;BUNDLE_X_SOURCE;BUNDLE_X_TIMESTAMP;BUNDLE_X_SEQNO;"
-								"FRAG_OFFSET;FRAG_LENGTH;");
+			fprintf(file,"RX_TIME;Report_SRC;Report_TST;Report_SQN;"
+								"Report_Type;Bndl_SRC;Bndl_TST;Bndl_SQN;"
+								"Bndl_FO;Bndl_FL;");
 			csv_print_status_report_timestamps_header(file);
 			csv_end_line(file);
 		}
