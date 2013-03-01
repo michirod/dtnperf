@@ -745,6 +745,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	if(debug)
 		printf("[debug] payload prepared\n");
 
+	printf("Here\n");
 	if(perf_opt->op_mode == 'F')
 	{
 		free(source_file_abs); printf("OK");
