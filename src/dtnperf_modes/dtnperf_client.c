@@ -466,7 +466,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		source_file_abs = malloc(strlen(buf) + 1);
 		strncpy(source_file_abs, buf, strlen(buf) + 1);
 	}
-
+	printf("source_file_abs: %s\n",source_file_abs);
 	// Create the bundle object
 	if ((debug) && (debug_level > 0))
 		printf("[debug] creating the bundle object...");
@@ -503,10 +503,10 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	// open payload stream in write mode
 	if (open_payload_stream_write(bundle, &stream) < 0)
 	{
-		fprintf(stderr, "ERROR: couldn't open payload stream in write mode");
+		fprintf(stderr, "ERROR: couldn't open payload stream in write mode\n");
 
 		if (create_log)
-			fprintf(log_file, "ERROR: couldn't open payload stream in write mode");
+			fprintf(log_file, "ERROR: couldn't open payload stream in write mode\n");
 
 		client_clean_exit(2);
 	}
