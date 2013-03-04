@@ -861,7 +861,6 @@ void * send_bundles(void * opt)
 
 		// put bundle id in send_info (only windowed congestion control)
 		if (perf_opt->congestion_ctrl == 'w') {
-			printf("STAMPA\n");
 			gettimeofday(&bundle_sent, NULL);
 			add_info(send_info, *bundle_id, bundle_sent, perf_opt->window);
 			if ((debug) && (debug_level > 0))
@@ -938,7 +937,6 @@ void * congestion_control(void * opt)
 			pthread_mutex_lock(&mutexdata);
 			if (close_ack_receiver == 0 && count_info(send_info, perf_opt->window) == 0)
 			{
-				printf("\n\tWAIT\n");
 				pthread_cond_wait(&cond_ackreceiver, &mutexdata);
 				pthread_mutex_unlock(&mutexdata);
 				// pthread_yield();
