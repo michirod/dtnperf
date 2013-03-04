@@ -931,7 +931,6 @@ void * congestion_control(void * opt)
 
 	if (perf_opt->congestion_ctrl == 'w') // window based congestion control
 	{
-		printf("\n\tWINDOW: %d\n",perf_opt->window);
 		al_bp_bundle_create(&ack);
 		while ((close_ack_receiver == 0) || (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit))
 		{
@@ -939,6 +938,7 @@ void * congestion_control(void * opt)
 			pthread_mutex_lock(&mutexdata);
 			if (close_ack_receiver == 0 && count_info(send_info, perf_opt->window) == 0)
 			{
+				printf("\n\tWAIT\n");
 				pthread_cond_wait(&cond_ackreceiver, &mutexdata);
 				pthread_mutex_unlock(&mutexdata);
 				// pthread_yield();
