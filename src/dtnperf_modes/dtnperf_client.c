@@ -864,7 +864,7 @@ void * send_bundles(void * opt)
 			printf("STAMPA\n");
 			gettimeofday(&bundle_sent, NULL);
 			add_info(send_info, *bundle_id, bundle_sent, perf_opt->window);
-			if ((debug) && (debug_level > 1))
+			if ((debug) && (debug_level > 0))
 				printf("\t[debug send thread] added info for sent bundle\n");
 			pthread_cond_signal(&cond_ackreceiver);
 			pthread_mutex_unlock(&mutexdata);
