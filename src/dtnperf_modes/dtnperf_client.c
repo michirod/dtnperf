@@ -834,6 +834,7 @@ void * send_bundles(void * opt)
 
 		if (perf_opt->congestion_ctrl == 'w')
 			pthread_mutex_lock(&mutexdata);
+
 		if ((error = al_bp_bundle_send(handle, regid, &bundle)) != 0)
 		{
 			fprintf(stderr, "error sending bundle: %d (%s)\n", error, al_bp_strerror(error));
@@ -841,8 +842,6 @@ void * send_bundles(void * opt)
 				fprintf(log_file, "error sending bundle: %d (%s)\n", error, al_bp_strerror(error));
 			client_clean_exit(1);
 		}
-
-		//sleep(1);
 
 		if ((error = al_bp_bundle_get_id(bundle, &bundle_id)) != 0)
 		{
@@ -862,6 +861,7 @@ void * send_bundles(void * opt)
 
 		// put bundle id in send_info (only windowed congestion control)
 		if (perf_opt->congestion_ctrl == 'w') {
+			printf("STAMPA\n");
 			gettimeofday(&bundle_sent, NULL);
 			add_info(send_info, *bundle_id, bundle_sent, perf_opt->window);
 			if ((debug) && (debug_level > 1))

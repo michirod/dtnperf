@@ -117,7 +117,6 @@ int count_info(send_information_t* send_info, int window)
 	int i, count = 0;
 	for (i = 0; i < window; i++)
 	{
-		printf("SECS: %d - %lu\n",i,send_info[i].bundle_id.creation_ts.secs);
 		if (send_info[i].bundle_id.creation_ts.secs != 0)
 		{
 			count++;
