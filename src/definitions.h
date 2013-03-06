@@ -34,7 +34,7 @@
 // source file for bundle in client with use_file option
 #define SOURCE_FILE "/tmp/dtnperfbuf"
 
-// source file for bundle ack in server [ONLY ION impl]
+// source file for bundle ack in server [ONLY ION implementation]
 #define SOURCE_FILE_ACK "/tmp/dtnperfack"
 
 // default client log filename

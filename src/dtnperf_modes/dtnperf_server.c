@@ -564,6 +564,10 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				}
 				write(fd_ack, pl_buffer, pl_buffer_size);
 				close(fd_ack);
+				if (debug && debug_level > 0)
+				{
+					printf("[debug] bundle payload ack saved in: %s", filename_ack);
+				}
 				num_ack++;
 				error = al_bp_bundle_set_payload_file(&bundle_ack_object,filename_ack,filename_ack_len);
 			}
