@@ -924,7 +924,7 @@ void * congestion_control(void * opt)
 	if (debug && debug_level > 0)
 		printf("[debug cong ctrl] congestion control = %c\n", perf_opt->congestion_ctrl);
 
-	sleep(1);
+	pthread_sleep(0.5);
 
 	if (perf_opt->congestion_ctrl == 'w') // window based congestion control
 	{
