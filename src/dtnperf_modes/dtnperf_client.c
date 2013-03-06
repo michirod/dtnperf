@@ -495,6 +495,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	pthread_create(&wait_for_signal, NULL, wait_for_sigint, (void*) client_demux_string);
 
 	pthread_join(cong_ctrl, (void**)&pthread_status);
+	sleep(1);
 	pthread_join(sender, (void**)&pthread_status);
 
 	pthread_mutex_destroy(&mutexdata);
@@ -604,8 +605,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	free((void*)buffer);
 	free(client_demux_string);
-//	free(source_file_abs);
-//	free(source_file);
 	free(transfer_filename);
 	free(send_info);
 	al_bp_bundle_free(&bundle);
