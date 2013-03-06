@@ -491,7 +491,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	pthread_mutex_init (&mutexdata, NULL);
 
 	pthread_create(&sender, NULL, send_bundles, (void*)perf_g_opt);
-	sleep(1);
 	pthread_create(&cong_ctrl, NULL, congestion_control, (void*)perf_g_opt);
 	pthread_create(&wait_for_signal, NULL, wait_for_sigint, (void*) client_demux_string);
 
@@ -622,7 +621,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 /**
  * Create and Fill Buffer File Payload
  **/
-
 void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_log,
 						int num_bundle){
 	FILE * stream;
@@ -731,8 +729,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	if(debug)
 		printf("[debug] payload prepared\n");
 
-}
-
+} // end create_fill_payload_buf
 
 /**
  * Client Threads code
@@ -907,7 +904,7 @@ void * send_bundles(void * opt)
 	// close thread
 	pthread_exit(NULL);
 
-}
+} // end send_bundles
 
 void * congestion_control(void * opt)
 {
@@ -1056,7 +1053,7 @@ void * congestion_control(void * opt)
 
 	pthread_exit(NULL);
 	return NULL;
-}
+} // end congestion_control
 
 void * start_dedicated_monitor(void * params)
 {
@@ -1065,7 +1062,7 @@ void * start_dedicated_monitor(void * params)
 	run_dtnperf_monitor(parameters);
 	pthread_exit(NULL);
 	return NULL;
-}
+} // end start_dedicated_monitor
 
 void * wait_for_sigint(void * arg)
 {
@@ -1154,7 +1151,7 @@ void * wait_for_sigint(void * arg)
 
 
 	return NULL;
-}
+} // end wait_for_sigint
 
 void print_final_report(FILE * f)
 {
@@ -1197,7 +1194,7 @@ void print_final_report(FILE * f)
 	fprintf(f, "\nBundles sent = %d , total data sent = %.3f %s\n", sent_bundles, sent, sent_unit);
 	fprintf(f, "Total execution time = %.1f\n", total_secs);
 	fprintf(f, "Goodput = %.3f %s\n", goodput, gput_unit);
-}
+} // end print_final_report
 
 void print_client_usage(char* progname)
 {
@@ -1237,7 +1234,7 @@ void print_client_usage(char* progname)
 			(int) (HEADER_SIZE + BUNDLE_OPT_SIZE), LOG_FILENAME, LOGS_DIR_DEFAULT);
 	fprintf(stderr, "\n");
 	exit(1);
-}
+} // end print_client_usage
 
 void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * perf_g_opt)
 {
@@ -1558,7 +1555,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	// check command line options
 	check_options(perf_g_opt);
 
-}
+} // end parse_client_options
 
 /* ----------------------------
  * check_options
@@ -1646,7 +1643,7 @@ void client_handler(int sig)
 		fprintf(log_file, "\nDTNperf client received SIGINT: Exiting\n");
 
 	client_clean_exit(0);
-}
+} // end client_handler
 
 void client_clean_exit(int status)
 {
@@ -1673,5 +1670,5 @@ void client_clean_exit(int status)
 		al_bp_close(handle);
 	al_bp_unregister(handle,regid,local_eid);
 	exit(status);
-}
+} // end client_clean_exit
 
