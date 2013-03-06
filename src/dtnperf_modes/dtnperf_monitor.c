@@ -368,7 +368,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			memset(filename, 0, filename_len);
 			sprintf(filename, "%lu_", relative_creation_timestamp.secs);
 			strncpy(temp, relative_source_addr.uri, strlen(relative_source_addr.uri) + 1);
-			printf("relative_source_addr.uri: %s\n\n",relative_source_addr.uri);
+
 			if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
 			{
 				strtok(temp, ":");
