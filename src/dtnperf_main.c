@@ -50,8 +50,10 @@ int main(int argc, char ** argv)
 	parse_options(argc, argv, &global_options);
 
 	//Print version
-	printf("\n******* Version: DTNper vION - 06 mar 2013 ***********\n");
-	printf("******* Server ACK su File                   ***********\n");
+	printf("\n");
+	printf("******* Version: DTNper vION - 06 mar 2013 ***********\n");
+	printf("******* Server ACK su File                 ***********\n");
+	printf("******* Bug Windowd Fixed                  ***********\n");
 
 	switch (global_options.mode)
 	{
