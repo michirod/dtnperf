@@ -937,6 +937,7 @@ void * congestion_control(void * opt)
 			pthread_mutex_lock(&mutexdata);
 			if (close_ack_receiver == 0 && count_info(send_info, perf_opt->window) == 0)
 			{
+				printf("\n\tWAIT\n");
 				pthread_cond_wait(&cond_ackreceiver, &mutexdata);
 				pthread_mutex_unlock(&mutexdata);
 				// pthread_yield();
