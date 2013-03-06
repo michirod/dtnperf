@@ -924,6 +924,8 @@ void * congestion_control(void * opt)
 	if (debug && debug_level > 0)
 		printf("[debug cong ctrl] congestion control = %c\n", perf_opt->congestion_ctrl);
 
+	sleep(1);
+
 	if (perf_opt->congestion_ctrl == 'w') // window based congestion control
 	{
 		al_bp_bundle_create(&ack);
@@ -933,7 +935,6 @@ void * congestion_control(void * opt)
 			pthread_mutex_lock(&mutexdata);
 			if (close_ack_receiver == 0 && count_info(send_info, perf_opt->window) == 0)
 			{
-				printf("\n\tWAIT\n");
 				pthread_cond_wait(&cond_ackreceiver, &mutexdata);
 				pthread_mutex_unlock(&mutexdata);
 				// pthread_yield();
