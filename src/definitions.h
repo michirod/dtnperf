@@ -32,7 +32,10 @@
 #define LOGS_DIR_DEFAULT "."
 
 // source file for bundle in client with use_file option
-#define SOURCE_FILE "/tmp/dtnperfbuf.src"
+#define SOURCE_FILE "/tmp/dtnperfbuf"
+
+// source file for bundle ack in server [ONLY ION impl]
+#define SOURCE_FILE_ACK "/tmp/dtnperfack"
 
 // default client log filename
 #define LOG_FILENAME "dtnperf_client.log"
