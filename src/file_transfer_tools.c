@@ -175,7 +175,6 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 		return -1;
 	}
 
-	printf("\n\tOffset: %lu\n", offset);
 	// write fragment
 	lseek(fd, offset, SEEK_SET);
 	if (write(fd, transfer, transfer_len) < 0)
@@ -334,7 +333,6 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	offset = lseek(fd, 0, SEEK_CUR);
 	// write offset in the bundle
 	fwrite(&offset, sizeof(offset), 1, f);
-	printf("\n\tOffset WRITE: %lu\n", offset);
 	// read fragment from file
 	bytes_read = read(fd, fragment, fragment_len);
 
