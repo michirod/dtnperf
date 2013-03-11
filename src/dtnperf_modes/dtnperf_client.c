@@ -601,7 +601,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			printf("[debug] removed file %s\n", source_file);
 		}
 	}
-
+	close(transfer_fd);
 	free((void*)buffer);
 	free(client_demux_string);
 	free(transfer_filename);
@@ -709,7 +709,6 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 				fprintf(log_file, "error preparing file transfer payload");
 			client_clean_exit(2);
 		}
-		close(transfer_fd);
 	}
 	else // Time and Data mode
 	{
