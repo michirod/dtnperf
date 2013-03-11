@@ -51,9 +51,8 @@ int main(int argc, char ** argv)
 
 	//Print version
 	printf("\n");
-	printf("******* Version: DTNper vION - 06 mar 2013 ***********\n");
-	printf("******* Server ACK su File                 ***********\n");
-	printf("******* Bug Windowd Fixed                  ***********\n");
+	printf("******* Version: DTNper vION - 11 mar 2013 ***********\n");
+	printf("******* Bug assemble File Fragment         ***********\n");
 
 	switch (global_options.mode)
 	{
