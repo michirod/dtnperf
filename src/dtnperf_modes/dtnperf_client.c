@@ -457,6 +457,19 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			printf(" done\n");
 	}
 
+	// Open File Transfered
+	if(perf_opt->op_mode == 'F') // File mode
+	{
+		// open file to transfer in read mode
+		if ((transfer_fd = open(perf_opt->F_arg, O_RDONLY)) < 0)
+		{
+			fprintf(stderr, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
+			if (create_log)
+				fprintf(log_file, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
+			client_clean_exit(2);
+		}
+	}
+
 
 	// Setting the bundle options
 	al_bp_bundle_set_source(&bundle, local_eid);
@@ -601,7 +614,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			printf("[debug] removed file %s\n", source_file);
 		}
 	}
-	close(transfer_fd);
+
+	// free resource
 	free((void*)buffer);
 	free(client_demux_string);
 	free(transfer_filename);
@@ -691,14 +705,6 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	// prepare the payload
 	if(perf_opt->op_mode == 'F') // File mode
 	{
-		// open file to transfer in read mode
-		if ((transfer_fd = open(perf_opt->F_arg, O_RDONLY)) < 0)
-		{
-			fprintf(stderr, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
-			if (create_log)
-				fprintf(log_file, "couldn't stat file %s : %s", perf_opt->F_arg, strerror(errno));
-			client_clean_exit(2);
-		}
 		open_payload_stream_write(bundle, &stream);
 		error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd,
 				transfer_filename, transfer_filedim, &eof_reached);
