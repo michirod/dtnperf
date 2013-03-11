@@ -175,12 +175,12 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 		return -1;
 	}
 
-
 	// write fragment
 	lseek(fd, offset, SEEK_SET);
 	if (write(fd, transfer, transfer_len) < 0)
 		return -1;
 	close(fd);
+	printf("\n\tWRITE FRAGMENT\n");
 
 	// deallocate resources
 	free(filename);
