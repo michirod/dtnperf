@@ -52,6 +52,7 @@ int main(int argc, char ** argv)
 	//Print version
 	printf("\n");
 <<<<<<< HEAD
+<<<<<<< HEAD
 	printf("******* Version: DTNper vION - 11 mar 2013 ***********\n");
 	printf("******* Bug assemble File Fragment Fixed   ***********\n");
 =======
@@ -59,6 +60,15 @@ int main(int argc, char ** argv)
 	printf("******* Bug assemble File Fragment Fixed   ***********\n");
 	printf("******* Bug Registration DTN2              ***********\n");
 >>>>>>> 781a135... Bug Registration DTN2
+=======
+	printf("******* Version: DTNper vION - 12 mar 2013 ***********\n");
+	printf("******* Bug assemble File Fragment Fixed   ***********\n");
+	printf("******* Bug Registration DTN2              ***********\n");
+=======
+	printf("******* Version: DTNper vION - 11 mar 2013 ***********\n");
+	printf("******* Bug assemble File Fragment Fixed   ***********\n");
+>>>>>>> a0c2d61d785519b03ce92c193e908320d0556512
+>>>>>>> 4948923... Merge branch 'master' of https://github.com/annettaws/dtnperf_vION
 
 	switch (global_options.mode)
 	{
