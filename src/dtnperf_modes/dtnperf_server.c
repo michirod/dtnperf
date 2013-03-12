@@ -66,7 +66,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	size_t pl_buffer_size = 0;
 	boolean_t is_file_transfer_bundle;
 	int indicator; // for file transfer functions purposes
-
+	int num_ack; // for name file bundle ack
 
 	/* ------------------------
 	 * initialize variables
@@ -79,6 +79,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 	bp_handle_open = FALSE;
 
+	num_ack=0;
 
 	// initialize structures for file transfers
 	file_transfer_info_list = file_transfer_info_list_create();
@@ -542,11 +543,38 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			// setting the bundle ack payload
 			if ((debug) && (debug_level > 0))
 				printf("[debug] setting the payload of the bundle ack...");
-			error = al_bp_bundle_set_payload_mem(&bundle_ack_object, pl_buffer, pl_buffer_size);
+			// For DTN2 implementation ack payload in in memory
+			if(perf_opt->bp_implementation == BP_DTN)
+			{
+				error = al_bp_bundle_set_payload_mem(&bundle_ack_object, pl_buffer, pl_buffer_size);
+			}
+			else if(perf_opt->bp_implementation == BP_ION)
+			{
+				char filename_ack[256];
+				int fd_ack;
+				u32_t filename_ack_len;
+				sprintf(filename_ack,"%s_%s_%d",SOURCE_FILE_ACK,bundle_source_addr.uri,num_ack);
+				filename_ack_len = strlen(filename_ack)+1;
+				fd_ack = open(filename_ack,O_WRONLY|O_CREAT,0777);
+				if(fd_ack < 0)
+				{
+					fflush(stdout);
+					fprintf(stderr, "fatal error create the payload of the bundle ack: %s\n", al_bp_strerror(error));
+					exit(1);
+				}
+				write(fd_ack, pl_buffer, pl_buffer_size);
+				close(fd_ack);
+				if (debug && debug_level > 0)
+				{
+					printf("\n[debug] bundle payload ack saved in: %s ... ", filename_ack);
+				}
+				num_ack++;
+				error = al_bp_bundle_set_payload_file(&bundle_ack_object,filename_ack,filename_ack_len);
+			}
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "fatal error setting the payload of the bundle ack: %s\n", al_bp_strerror(error));
+				fprintf(stderr, "\nfatal error setting the payload of the bundle ack: %s\n", al_bp_strerror(error));
 				exit(1);
 			}
 			if(debug && debug_level > 0)

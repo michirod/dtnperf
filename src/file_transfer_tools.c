@@ -175,12 +175,12 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 		return -1;
 	}
 
-
 	// write fragment
 	lseek(fd, offset, SEEK_SET);
 	if (write(fd, transfer, transfer_len) < 0)
 		return -1;
 	close(fd);
+
 
 	// deallocate resources
 	free(filename);
@@ -336,12 +336,6 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	// read fragment from file
 	bytes_read = read(fd, fragment, fragment_len);
 
-	printf("filename_len: %lu\n", filename_len);
-	printf("filename: %s\n", filename);
-	printf("file_dim: %lu\n", file_dim);
-	printf("fragment_len: %lu\n", fragment_len);
-	printf("Offset: %lu\n", offset);
-	//printf("fragment: %s\n", filename_len);
 	if (bytes_read < fragment_len) // reached EOF
 		*eof = TRUE;
 	else
