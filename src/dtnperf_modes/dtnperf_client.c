@@ -294,7 +294,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	reginfo.regid = BP_REGID_NONE;
 	reginfo.expiration = 0;
 	error = al_bp_register(&handle, &reginfo, &regid);
-	if ( (error == BP_SUCCESS && perf_opt->bp_implementation == BP_DTN)
+	if ( (error != BP_SUCCESS && perf_opt->bp_implementation == BP_DTN)
 			|| (perf_opt->bp_implementation == BP_ION && (error == BP_EBUSY || error == BP_EPARSEEID)))
 	{
 		fflush(stdout);

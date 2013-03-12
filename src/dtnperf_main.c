@@ -51,8 +51,14 @@ int main(int argc, char ** argv)
 
 	//Print version
 	printf("\n");
+<<<<<<< HEAD
 	printf("******* Version: DTNper vION - 11 mar 2013 ***********\n");
 	printf("******* Bug assemble File Fragment Fixed   ***********\n");
+=======
+	printf("******* Version: DTNper vION - 12 mar 2013 ***********\n");
+	printf("******* Bug assemble File Fragment Fixed   ***********\n");
+	printf("******* Bug Registration DTN2              ***********\n");
+>>>>>>> 781a135... Bug Registration DTN2
 
 	switch (global_options.mode)
 	{
