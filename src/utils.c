@@ -469,13 +469,3 @@ void pthread_sleep(double sec)
 	pthread_cond_timedwait(&fakeCond, &fakeMutex, &abs_timespec);
 	pthread_mutex_unlock(&fakeMutex);
 }
-
-int find_bp_implementation(const char *inarg)
-{
-	if(strcmp(inarg,"DTN") == 0)
-		return 0;
-	else if(strcmp(inarg,"ION") == 0)
-		return 1;
-	else
-		return -1;
-}
