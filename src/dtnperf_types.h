@@ -54,6 +54,8 @@ typedef struct dtnperf_options
 	boolean_t use_ip;		// set different values of ip address and port [FALSE]
 	char * ip_addr;			// daemon ip address [127.0.0.1]
 	short ip_port;			// daemon port [5010]
+	al_bp_implementation_t forced_reg_impl; // Forced EID registration independently of BP implementation
+	boolean_t forced_imp;   // if true, is forced the EID registration
 	boolean_t daemon;		// run as daemon (server and monitor) [FALSE]
 	char * server_output_file;	// stdout and stderr redirect here if daemon is TRUE [SERVER_OUTPUT_FILE]
 	char * monitor_output_file;	// stdout and stderr redirect here if daemon is TRUE [MONITOR_OUTPUT_FILE]

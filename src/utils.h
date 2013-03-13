@@ -16,6 +16,7 @@ double byte2mega(long n);
 double byte2kilo(long n);
 char find_data_unit(const char *inarg);
 char find_rate_unit(const char *inarg);
+int find_bp_implementation(const char *inarg);
 
 void csv_time_report(int b_sent, int payload, struct timeval start, struct timeval end, FILE* csv_log);
 void csv_data_report(int b_id, int payload, struct timeval start, struct timeval end, FILE* csv_log);

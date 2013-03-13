@@ -198,10 +198,20 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	if(debug && debug_level > 0)
 		printf("[debug] building a local eid...");
 
-	if(perf_opt->bp_implementation == BP_ION)
-		al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
-	else if(perf_opt->bp_implementation == BP_DTN)
-		al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
+	if(perf_opt->forced_imp == TRUE)
+	{
+		if(perf_opt->forced_reg_impl == BP_ION)
+			al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
+		else if(perf_opt->forced_reg_impl == BP_DTN)
+			al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
+	}
+	else
+	{
+		if(perf_opt->bp_implementation == BP_ION)
+			al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
+		else if(perf_opt->bp_implementation == BP_DTN)
+			al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
+	}
 
 	if(debug && debug_level > 0)
 		printf("done\n");
@@ -779,20 +789,21 @@ void print_server_usage(char * progname)
 	fprintf(stderr, "SYNTAX: %s %s [options]\n", progname, SERVER_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
-			" -a, --daemon           Start the server as a daemon. Output is redirected to %s.\n"
-			" -o, --output <file>    Change the default output file (only with -a option).\n"
-			" -s, --stop             Stop a demonized instance of server.\n"
-			"     --ip-addr <addr>   Ip address of the bp daemon api. Default: 127.0.0.1\n"
-			"     --ip-port <port>   Ip port of the bp daemon api. Default: 5010\n"
-			"     --fdir <dir>       Destination directory of transfered files. Default is %s .\n"
-			"     --debug[=level]    Debug messages [1-2], if level is not indicated level = 1.\n"
-			" -M, --memory         	 Save bundles into memory.\n"
-			" -l, --lifetime <sec>   Bundle acks lifetime (s). Max idle time for ongoing file transfers (in ION). Default is 60.\n"
-			" -p, --priority <val>   Bundle acks priority [bulk|normal|expedited|reserved]. Default: normal\n"
+			" -a, --daemon                Start the server as a daemon. Output is redirected to %s.\n"
+			" -o, --output <file>         Change the default output file (only with -a option).\n"
+			" -s, --stop                  Stop a demonized instance of server.\n"
+			"     --ip-addr <addr>        Ip address of the bp daemon api. ONLY for DTN2 impl. Default: 127.0.0.1\n"
+			"     --ip-port <port>        Ip port of the bp daemon api. ONLY for DTN2 impl. Default: 5010\n"
+			"     --force-reg <[ION|DTN]> Force the registration EID independently of BP implementation.\n"
+			"     --fdir <dir>            Destination directory of transfered files. Default is %s .\n"
+			"     --debug[=level]         Debug messages [1-2], if level is not indicated level = 1.\n"
+			" -M, --memory         	      Save bundles into memory.\n"
+			" -l, --lifetime <sec>        Bundle acks lifetime (s). Max idle time for ongoing file transfers (in ION). Default is 60.\n"
+			" -p, --priority <val>        Bundle acks priority [bulk|normal|expedited|reserved]. Default: normal\n"
 			//"     --acks-to-mon      Send bundle acks to the monitor too\n"
 			//"     --eid [URI|CBHE]   Set type of eid format. CBHE only for ION implementation. Default: URI\n",
-			" -v, --verbose          Print some information message during the execution.\n"
-			" -h, --help             This help.\n",
+			" -v, --verbose               Print some information message during the execution.\n"
+			" -h, --help                  This help.\n",
 			SERVER_OUTPUT_FILE, FILE_DIR_DEFAULT);
 	fprintf(stderr, "\n");
 	exit(1);
@@ -823,6 +834,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"acks-to-mon", no_argument, 0, 35},		// server only option
 				{"ip-addr", required_argument, 0, 37},
 				{"ip-port", required_argument, 0, 38},
+				{"force-reg", required_argument, 0, 48},
 				{"daemon", no_argument, 0, 'a'},
 				{"output", required_argument, 0, 'o'},
 				{"stop", no_argument, 0, 's'},
@@ -908,6 +920,21 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 39:
 			perf_opt->file_dir = strdup(optarg);
 			break;
+
+		case 48:
+			perf_opt->forced_imp = TRUE;
+			switch( find_bp_implementation(strdup(optarg)))
+			{
+			case 0:
+				perf_opt->forced_reg_impl = BP_DTN; break;
+			case 1:
+				perf_opt->forced_reg_impl = BP_DTN; break;
+			case -1:
+				fprintf(stderr, "wrong --force-reg\n");
+				exit(1);
+			return;
+		}
+		break;
 
 		case 'a':
 			perf_opt->daemon = TRUE;
