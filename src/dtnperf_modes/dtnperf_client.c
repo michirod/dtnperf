@@ -577,17 +577,20 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 
 	// Unregister Local Eid only For ION
-	if (al_bp_unregister(handle,regid,local_eid) != BP_SUCCESS)
+	if(perf_opt->bp_implementation == BP_ION)
 	{
-		fprintf(stderr, "fatal error unregister endpoint: %s\n", strerror(errno));
-		if (create_log)
-			fprintf(log_file, "fatal error unregister endpoint: %s\n", strerror(errno));
-			client_clean_exit(1);
-	}
-	else
-	{
-		//bp_local_eid_register = FALSE;
-		bp_handle_open = FALSE;
+		if (al_bp_unregister(handle,regid,local_eid) != BP_SUCCESS)
+		{
+			fprintf(stderr, "fatal error unregister endpoint: %s\n", strerror(errno));
+			if (create_log)
+				fprintf(log_file, "fatal error unregister endpoint: %s\n", strerror(errno));
+				client_clean_exit(1);
+		}
+		else
+		{
+			//bp_local_eid_register = FALSE;
+			bp_handle_open = FALSE;
+		}
 	}
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
