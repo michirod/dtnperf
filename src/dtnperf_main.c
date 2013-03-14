@@ -54,6 +54,7 @@ int main(int argc, char ** argv)
 
 	printf("******* Version: DTNper vION - 14 mar 2013 ***********\n");
 	printf("******* Bug generig payload                ***********\n");
+	printf("******* Unregister EID only ION impl       ***********\n");
 
 
 	switch (global_options.mode)
