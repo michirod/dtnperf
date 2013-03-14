@@ -205,6 +205,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		printf("done\n");
 
 	//build a local eid
+	printf(" EID: %d\n", force_eid);
 	if( force_eid == TRUE)
 	{
 		if(debug && debug_level > 0)
