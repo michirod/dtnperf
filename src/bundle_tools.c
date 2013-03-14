@@ -396,7 +396,7 @@ al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 	result = prepare_payload_header_and_ack_options(opt, f);
 
 	// remaining = bundle_payload - HEADER_SIZE - congestion control char
-	remaining = opt->bundle_payload - HEADER_SIZE - 1;
+	remaining = opt->bundle_payload - HEADER_SIZE - 2;
 
 	// fill remainig payload with a pattern
 	for (i = remaining; i > strlen(pattern); i -= strlen(pattern))

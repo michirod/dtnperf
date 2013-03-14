@@ -52,9 +52,8 @@ int main(int argc, char ** argv)
 	//Print version
 	printf("\n");
 
-	printf("******* Version: DTNper vION - 12 mar 2013 ***********\n");
-	printf("******* Bug assemble File Fragment Fixed   ***********\n");
-	printf("******* Bug Registration DTN2              ***********\n");
+	printf("******* Version: DTNper vION - 14 mar 2013 ***********\n");
+	printf("******* Bug generig payload                ***********\n");
 
 
 	switch (global_options.mode)
