@@ -939,10 +939,12 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			switch( find_forced_eid(strdup(optarg)) )
 			{
 				case 'U':
-					printf("URI EID\n");
+					force_eid = TRUE;
+					eid_format = 'U';
 					break;
 				case 'C':
-					printf("CBHE EID\n");
+					force_eid = TRUE;
+					eid_format = 'F';
 					break;
 			}
 			break;
