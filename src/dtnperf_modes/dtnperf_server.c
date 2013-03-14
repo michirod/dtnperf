@@ -30,6 +30,10 @@ al_bp_endpoint_id_t local_eid;
 // flags to exit cleanly
 boolean_t bp_handle_open;
 
+// flags to change eid format
+boolean_t force_eid;
+char eid_format;
+
 
 /*  ----------------------------
  *          SERVER CODE
@@ -80,6 +84,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	bp_handle_open = FALSE;
 
 	num_ack=0;
+
+	force_eid = FALSE;
+	if (perf_opt->bp_implementation == BP_DTN )
+		eid_format = 'U';
+	else
+		eid_format = 'C';
 
 	// initialize structures for file transfers
 	file_transfer_info_list = file_transfer_info_list_create();
@@ -195,13 +205,27 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		printf("done\n");
 
 	//build a local eid
-	if(debug && debug_level > 0)
-		printf("[debug] building a local eid...");
-
-	if(perf_opt->bp_implementation == BP_ION)
-		al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
-	else if(perf_opt->bp_implementation == BP_DTN)
-		al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
+	if( force_eid == TRUE)
+	{
+		if(debug && debug_level > 0)
+		{
+			printf("[debug] building local eid in format ");
+			eid_format == 'U' ? printf("URI...") : printf("CBHE...");
+		}
+		if(eid_format == 'C')
+			al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
+		else if(eid_format == 'U')
+			al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
+	}
+	else
+	{
+		if(debug && debug_level > 0)
+			printf("[debug] building a local eid...");
+		if(perf_opt->bp_implementation == BP_ION)
+			al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
+		else if(perf_opt->bp_implementation == BP_DTN)
+			al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
+	}
 
 	if(debug && debug_level > 0)
 		printf("done\n");
