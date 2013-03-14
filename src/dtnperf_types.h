@@ -86,7 +86,6 @@ typedef struct dtnperf_options
 	//monitor options
 	char * logs_dir;		// dir where are saved monitor logs [LOGS_DIR_DEFAULT]
 	int expiration_session; // expiration time of session Client-Server [3600]
-	boolean_t test;
 } dtnperf_options_t;
 
 /**
