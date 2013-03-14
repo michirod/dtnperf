@@ -295,6 +295,8 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->bundle_ack_options.set_ack_expiration = FALSE;
 	opt->bundle_ack_options.set_ack_priority = FALSE;
 	printf("FINISH SET\n");
+	opt->test = FALSE;
+	printf("TEST: %d\n",opt->test);
 }
 
 
