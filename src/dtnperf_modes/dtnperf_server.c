@@ -784,7 +784,7 @@ void print_server_usage(char * progname)
 			" -s, --stop                   Stop a demonized instance of server.\n"
 			"     --ip-addr <addr>         Ip address of the bp daemon api. Default: 127.0.0.1\n"
 			"     --ip-port <port>         Ip port of the bp daemon api. Default: 5010\n"
-			"     --force-eid <[URI|CBHE]  Force the registration EID independently of BP implementation.\n"
+//			"     --force-eid <[URI|CBHE]  Force the registration EID independently of BP implementation.\n"
 			"     --fdir <dir>             Destination directory of transfered files. Default is %s .\n"
 			"     --debug[=level]          Debug messages [1-2], if level is not indicated level = 1.\n"
 			" -M, --memory         	       Save bundles into memory.\n"
@@ -824,7 +824,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"acks-to-mon", no_argument, 0, 35},		// server only option
 				{"ip-addr", required_argument, 0, 37},
 				{"ip-port", required_argument, 0, 38},
-				{"force-eid", required_argument, 0, 48},
+//				{"force-eid", required_argument, 0, 48},
 				{"daemon", no_argument, 0, 'a'},
 				{"output", required_argument, 0, 'o'},
 				{"stop", no_argument, 0, 's'},
@@ -907,7 +907,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			perf_opt->use_ip = TRUE;
 			break;
 
-		case 48:
+/*		case 48:
 			switch( find_forced_eid(strdup(optarg)))
 			{
 				case 'U':
@@ -924,7 +924,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 					return;
 			}
 			break;
-
+*/
 		case 39:
 			perf_opt->file_dir = strdup(optarg);
 			break;
