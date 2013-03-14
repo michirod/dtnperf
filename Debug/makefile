@@ -26,14 +26,11 @@ endif
 # All Target
 all: dtnperf_3_vION
 
-dependents:
-	-cd /home/annetta/test_VM/abstraction_layer_bundle_protocol/Debug && $(MAKE) clean all
-
 # Tool invocations
-dtnperf_3_vION: $(OBJS) $(USER_OBJS) /home/annetta/test_VM/abstraction_layer_bundle_protocol/Debug/libbp_abstraction_layer.a
+dtnperf_3_vION: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: Cross GCC Linker'
-	gcc -L"/home/annetta/test_VM/abstraction_layer_bundle_protocol/Debug" -pthread -o "dtnperf_3_vION" $(OBJS) $(USER_OBJS) $(LIBS)
+	gcc -pthread -o "dtnperf_3_vION" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -44,6 +41,5 @@ clean:
 
 .PHONY: all clean dependents
 .SECONDARY:
-/home/annetta/test_VM/abstraction_layer_bundle_protocol/Debug/libbp_abstraction_layer.a:
 
 -include ../makefile.targets
