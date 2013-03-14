@@ -824,7 +824,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"acks-to-mon", no_argument, 0, 35},		// server only option
 				{"ip-addr", required_argument, 0, 37},
 				{"ip-port", required_argument, 0, 38},
-				{"force-eid", required_argument, 0, 50},
+				{"force-eid", required_argument, 0, 127},
 				{"daemon", no_argument, 0, 'a'},
 				{"output", required_argument, 0, 'o'},
 				{"stop", no_argument, 0, 's'},
@@ -911,7 +911,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			perf_opt->file_dir = strdup(optarg);
 			break;
 
-		case 50:
+		case 127:
 			switch( find_forced_eid(strdup(optarg)) )
 			{
 				case 'U':
