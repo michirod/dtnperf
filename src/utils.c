@@ -99,17 +99,6 @@ char find_rate_unit(const char *inarg)
     return unit;
 } // end find_data_unit
 
-char find_forced_eid(const char *inarg)
-{
-	// value of forced unit are CBHE or URI
-	if(strcmp("URI", inarg) == 0)
-		return 'U';
-	else if(strcmp("CBHE", inarg) == 0)
-		return 'C';
-	else
-		return 'N';
-} // end find_force_eid
-
 
 /* ------------------------------------------
  * add_time
