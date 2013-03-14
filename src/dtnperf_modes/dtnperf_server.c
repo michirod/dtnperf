@@ -916,9 +916,13 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			{
 				case 'U':
 					printf("URI EID\n");
+					perf_opt->force_eid = TRUE;
+					perf_opt->eid_forced = 'U';
 					break;
 				case 'C':
 					printf("CBHE EID\n");
+					perf_opt->force_eid = TRUE;
+					perf_opt->eid_forced = 'C';
 					break;
 				case 'N':
 					printf("wrong argument --forced-eid\n");
