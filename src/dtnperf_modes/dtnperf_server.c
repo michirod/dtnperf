@@ -31,8 +31,8 @@ al_bp_endpoint_id_t local_eid;
 boolean_t bp_handle_open;
 
 // flags to change eid format
-boolean_t force_eid;
-char eid_format;
+boolean_t force_eid = FALSE;
+char eid_format = 'U';
 
 
 /*  ----------------------------
@@ -84,12 +84,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	bp_handle_open = FALSE;
 
 	num_ack=0;
-
-	force_eid = FALSE;
-	if (perf_opt->bp_implementation == BP_DTN )
-		eid_format = 'U';
-	else
-		eid_format = 'C';
 
 	// initialize structures for file transfers
 	file_transfer_info_list = file_transfer_info_list_create();
