@@ -788,7 +788,7 @@ void * send_bundles(void * opt)
 	if (perf_opt->op_mode == 'T') 	// TIME MODE
 	{								// init variables for loop and setting condition
 		now.tv_sec = start.tv_sec;
-		condition = now.tv_sec <= end.tv_sec;
+		condition = now.tv_sec < end.tv_sec;
 	}
 	else							// DATA and FILE MODE
 	{								// setting condition for loop
@@ -883,7 +883,7 @@ void * send_bundles(void * opt)
 		if (perf_opt->op_mode == 'T')	// TIME MODE
 		{								// update time and condition
 			gettimeofday(&now, NULL);
-			condition = now.tv_sec <= end.tv_sec;
+			condition = now.tv_sec < end.tv_sec;
 			printf("\n\tNOW sec: %lu - CONDITION %d\n",now.tv_sec,condition);
 		}
 		else							// DATA MODE
