@@ -131,20 +131,36 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		printf("done\n");
 
 	//build a local eid
-	if(debug && debug_level > 0)
-		printf("[debug] building a local eid...");
 	if (parameters->dedicated_monitor)
 		sprintf(temp, "%s_%d", MON_EP_STRING, parameters->client_id);
 	else
 		sprintf(temp, "%s", MON_EP_STRING);
 
-	if(perf_opt->bp_implementation == BP_ION)
-		al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Monitor-CBHE",NULL);
-	if(perf_opt->bp_implementation == BP_DTN)
-		al_bp_build_local_eid(handle, &local_eid, MON_EP_STRING,"Monitor-DTN",NULL);
+	if( perf_opt->eid_format_forced == 'U' || perf_opt->eid_format_forced == 'C')
+	{
+		if(debug && debug_level > 0)
+		{
+			printf("[debug] building local eid in format ");
+			perf_opt->eid_format_forced == 'U' ? printf("URI...") : printf("CBHE...");
+		}
+		if(perf_opt->eid_format_forced == 'C')
+			al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Server-CBHE",NULL);
+		else
+			al_bp_build_local_eid(handle, &local_eid, MON_EP_STRING,"Server-DTN",NULL);
+	}
+	else
+	{
+		if(debug && debug_level > 0)
+			printf("[debug] building a local eid...");
+		if(perf_opt->bp_implementation == BP_ION)
+			al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Monitor-CBHE",NULL);
+		if(perf_opt->bp_implementation == BP_DTN)
+			al_bp_build_local_eid(handle, &local_eid, MON_EP_STRING,"Monitor-DTN",NULL);
+	}
 
 	if(debug && debug_level > 0)
 		printf("done\n");
+
 	if (debug)
 		printf("local_eid = %s\n", local_eid.uri);
 
@@ -616,6 +632,7 @@ void print_monitor_usage(char * progname)
 			" -l, --lifetime <s>     Max idle time of log files (s) (in ION). Default: 60"
 			"     --ip-addr <addr>   Ip address of the bp daemon api. Default: 127.0.0.1 (Only in DTN2)\n"
 			"     --ip-port <port>   Ip port of the bp daemon api. Default: 5010 (Only in DTN2)\n"
+			"     --force-eid <[URI|CBHE]  Force the registration EID independently of BP implementation.\n"
 			"     --ldir <dir>       Logs directory. Default: %s .\n"
 			"     --debug[=level]    Debug messages [0-1], if level is not indicated level = 1.\n"
 			" -v, --verbose          Print some information message during the execution.\n"
@@ -644,6 +661,7 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 					{"ldir", required_argument, 0, 40},
 					{"ip-addr", required_argument, 0, 37},
 					{"ip-port", required_argument, 0, 38},
+					{"force-eid", required_argument, 0, 50},
 					{"lifetime", required_argument,0,'l'},
 					{"daemon", no_argument, 0, 'a'},
 					{"output", required_argument, 0, 'o'},
@@ -698,6 +716,21 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 
 			case 40:
 				perf_opt->logs_dir = strdup(optarg);
+				break;
+
+			case 50:
+				switch( find_forced_eid(strdup(optarg)) )
+				{
+					case 'U':
+						perf_opt->eid_format_forced = 'U';
+						break;
+					case 'C':
+						perf_opt->eid_format_forced = 'C';
+						break;
+					case '?':
+						fprintf(stderr, "wrong --force-eid argument\n");
+						exit(1);
+				}
 				break;
 
 			case 'a':
