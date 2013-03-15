@@ -204,7 +204,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if (strlen(perf_opt->mon_eid) == 0)
 	{
 		//if isn't CHBE format copy from local eid only the uri (not the demux string)
-		if(strncmp(local_eid.uri,"ipn",3) != 0){
+		if(strncmp(dest_eid.uri,"ipn",3) != 0){
+			perf_opt->eid_format_forced = 'C';
 			char * ptr;
 			ptr = strstr(local_eid.uri, CLI_EP_STRING);
 			// copy from local eid only the uri (not the demux string)
@@ -212,6 +213,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		}
 		else
 		{
+			perf_opt->eid_format_forced = 'U';
 			char * ptr, * temp;
 			temp = (char *) malloc(sizeof(char)*AL_BP_MAX_ENDPOINT_ID);
 			strcpy(temp,local_eid.uri);
