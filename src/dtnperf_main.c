@@ -51,10 +51,10 @@ int main(int argc, char ** argv)
 
 	//Print version
 	printf("\n");
-	printf("******* Version: DTNper vION - 14 mar 2013 ***********\n");
+	printf("******* Version: DTNper vION - 15 mar 2013 ***********\n");
 	printf("******* Bug generig payload                ***********\n");
-	printf("******* Unregister EID only ION impl       ***********\n");
 	printf("******* Force Impl ONLY SERVER             ***********\n");
+	printf("******* Bug Time                           ***********\n");
 
 
 	switch (global_options.mode)
