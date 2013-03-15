@@ -255,6 +255,7 @@ void init_dtnperf_global_options(dtnperf_global_options_t *opt, dtnperf_options_
 void init_dtnperf_options(dtnperf_options_t *opt)
 {
 	opt->bp_implementation = al_bp_get_implementation();
+	opt->test = FALSE;
 	opt->verbose = FALSE;
 	opt->debug = FALSE;
 	opt->debug_level = 0;
