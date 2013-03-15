@@ -119,10 +119,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	process_interrupted = FALSE;
 	perf_opt->log_filename = correct_dirname(perf_opt->log_filename);
 
-	printf("TEST: %d\n", perf_opt->force_eid);
-	perf_opt->eid_format = 'C';
-	printf("EID FORMAT: %c\n",perf_opt->eid_format);
-
+	printf("EID FORMAT: %c\n",perf_opt->eid_format_forced);
 
 
 	// Create a new log file
