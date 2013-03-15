@@ -119,7 +119,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	process_interrupted = FALSE;
 	perf_opt->log_filename = correct_dirname(perf_opt->log_filename);
 
-	printf("TEST: %d\n", perf_opt->test);
+	printf("TEST: %d\n", perf_opt->force_eid);
 
 
 	// Create a new log file
