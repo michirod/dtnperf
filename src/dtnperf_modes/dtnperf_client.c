@@ -264,6 +264,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			dedicated_monitor = TRUE;
 			mon_params.client_id = getpid();
 			mon_params.perf_g_opt = perf_g_opt;
+			printf("OPT MON %c\n",mon_params.perf_g_opt->perf_opt->eid_format_forced);
 			printf("there is not a monitor on this endpoint.\n");
 			// if isn't CBHE Format append monitor demux string to replyto eid
 			if(strncmp(perf_opt->mon_eid,"ipn",3) != 0)
