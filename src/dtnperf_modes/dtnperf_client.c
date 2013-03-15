@@ -119,7 +119,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	process_interrupted = FALSE;
 	perf_opt->log_filename = correct_dirname(perf_opt->log_filename);
 
-
 	// Create a new log file
 	if (create_log)
 	{
