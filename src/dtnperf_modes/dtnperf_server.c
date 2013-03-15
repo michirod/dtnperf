@@ -30,10 +30,6 @@ al_bp_endpoint_id_t local_eid;
 // flags to exit cleanly
 boolean_t bp_handle_open;
 
-// flags to change eid format
-boolean_t force_eid = FALSE;
-char eid_format = 'U';
-
 
 /*  ----------------------------
  *          SERVER CODE
@@ -199,17 +195,16 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		printf("done\n");
 
 	//build a local eid
-	printf(" EID: %d\n", force_eid);
-	if( force_eid == TRUE)
+	if( perf_opt->eid_format_forced == 'U' || perf_opt->eid_format_forced == 'C')
 	{
 		if(debug && debug_level > 0)
 		{
 			printf("[debug] building local eid in format ");
-			eid_format == 'U' ? printf("URI...") : printf("CBHE...");
+			perf_opt->eid_format_forced == 'U' ? printf("URI...") : printf("CBHE...");
 		}
-		if(eid_format == 'C')
+		if(perf_opt->eid_format_forced == 'C')
 			al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
-		else if(eid_format == 'U')
+		else
 			al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
 	}
 	else
@@ -934,13 +929,14 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			switch( find_forced_eid(strdup(optarg)) )
 			{
 				case 'U':
-					force_eid = TRUE;
-					eid_format = 'U';
+					perf_opt->eid_format_forced = 'U';
 					break;
 				case 'C':
-					force_eid = TRUE;
-					eid_format = 'F';
+					perf_opt->eid_format_forced = 'C';
 					break;
+				case '?':
+					fprintf(stderr, "wrong --force-eid argument\n");
+					exit(1);
 			}
 			break;
 

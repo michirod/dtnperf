@@ -107,7 +107,7 @@ char find_forced_eid(const char *inarg)
 	else if(strcmp("CBHE", inarg) == 0)
 		return 'C';
 	else
-		return 'N';
+		return '?';
 } // end find_force_eid
 
 
