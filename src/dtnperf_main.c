@@ -255,13 +255,13 @@ void init_dtnperf_global_options(dtnperf_global_options_t *opt, dtnperf_options_
 void init_dtnperf_options(dtnperf_options_t *opt)
 {
 	opt->bp_implementation = al_bp_get_implementation();
-	opt->test = FALSE;
 	opt->verbose = FALSE;
 	opt->debug = FALSE;
 	opt->debug_level = 0;
 	opt->use_ip = FALSE;
 	opt->ip_addr = "127.0.0.1";
 	opt->ip_port = 5010;
+	opt->force_eid = FALSE;
 	opt->daemon = FALSE;
 	opt->server_output_file = SERVER_OUTPUT_FILE;
 	opt->monitor_output_file = MONITOR_OUTPUT_FILE;
