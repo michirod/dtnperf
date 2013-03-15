@@ -55,7 +55,7 @@ typedef struct dtnperf_options
 	char * ip_addr;			// daemon ip address [127.0.0.1]
 	short ip_port;			// daemon port [5010]
 	boolean_t force_eid;	// if true, the format eid is forced in the value specified to eid_format [FALSE]
-	//char eid_format;		// is the format of the eid (U = URI, C = CBHE)
+	char eid_format;		// is the format of the eid (U = URI, C = CBHE)
 	boolean_t daemon;		// run as daemon (server and monitor) [FALSE]
 	char * server_output_file;	// stdout and stderr redirect here if daemon is TRUE [SERVER_OUTPUT_FILE]
 	char * monitor_output_file;	// stdout and stderr redirect here if daemon is TRUE [MONITOR_OUTPUT_FILE]
