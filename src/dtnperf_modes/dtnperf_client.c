@@ -884,6 +884,7 @@ void * send_bundles(void * opt)
 		{								// update time and condition
 			gettimeofday(&now, NULL);
 			condition = now.tv_sec <= end.tv_sec;
+			printf("\n\tNOW sec: %lu - CONDITION %d\n",now.tv_sec,condition);
 		}
 		else							// DATA MODE
 		{								// update condition
