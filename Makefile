@@ -1,8 +1,11 @@
 # Makefile for compiling DTNPerf3
 
+# NAME OF BIN USED FOR INSTALL/UNINSTALL (NEVER LEAVE IT BLANK!!!)
 BIN_NAME_BASE=dtnperf3
 CC=gcc
 LIBs=-L/usr/local/lib -L$(AL_BPDIR)
+
+INSTALLED=$(wildcard /usr/bin/$(BIN_NAME_BASE)*)
 
 ifeq ($(strip $(AL_BPDIR)),)
 all: help
@@ -34,10 +37,10 @@ bin:
 	$(CC) -o $(BIN_NAME) $(LIBs) $(INC) src/*.c src/dtnperf_modes/*.c $(OPT)
 
 install: 
-	cp $(BIN_NAME) /usr/bin/
+	cp $(BIN_NAME_BASE)* /usr/bin/
 
 uninstall:
-	rm -rf /usr/bin/$(BIN_NAME)
+	@if test `echo $(INSTALLED) | wc -w` -eq 1 -a -f "$(INSTALLED)"; then rm -rf $(INSTALLED); else echo "MORE THAN 1 FILE, DELETE THEM MANUALLY: $(INSTALLED)"; fi
 
 help:
 	@echo "Usage:"
