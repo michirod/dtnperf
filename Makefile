@@ -49,5 +49,5 @@ help:
 	@echo "For both Impl: 		make DTN_DIR=<dtn2_dir> ION_DIR=<ion_dir> AL_BPDIR=<al_bpdir>"
 
 clean:
-	@rm -rf $(BIN_NAME)
+	@rm -rf $(BIN_NAME_BASE)*
 
