@@ -888,6 +888,10 @@ void * send_bundles(void * opt)
 		{								// update condition
 			condition = sent_bundles < tot_bundles;
 		}
+		if(condition == TRUE)
+			printf("\n\t CONDITION TRUE\n");
+		else
+			printf("\n\y CONDITION FALSE\n");
 	} // while
 	if ((debug) && (debug_level > 0))
 		printf("[debug send thread] ...out from loop\n");
