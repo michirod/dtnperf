@@ -52,10 +52,8 @@ int main(int argc, char ** argv)
 
 	//Print version
 	printf("\n");
-	printf("******* Version: DTNper vION - 15 mar 2013 ***********\n");
-	printf("******* Bug generig payload                ***********\n");
-	printf("******* Force Impl ONLY SERVER             ***********\n");
-	printf("******* Bug Time                           ***********\n");
+	printf("******* Version: DTNper vION - 24 mar 2013 ***********\n");
+	printf("******* Bug Bundle after Timestamp         ***********\n");
 
 
 	switch (global_options.mode)
