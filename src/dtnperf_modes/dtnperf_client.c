@@ -891,7 +891,7 @@ void * send_bundles(void * opt)
 		if(condition == TRUE)
 			printf("\n\t CONDITION TRUE\n");
 		else
-			printf("\n\y CONDITION FALSE\n");
+			printf("\n\t CONDITION FALSE\n");
 	} // while
 	if ((debug) && (debug_level > 0))
 		printf("[debug send thread] ...out from loop\n");
