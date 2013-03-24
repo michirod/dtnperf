@@ -9,6 +9,7 @@
 #include "utils.h"
 #include "dtnperf_types.h"
 #include "definitions.h"
+#include "al_bp_api.h"
 #include "dtnperf_modes/dtnperf_client.h"
 #include "dtnperf_modes/dtnperf_server.h"
 #include "dtnperf_modes/dtnperf_monitor.h"
