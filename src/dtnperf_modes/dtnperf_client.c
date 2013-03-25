@@ -826,6 +826,15 @@ void * send_bundles(void * opt)
 			sem_getvalue(&window, &cur);
 			printf("\t[debug send thread] window is %d\n", cur);
 		}
+		// wait for the semaphore
+		sem_wait(&window);
+		if (perf_opt->op_mode == 'T')	// TIME MODE
+		{								// update time and condition
+			gettimeofday(&now, NULL);
+			condition = now.tv_sec <= end.tv_sec;
+		}
+		if(!condition)
+			break;
 
 		// Send the bundle
 		if (debug)
@@ -867,9 +876,6 @@ void * send_bundles(void * opt)
 			pthread_cond_signal(&cond_ackreceiver);
 			pthread_mutex_unlock(&mutexdata);
 		}
-
-		// wait for the semaphore
-		sem_wait(&window);
 
 		// Increment sent_bundles
 		++sent_bundles;
