@@ -144,13 +144,13 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			perf_opt->eid_format_forced == 'U' ? printf("URI...") : printf("CBHE...");
 		}
 		if(perf_opt->eid_format_forced == 'C')
-			al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Server-CBHE",NULL);
+			al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Monitor-CBHE",NULL);
 		else
 		{
 			if(parameters->dedicated_monitor)
-				al_bp_build_local_eid(handle, &local_eid, temp,"Server-DTN",NULL);
+				al_bp_build_local_eid(handle, &local_eid, temp,"Monitor-DTN",NULL);
 			else
-				al_bp_build_local_eid(handle, &local_eid, MON_EP_STRING,"Server-DTN",NULL);
+				al_bp_build_local_eid(handle, &local_eid, MON_EP_STRING,"Monitor-DTN",NULL);
 		}
 	}
 	else
