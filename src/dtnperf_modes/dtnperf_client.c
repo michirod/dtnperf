@@ -229,7 +229,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	{
 		if(perf_g_opt->mode == DTNPERF_CLIENT_MONITOR)
 		{
-			sprintf(temp1, "%s_%d", mon_eid.uri, mon_params.client_id);
+			memset(temp1,0,sizeof(temp1));
+			sprintf(temp1, "%s_%d", MON_EP_STRING, getpid());
 			strcat(perf_opt->mon_eid, temp1);
 		}
 		else
