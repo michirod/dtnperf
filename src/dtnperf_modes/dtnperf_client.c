@@ -226,8 +226,15 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	// if isn't CBHE Format append monitor demux string to replyto eid
 	if(strncmp(perf_opt->mon_eid,"ipn",3) != 0)
-		strcat(perf_opt->mon_eid, MON_EP_STRING);
-
+	{
+		if(perf_g_opt->mode == DTNPERF_CLIENT_MONITOR)
+		{
+			sprintf(temp1, "%s_%d", mon_eid.uri, mon_params.client_id);
+			strcat(perf_opt->mon_eid, temp1);
+		}
+		else
+			strcat(perf_opt->mon_eid, MON_EP_STRING);
+	}
 	// parse
 	error = al_bp_parse_eid_string(&mon_eid, perf_opt->mon_eid);
 	if (error != BP_SUCCESS)

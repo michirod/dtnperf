@@ -51,9 +51,8 @@ int main(int argc, char ** argv)
 
 	//Print version
 	printf("\n");
-	printf("******* Version: DTNper vION - 25 mar 2013 ***********\n");
-	printf("******* Bug Bundle after Time              ***********\n");
-	printf("******* Bug Registration double /          ***********\n");
+	printf("******* Version: DTNper vION - 26 mar 2013 ***********\n");
+	printf("******* Bug EID Monitor-Dedicated          ***********\n");
 
 
 	switch (global_options.mode)
