@@ -102,10 +102,10 @@ char find_rate_unit(const char *inarg)
 char find_forced_eid(const char *inarg)
 {
 	// value of forced unit are CBHE or URI
-	if(strcmp("URI", inarg) == 0)
-		return 'U';
-	else if(strcmp("CBHE", inarg) == 0)
-		return 'C';
+	if(strcmp("DTN", inarg) == 0)
+		return 'D';
+	else if(strcmp("IPN", inarg) == 0)
+		return 'I';
 	else
 		return '?';
 } // end find_force_eid
