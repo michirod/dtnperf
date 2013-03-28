@@ -19,8 +19,8 @@ typedef enum {
 } dtnperf_mode_t;
 
 typedef enum {
-	URI = 1,
-	CBHE
+	DTN = 1,
+	IPN
 } dtnperf_eid_format_t;
 
 // server ack to monitor options
