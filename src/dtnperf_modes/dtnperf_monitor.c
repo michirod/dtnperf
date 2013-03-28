@@ -516,7 +516,6 @@ void * session_expiration_timer(void * opt)
 
 	while(1)
 	{
-		//pthread_sleep(5);
 		current_dtn_time = get_current_dtn_time();
 		gettimeofday(&current_time, NULL);
 
