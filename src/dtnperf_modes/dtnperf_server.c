@@ -195,14 +195,14 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		printf("done\n");
 
 	//build a local eid
-	if( perf_opt->eid_format_forced == 'U' || perf_opt->eid_format_forced == 'C')
+	if( perf_opt->eid_format_forced == 'D' || perf_opt->eid_format_forced == 'I')
 	{
 		if(debug && debug_level > 0)
 		{
 			printf("[debug] building local eid in format ");
-			perf_opt->eid_format_forced == 'U' ? printf("URI...") : printf("CBHE...");
+			perf_opt->eid_format_forced == 'D' ? printf("DTN...") : printf("IPN...");
 		}
-		if(perf_opt->eid_format_forced == 'C')
+		if(perf_opt->eid_format_forced == 'I')
 			al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
 		else
 			al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
@@ -798,7 +798,7 @@ void print_server_usage(char * progname)
 			" -s, --stop                   Stop a demonized instance of server.\n"
 			"     --ip-addr <addr>         Ip address of the bp daemon api. Default: 127.0.0.1\n"
 			"     --ip-port <port>         Ip port of the bp daemon api. Default: 5010\n"
-			"     --force-eid <[URI|CBHE]  Force the registration EID independently of BP implementation.\n"
+			"     --force-eid <[DTN|IPN]  Force the registration EID independently of BP implementation.\n"
 			"     --fdir <dir>             Destination directory of transfered files. Default is %s .\n"
 			"     --debug[=level]          Debug messages [1-2], if level is not indicated level = 1.\n"
 			" -M, --memory         	       Save bundles into memory.\n"
@@ -928,11 +928,11 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 50:
 			switch( find_forced_eid(strdup(optarg)) )
 			{
-				case 'U':
-					perf_opt->eid_format_forced = 'U';
+				case 'D':
+					perf_opt->eid_format_forced = 'D';
 					break;
-				case 'C':
-					perf_opt->eid_format_forced = 'C';
+				case 'I':
+					perf_opt->eid_format_forced = 'I';
 					break;
 				case '?':
 					fprintf(stderr, "wrong --force-eid argument\n");

@@ -136,14 +136,14 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	else
 		sprintf(temp, "%s", MON_EP_STRING);
 
-	if( perf_opt->eid_format_forced == 'U' || perf_opt->eid_format_forced == 'C')
+	if( perf_opt->eid_format_forced == 'D' || perf_opt->eid_format_forced == 'I')
 	{
 		if(debug && debug_level > 0)
 		{
 			printf("[debug] building local eid in format ");
-			perf_opt->eid_format_forced == 'U' ? printf("URI...") : printf("CBHE...");
+			perf_opt->eid_format_forced == 'D' ? printf("DTN...") : printf("IPN...");
 		}
-		if(perf_opt->eid_format_forced == 'C')
+		if(perf_opt->eid_format_forced == 'D')
 			al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Monitor-CBHE",NULL);
 		else
 		{
@@ -630,17 +630,17 @@ void print_monitor_usage(char * progname)
 	fprintf(stderr, "SYNTAX: %s %s [options]\n", progname, MONITOR_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
-			" -a, --daemon           Start the monitor as a daemon. Output is redirected to %s .\n"
-			" -o, --output <file>    Change the default output file (only with -a option).\n"
-			" -s, --stop             Stop a demonized instance of monitor.\n"
-			" -l, --lifetime <s>     Max idle time of log files (s) (in ION). Default: 60"
-			"     --ip-addr <addr>   Ip address of the bp daemon api. Default: 127.0.0.1 (Only in DTN2)\n"
-			"     --ip-port <port>   Ip port of the bp daemon api. Default: 5010 (Only in DTN2)\n"
-			"     --force-eid <[URI|CBHE]  Force the registration EID independently of BP implementation.\n"
-			"     --ldir <dir>       Logs directory. Default: %s .\n"
-			"     --debug[=level]    Debug messages [0-1], if level is not indicated level = 1.\n"
-			" -v, --verbose          Print some information message during the execution.\n"
-			" -h, --help             This help.\n",
+			" -a, --daemon                Start the monitor as a daemon. Output is redirected to %s .\n"
+			" -o, --output <file>         Change the default output file (only with -a option).\n"
+			" -s, --stop                  Stop a demonized instance of monitor.\n"
+			" -l, --lifetime <s>          Max idle time of log files (s) (in ION). Default: 60"
+			"     --ip-addr <addr>        Ip address of the bp daemon api. Default: 127.0.0.1 (Only in DTN2)\n"
+			"     --ip-port <port>        Ip port of the bp daemon api. Default: 5010 (Only in DTN2)\n"
+			"     --force-eid <[DTN|IPN]  Force the registration EID independently of BP implementation.\n"
+			"     --ldir <dir>            Logs directory. Default: %s .\n"
+			"     --debug[=level]         Debug messages [0-1], if level is not indicated level = 1.\n"
+			" -v, --verbose               Print some information message during the execution.\n"
+			" -h, --help                  This help.\n",
 			MONITOR_OUTPUT_FILE, LOGS_DIR_DEFAULT);
 	fprintf(stderr, "\n");
 	exit(1);
@@ -725,11 +725,11 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 			case 50:
 				switch( find_forced_eid(strdup(optarg)) )
 				{
-					case 'U':
-						perf_opt->eid_format_forced = 'U';
+					case 'D':
+						perf_opt->eid_format_forced = 'D';
 						break;
-					case 'C':
-						perf_opt->eid_format_forced = 'C';
+					case 'I':
+						perf_opt->eid_format_forced = 'I';
 						break;
 					case '?':
 						fprintf(stderr, "wrong --force-eid argument\n");
