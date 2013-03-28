@@ -143,7 +143,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			printf("[debug] building local eid in format ");
 			perf_opt->eid_format_forced == 'D' ? printf("DTN...") : printf("IPN...");
 		}
-		if(perf_opt->eid_format_forced == 'D')
+		if(perf_opt->eid_format_forced == 'I')
 			al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Monitor-CBHE",NULL);
 		else
 		{
