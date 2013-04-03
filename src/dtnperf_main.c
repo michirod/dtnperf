@@ -54,6 +54,7 @@ int main(int argc, char ** argv)
 	printf("******* Version: DTNper vION - 3 apr 2013 ***********\n");
 	printf("******* Bug Server ION-DTN ACK            ***********\n");
 	printf("******* Bug Session Expired               ***********\n");
+	printf("******* Bug Bundle Stop                   ***********\n");
 
 
 	switch (global_options.mode)

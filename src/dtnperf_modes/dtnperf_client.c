@@ -237,14 +237,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			fprintf(log_file, "\nfatal error parsing bp EID: invalid eid string '%s'", perf_opt->dest_eid);
 		client_clean_exit(1);
 	}
-	if (debug)
-		printf("Reply-to   : %s\n\n", mon_eid.uri);
-
-	if (create_log)
-		fprintf(log_file, "Reply-to   : %s\n\n", mon_eid.uri);
-
-	if(create_log)
-		fflush(log_file);
 
 	// checking if there is a running monitor on this endpoint
 	if(perf_g_opt->mode == DTNPERF_CLIENT_MONITOR)
@@ -283,6 +275,18 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		if ((debug) && (debug_level > 0))
 			printf(" done\n");
 	}
+
+	if(dedicated_monitor == TRUE)
+		strcpy(mon_eid.uri, temp1);
+
+	if (debug)
+		printf("Reply-to   : %s\n\n", mon_eid.uri);
+
+	if (create_log)
+		fprintf(log_file, "Reply-to   : %s\n\n", mon_eid.uri);
+
+	if(create_log)
+		fflush(log_file);
 
 	//create a new registration to the local router based on this eid
 	if(debug && debug_level > 0)
