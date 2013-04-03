@@ -484,6 +484,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		if (bundle_type == CLIENT_STOP)
 		{
 			int total_to_receive;
+			printf("BUNDLE STOP OKKK\n");
 			get_info_from_stop(&bundle_object, &total_to_receive);
 			pthread_mutex_lock(&mutexdata);
 			session->total_to_receive = total_to_receive;
