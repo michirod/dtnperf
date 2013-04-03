@@ -51,8 +51,8 @@ int main(int argc, char ** argv)
 
 	//Print version
 	printf("\n");
-	printf("******* Version: DTNper vION - 28 mar 2013 ***********\n");
-	printf("******* Bug Server ION-DTN                 ***********\n");
+	printf("******* Version: DTNper vION - 3 apr 2013 ***********\n");
+	printf("******* Bug Server ION-DTN ACK            ***********\n");
 
 
 	switch (global_options.mode)
