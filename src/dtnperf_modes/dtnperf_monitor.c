@@ -502,7 +502,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 	session_list_destroy(session_list);
 	al_bp_close(handle);
-	//al_bp_unregister(handle,regid,local_eid);
+	if(parameters->dedicated_monitor == TRUE)
+		al_bp_unregister(handle,regid,local_eid);
 	bp_handle_open = FALSE;
 }
 // end monitor code
