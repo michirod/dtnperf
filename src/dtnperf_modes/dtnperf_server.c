@@ -597,7 +597,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			// setting the bundle ack options
 			if (debug && debug_level > 0)
 			{
-				printf("[debug] setting source of the bundle ack: %s ...", bundle_source_addr.uri);
+				printf("[debug] setting source of the bundle ack: %s ...", local_eid.uri);
 			}
 			error = al_bp_bundle_set_source(& bundle_ack_object, local_eid);
 			if (error != BP_SUCCESS)
