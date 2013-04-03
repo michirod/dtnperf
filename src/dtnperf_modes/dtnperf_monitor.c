@@ -131,9 +131,9 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		printf("done\n");
 
 	//build a local eid
-//	if (parameters->dedicated_monitor)
-//		sprintf(temp, "%s_%d", MON_EP_STRING, parameters->client_id);
-//	else
+	if (parameters->dedicated_monitor)
+		sprintf(temp, "%s_%d", MON_EP_STRING, parameters->client_id);
+	else
 		sprintf(temp, "%s", MON_EP_STRING);
 
 	if( perf_opt->eid_format_forced == 'D' || perf_opt->eid_format_forced == 'I')
