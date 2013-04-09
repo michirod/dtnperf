@@ -590,6 +590,8 @@ void monitor_clean_exit(int status)
 	// terminate all child thread
 	pthread_cancel(session_exp_timer);
 
+	pthread_sleep(1);
+
 	// close all log files and delete all sessions
 	if (dedicated_monitor)
 	{
