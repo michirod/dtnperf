@@ -590,8 +590,9 @@ void monitor_clean_exit(int status)
 	// terminate all child thread
 	pthread_cancel(session_exp_timer);
 
-	sleep(1);
-	printf("\nDOPO SLEEP\n");
+	printf("\nPRIMA SLEEP\n");
+		pthread_sleep(3);
+		printf("\nDOPO SLEEP\n");
 
 	// close all log files and delete all sessions
 	if (dedicated_monitor)
