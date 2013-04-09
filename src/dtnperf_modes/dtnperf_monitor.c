@@ -590,10 +590,6 @@ void monitor_clean_exit(int status)
 	// terminate all child thread
 	pthread_cancel(session_exp_timer);
 
-	printf("\nPRIMA SLEEP\n");
-		pthread_sleep(3);
-		printf("\nDOPO SLEEP\n");
-
 	// close all log files and delete all sessions
 	if (dedicated_monitor)
 	{
@@ -610,6 +606,10 @@ void monitor_clean_exit(int status)
 	}
 
 	session_list_destroy(session_list);
+
+	printf("\nPRIMA SLEEP\n");
+	sleep(4);
+		printf("\nDOPO SLEEP\n");
 
 	// close bp_handle
 	if (bp_handle_open)
