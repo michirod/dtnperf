@@ -1,7 +1,7 @@
 # Makefile for compiling DTNPerf3
 
 # NAME OF BIN USED FOR INSTALL/UNINSTALL (NEVER LEAVE IT BLANK!!!)
-BIN_NAME_BASE=dtnperf3
+BIN_NAME_BASE=dtnperf
 CC=gcc
 LIBs=-L/usr/local/lib -L$(AL_BP_DIR)
 CFLAG=-O0 -Wall -fmessage-length=0
