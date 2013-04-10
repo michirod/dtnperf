@@ -49,12 +49,6 @@ int main(int argc, char ** argv)
 	// parse command line options
 	parse_options(argc, argv, &global_options);
 
-	//Print version
-	printf("\n");
-	printf("******* Version: DTNper vION - 9 apr 2013 ***********\n");
-	printf("******* Bug Error dtn2 log                ***********\n");
-
-
 	switch (global_options.mode)
 	{
 	case DTNPERF_SERVER:
