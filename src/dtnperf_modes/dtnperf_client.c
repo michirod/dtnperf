@@ -38,7 +38,7 @@ sem_t window;			// semaphore for congestion control
 int monitor_status;
 int monitor_pid;
 
-// client threads variables
+// variables of client threads
 send_information_t * send_info;		// array info of sent bundles
 long tot_bundles;					// for data mode
 struct timeval start, end, now;			// time variables

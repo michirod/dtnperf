@@ -607,9 +607,6 @@ void monitor_clean_exit(int status)
 
 	session_list_destroy(session_list);
 
-	printf("\nPRIMA SLEEP\n");
-	sleep(4);
-		printf("\nDOPO SLEEP\n");
 
 	// close bp_handle
 	if (bp_handle_open)
