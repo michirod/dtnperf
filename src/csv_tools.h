@@ -1,8 +1,14 @@
+/********************************************************
+ **  Authors: Michele Rodolfi, michele.rodolfi@studio.unibo.it
+ **           Anna d'Amico, anna.damico@studio.unibo.it
+ **           Carlo Caini (DTNperf_3 project supervisor), carlo.caini@unibo.it
+ **
+ **
+ **  Alma Mater Studiorum, University of Bologna
+ ********************************************************/
+
 /*
  * csv_tools.h
- *
- *  Created on: 30/ago/2012
- *      Author: michele
  */
 
 #ifndef CSV_TOOLS_H_

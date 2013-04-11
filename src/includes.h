@@ -1,3 +1,12 @@
+/********************************************************
+ **  Authors: Michele Rodolfi, michele.rodolfi@studio.unibo.it
+ **           Anna d'Amico, anna.damico@studio.unibo.it
+ **           Carlo Caini (DTNperf_3 project supervisor), carlo.caini@unibo.it
+ **
+ **
+ **  Alma Mater Studiorum, University of Bologna
+ ********************************************************/
+
 #ifndef INCLUDES_H_
 #define INCLUDES_H_
 
