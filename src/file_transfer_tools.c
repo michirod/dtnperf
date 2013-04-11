@@ -1,8 +1,14 @@
+/********************************************************
+ **  Authors: Michele Rodolfi, michele.rodolfi@studio.unibo.it
+ **           Anna d'Amico, anna.damico@studio.unibo.it
+ **           Carlo Caini (DTNperf_3 project supervisor), carlo.caini@unibo.it
+ **
+ **
+ **  Alma Mater Studiorum, University of Bologna
+ ********************************************************/
+
 /*
  * file_transfer_tools.c
- *
- *  Created on: 08/ago/2012
- *      Author: michele
  */
 
 #include <stdio.h>
