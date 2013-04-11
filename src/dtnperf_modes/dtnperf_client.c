@@ -1,8 +1,14 @@
+/********************************************************
+ **  Authors: Michele Rodolfi, michele.rodolfi@studio.unibo.it
+ **           Anna d'Amico, anna.damico@studio.unibo.it
+ **           Carlo Caini (DTNperf_3 project supervisor), carlo.caini@unibo.it
+ **
+ **
+ **  Alma Mater Studiorum, University of Bologna
+ ********************************************************/
+
 /*
  * dtnperf_client.c
- *
- *  Created on: 10/lug/2012
- *      Author: michele
  */
 
 
