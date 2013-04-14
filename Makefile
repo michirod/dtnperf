@@ -26,7 +26,7 @@ else ifeq ($(strip $(ION_DIR)),)
 # DTN
 INC=-I$(AL_BP_DIR)/src/bp_implementations -I$(AL_BP_DIR)/src -I$(DTN2_DIR) -I$(DTN2_DIR)/applib 
 OPT=$(CFLAG) -lal_bp_vDTN2 -ldtnapi -lpthread
-BIN_NAME=$(BIN_NAME_BASE)_vDTN
+BIN_NAME=$(BIN_NAME_BASE)_vDTN2
 else ifneq ($(and $(ION_DIR),$(DTN2_DIR)),)
 # BOTH
 INC=-I$(AL_BP_DIR)/src/bp_implementations -I$(AL_BP_DIR)/src -I$(DTN2_DIR) -I$(DTN2_DIR)/applib -I$(ION_DIR)/include -I$(ION_DIR)/library
