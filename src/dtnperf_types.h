@@ -93,6 +93,7 @@ typedef struct dtnperf_options
 	boolean_t no_acks;		// do not send ACKs (for retro-compatibility purpose)
 	//monitor options
 	char * logs_dir;		// dir where are saved monitor logs [LOGS_DIR_DEFAULT]
+	int expiration_session; // expiration time of session Client-Server [3600]
 } dtnperf_options_t;
 
 /**
