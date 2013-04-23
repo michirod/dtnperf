@@ -304,8 +304,8 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len)
 {
 	u32_t result;
-	// file fragment size is payload without header, congestion ctrl char and offset
-	result = payload_size - (HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(uint32_t));
+	// file fragment size is payload without header, congestion ctrl char , ack lifetime and offset
+	result = payload_size - (HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(uint32_t) + sizeof(al_bp_timeval_t));
 	// ... without filename_len, filename, file_size
 	result -= (filename_len + sizeof(filename_len) + sizeof(uint32_t));
 	return result;
