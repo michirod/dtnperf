@@ -301,7 +301,7 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	if (opt->bundle_ack_options.set_ack_priority)
 	{
 		options |= BO_SET_PRIORITY;
-		switch (opt->bundle_ack_options.priority.priority)
+		switch (opt->bundle_ack_options.ack_priority.priority)
 		{
 		case BP_PRIORITY_BULK:
 			options |= BO_PRIORITY_BULK;
@@ -322,6 +322,9 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	// write in payload
 	fwrite(&header, HEADER_SIZE, 1, f);
 	fwrite(&options, BUNDLE_OPT_SIZE, 1, f);
+	// write lifetime of ack
+	fwrite(&(opt->bundle_ack_options.ack_expiration),sizeof(al_bp_timeval_t),1);
+	// write reply-to eid
 
 	return BP_SUCCESS;
 }
@@ -331,6 +334,7 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 	if (bundle == NULL)
 		return -1;
 	BUNDLE_OPT_TYPE opt;
+	al_bp_timeval_t ack_lifetime;
 	FILE * pl_stream = NULL;
 	open_payload_stream_read(*bundle, &pl_stream);
 
@@ -379,15 +383,24 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 		{
 			options->set_ack_priority = TRUE;
 			if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_BULK)
-				options->priority.priority = BP_PRIORITY_BULK;
+				options->ack_priority.priority = BP_PRIORITY_BULK;
 			else if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_NORMAL)
-				options->priority.priority = BP_PRIORITY_NORMAL;
+				options->ack_priority.priority = BP_PRIORITY_NORMAL;
 			else if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_EXPEDITED)
-				options->priority.priority = BP_PRIORITY_EXPEDITED;
+				options->ack_priority.priority = BP_PRIORITY_EXPEDITED;
 			else if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_RESERVED)
-				options->priority.priority = BP_PRIORITY_RESERVED;
+				options->ack_priority.priority = BP_PRIORITY_RESERVED;
 		}
 	}
+	else
+	{
+		// skip option
+		fseek(pl_stream, BUNDLE_OPT_SIZE, SEEK_SET);
+	}
+	// read lifetime
+	fread(&ack_lifetime,sizeof(al_bp_timeval_t),1);
+	options->ack_expiration = ack_lifetime;
+
 	return 0;
 }
 
@@ -404,8 +417,8 @@ al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 	// prepare header and congestion control
 	result = prepare_payload_header_and_ack_options(opt, f);
 
-	// remaining = bundle_payload - HEADER_SIZE - congestion control char
-	remaining = opt->bundle_payload - HEADER_SIZE - 2;
+	// remaining = bundle_payload - HEADER_SIZE - congestion control char - ack_lifetime
+	remaining = opt->bundle_payload - HEADER_SIZE - 2 - sizeof(al_bp_timeval_t);
 
 	// fill remainig payload with a pattern
 	for (i = remaining; i > strlen(pattern); i -= strlen(pattern))

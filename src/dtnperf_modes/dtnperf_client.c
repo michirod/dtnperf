@@ -1250,8 +1250,8 @@ void print_client_usage(char* progname)
 			" -p, --priority <val>        Bundles priority [bulk|normal|expedited|reserved]. Default is normal\n"
 			"     --ack-to-mon            Force server to send bundle acks to the monitor indipendently of server settings\n"
 			"     --no-ack-to-mon         Force server to not to send bundle acks to the monitor\n"
-			"     --ack-lifetime          Force server to set bundle ack lifetime time to the same value of the data bundles sent by the client. Not valid for ION's implementation\n"
-			"     --ack-priority[=val]    Force server to set bundle ack priority as the one of client bundles or as the val provided\n"
+			"     --ack-lifetime <time>   Force server to set bundle ack lifetime time to the value setted. Default is bundles lifetime\n"
+			"     --ack-priority <val>    Force server to set bundle ack priority to the value setted [bulk|normal|expedited|reserved]. Default is bundles lifetime\n"
 			" -v, --verbose               Print some information messages during the execution.\n"
 			" -h, --help                  This help.\n",
 			(int) (HEADER_SIZE + BUNDLE_OPT_SIZE), LOG_FILENAME, LOGS_DIR_DEFAULT);
@@ -1266,6 +1266,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
 	boolean_t w = FALSE, r = FALSE;
 	boolean_t set_ack_priority_as_bundle = FALSE;
+	boolean_t set_ack_expiration_as_bundle = FALSE;
 
 	while (!done)
 	{
@@ -1297,7 +1298,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"ip-port", required_argument, 0, 38},
 				{"ack-to-mon", no_argument, 0, 44},			// force server to send acks to monitor
 				{"no-ack-to-mon", no_argument, 0, 45},		// force server to NOT send acks to monitor
-				{"ack-lifetime", no_argument, 0, 46}	,			// set server ack expiration equal to client bundles
+				{"ack-lifetime", optional_argument, 0, 46}	,			// set server ack expiration equal to client bundles
 				{"ack-priority", optional_argument, 0, 47},	// set server ack priority as indicated or equal to client bundles
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
@@ -1498,8 +1499,13 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			break;
 
 		case 46:
-			if(perf_opt->bp_implementation != BP_ION)
-				perf_opt->bundle_ack_options.set_ack_expiration = TRUE;
+			perf_opt->bundle_ack_options.set_ack_expiration = TRUE;
+			if (!optarg)
+					set_ack_expiration_as_bundle = TRUE;
+			else
+			{
+				perf_opt->bundle_ack_options.ack_expiration = atoi(optarg);
+			}
 			break;
 
 		case 47:
@@ -1509,13 +1515,13 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			else
 			{
 				if (!strcasecmp(optarg, "bulk"))   {
-					perf_opt->bundle_ack_options.priority.priority = BP_PRIORITY_BULK;
+					perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_BULK;
 				} else if (!strcasecmp(optarg, "normal")) {
-					perf_opt->bundle_ack_options.priority.priority = BP_PRIORITY_NORMAL;
+					perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_NORMAL;
 				} else if (!strcasecmp(optarg, "expedited")) {
-					perf_opt->bundle_ack_options.priority.priority = BP_PRIORITY_EXPEDITED;
+					perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_EXPEDITED;
 				} else if (!strcasecmp(optarg, "reserved")) {
-					perf_opt->bundle_ack_options.priority.priority = BP_PRIORITY_RESERVED;
+					perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_RESERVED;
 				} else {
 					fprintf(stderr, "Invalid ack priority value %s\n", optarg);
 					exit(1);
@@ -1550,11 +1556,16 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	// set ack-to-client request
 	if (perf_opt->congestion_ctrl == 'w')
 		perf_opt->bundle_ack_options.ack_to_client = TRUE;
-	else perf_opt->bundle_ack_options.ack_to_client = FALSE;
+	else
+		perf_opt->bundle_ack_options.ack_to_client = FALSE;
 
 	// set bundle ack priority as the same of bundle one
-	if (set_ack_priority_as_bundle)
-		perf_opt->bundle_ack_options.priority = conn_opt->priority;
+	if (set_ack_expiration_as_bundle || !perf_opt->bundle_ack_options.set_ack_expiration)
+		perf_opt->bundle_ack_options.ack_expiration = conn_opt->expiration;
+
+	// set bundle ack priority as the same of bundle one
+	if (set_ack_priority_as_bundle || !perf_opt->bundle_ack_options.set_ack_priority)
+		perf_opt->bundle_ack_options.ack_priority = conn_opt->priority;
 
 
 #define CHECK_SET(_arg, _what)                                          	\
