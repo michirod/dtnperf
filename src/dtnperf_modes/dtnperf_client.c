@@ -1266,7 +1266,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
 	boolean_t w = FALSE, r = FALSE;
 	boolean_t set_ack_priority_as_bundle = FALSE;
-	boolean_t set_ack_expiration_as_bundle = FALSE;
+	boolean_t set_ack_expiration_as_bundle = TRUE;
 
 	while (!done)
 	{
@@ -1298,7 +1298,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"ip-port", required_argument, 0, 38},
 				{"ack-to-mon", no_argument, 0, 44},			// force server to send acks to monitor
 				{"no-ack-to-mon", no_argument, 0, 45},		// force server to NOT send acks to monitor
-				{"ack-lifetime", optional_argument, 0, 46}	,			// set server ack expiration equal to client bundles
+				{"ack-lifetime", required_argument, 0, 46}	,			// set server ack expiration equal to client bundles
 				{"ack-priority", optional_argument, 0, 47},	// set server ack priority as indicated or equal to client bundles
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
@@ -1499,13 +1499,9 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			break;
 
 		case 46:
+			set_ack_expiration_as_bundle = FALSE;
 			perf_opt->bundle_ack_options.set_ack_expiration = TRUE;
-			if (!optarg)
-					set_ack_expiration_as_bundle = TRUE;
-			else
-			{
-				perf_opt->bundle_ack_options.ack_expiration = atoi(optarg);
-			}
+			perf_opt->bundle_ack_options.ack_expiration = atoi(optarg);
 			printf("EXPIRATION: %lu - %d - %d\n",perf_opt->bundle_ack_options.ack_expiration
 						, perf_opt->bundle_ack_options.set_ack_expiration,set_ack_expiration_as_bundle);
 			break;
@@ -1562,7 +1558,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		perf_opt->bundle_ack_options.ack_to_client = FALSE;
 
 	// set bundle ack priority as the same of bundle one
-	if (set_ack_expiration_as_bundle || !perf_opt->bundle_ack_options.set_ack_expiration)
+	if (set_ack_expiration_as_bundle)
 		perf_opt->bundle_ack_options.ack_expiration = conn_opt->expiration;
 
 	printf("EXPIRATION: %lu\n",perf_opt->bundle_ack_options.ack_expiration);
