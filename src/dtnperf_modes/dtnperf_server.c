@@ -514,7 +514,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		{
 			al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
 		}
-
+		printf("\n\tEXPIRATION: %lu\n",bundle_expiration);
 		// send acks to the client only if requested by client
 		// send acks to the monitor if:
 		// ack requested by client AND ack-to-monitor option set AND bundle_ack_options.ack_to_mon == ATM_NORMAL
