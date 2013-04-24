@@ -1506,7 +1506,8 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			{
 				perf_opt->bundle_ack_options.ack_expiration = atoi(optarg);
 			}
-			printf("EXPIRATION: %lu\n",perf_opt->bundle_ack_options.ack_expiration);
+			printf("EXPIRATION: %lu - %d - %d\n",perf_opt->bundle_ack_options.ack_expiration
+						, perf_opt->bundle_ack_options.set_ack_expiration,set_ack_expiration_as_bundle);
 			break;
 
 		case 47:
