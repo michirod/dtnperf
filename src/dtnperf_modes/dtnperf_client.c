@@ -1265,7 +1265,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
 	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
 	boolean_t w = FALSE, r = FALSE;
-	boolean_t set_ack_priority_as_bundle = FALSE;
+	boolean_t set_ack_priority_as_bundle = TRUE;
 	boolean_t set_ack_expiration_as_bundle = TRUE;
 
 	while (!done)
@@ -1499,34 +1499,26 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			break;
 
 		case 46:
-			if (optarg)
-			{
-				set_ack_expiration_as_bundle = FALSE;
-				perf_opt->bundle_ack_options.set_ack_expiration = TRUE;
-				perf_opt->bundle_ack_options.ack_expiration = atoi(optarg);
-			}
-			else
-				set_ack_expiration_as_bundle = TRUE;
+			set_ack_expiration_as_bundle = FALSE;
+			perf_opt->bundle_ack_options.set_ack_expiration = TRUE;
+			perf_opt->bundle_ack_options.ack_expiration = atoi(optarg);
 			break;
 
 		case 47:
+
+			set_ack_priority_as_bundle = FALSE;
 			perf_opt->bundle_ack_options.set_ack_priority = TRUE;
-			if (!optarg)
-				set_ack_priority_as_bundle = TRUE;
-			else
-			{
-				if (!strcasecmp(optarg, "bulk"))   {
-					perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_BULK;
-				} else if (!strcasecmp(optarg, "normal")) {
-					perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_NORMAL;
-				} else if (!strcasecmp(optarg, "expedited")) {
-					perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_EXPEDITED;
-				} else if (!strcasecmp(optarg, "reserved")) {
-					perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_RESERVED;
-				} else {
-					fprintf(stderr, "Invalid ack priority value %s\n", optarg);
-					exit(1);
-				}
+			if (!strcasecmp(optarg, "bulk"))   {
+				perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_BULK;
+			} else if (!strcasecmp(optarg, "normal")) {
+				perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_NORMAL;
+			} else if (!strcasecmp(optarg, "expedited")) {
+				perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_EXPEDITED;
+			} else if (!strcasecmp(optarg, "reserved")) {
+				perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_RESERVED;
+			} else {
+				fprintf(stderr, "Invalid ack priority value %s\n", optarg);
+				exit(1);
 			}
 			break;
 		case 48:
@@ -1566,9 +1558,8 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 
 	printf("EXPIRATION: %lu\n",perf_opt->bundle_ack_options.ack_expiration);
 
-
 	// set bundle ack priority as the same of bundle one
-	if (set_ack_priority_as_bundle || !perf_opt->bundle_ack_options.set_ack_priority)
+	if (set_ack_priority_as_bundle)
 		perf_opt->bundle_ack_options.ack_priority = conn_opt->priority;
 
 
