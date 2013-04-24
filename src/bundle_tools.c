@@ -401,7 +401,7 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 	// read lifetime
 	fread(&ack_lifetime,sizeof(al_bp_timeval_t), 1, pl_stream);
 	options->ack_expiration = ack_lifetime;
-
+	printf("\nACK_EXPIRATION: %lu\n",options->ack_expiration);
 	return 0;
 }
 
