@@ -1556,12 +1556,12 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	if (set_ack_expiration_as_bundle)
 		perf_opt->bundle_ack_options.ack_expiration = conn_opt->expiration;
 
-	printf("EXPIRATION: %lu\n",perf_opt->bundle_ack_options.ack_expiration);
-
 	// set bundle ack priority as the same of bundle one
 	if (set_ack_priority_as_bundle)
 		perf_opt->bundle_ack_options.ack_priority = conn_opt->priority;
-
+	// TEMP: ordinal = 0
+	conn_opt->priority.ordinal = 0;
+	perf_opt->bundle_ack_options.ack_priority.ordinal = conn_opt->priority.ordinal;
 
 #define CHECK_SET(_arg, _what)                                          	\
 		if (_arg == 0) {                                                    	\
