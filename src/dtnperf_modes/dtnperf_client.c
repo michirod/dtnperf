@@ -1299,7 +1299,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"ack-to-mon", no_argument, 0, 44},			// force server to send acks to monitor
 				{"no-ack-to-mon", no_argument, 0, 45},		// force server to NOT send acks to monitor
 				{"ack-lifetime", required_argument, 0, 46}	,			// set server ack expiration equal to client bundles
-				{"ack-priority", optional_argument, 0, 47},	// set server ack priority as indicated or equal to client bundles
+				{"ack-priority", required_argument, 0, 47},	// set server ack priority as indicated or equal to client bundles
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
 		};
@@ -1507,7 +1507,6 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 47:
 			set_ack_priority_as_bundle = FALSE;
 			perf_opt->bundle_ack_options.set_ack_priority = TRUE;
-			printf("OK\n");
 			perf_opt->bundle_ack_options.ack_priority.ordinal = 0;
 			if (!strcasecmp(optarg, "bulk"))   {
 				perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_BULK;
