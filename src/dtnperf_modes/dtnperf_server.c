@@ -481,7 +481,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 					is_file_transfer_bundle ? " " : " not ");
 			printf("\n");
 		}
-		printf("CONN_OPT: %lu",conn_opt->expiration);
 
 		// process file transfer bundle
 		if(is_file_transfer_bundle)
@@ -510,10 +509,16 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 					printf("Transfer Completed\n");
 			}
 		}
-		// get bundle expiration time from the DTNperf He
+		// get bundle expiration time
+
 		if (bundle_ack_options.set_ack_expiration)
 		{
-			al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
+		// 	al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
+		// is setted the smaller
+			if( conn_opt->expiration < bundle_ack_options.ack_expiration)
+				bundle_expiration = conn_opt->expiration;
+			else
+				bundle_expiration = bundle_ack_options.ack_expiration;
 		}
 
 		// send acks to the client only if requested by client
@@ -680,12 +685,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 			if(debug && debug_level > 0)
 				printf("done\n");
-
+			printf("EXPIRATION ACK: %lu\n", bundle_expiration);
 			if (debug && debug_level > 0)
 			{
 				printf("[debug] setting expiration time of the bundle ack...");
 			}
-			al_bp_bundle_set_expiration(& bundle_ack_object, bundle_ack_options.ack_expiration);
+			al_bp_bundle_set_expiration(& bundle_ack_object, bundle_expiration);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
