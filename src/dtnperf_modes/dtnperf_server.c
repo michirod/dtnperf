@@ -693,7 +693,10 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 			if(debug && debug_level > 0)
 				printf("done\n");
-			printf("DTNPERF: expiration %lu", bundle_ack_object.spec->expiration);
+
+			printf("DTNPERF: expiration %lu - %lu", bundle_ack_object.spec->expiration, conn_opt->expiration);
+
+
 			if (debug && debug_level > 0)
 			{
 				printf("[debug] setting delivery options of the bundle ack...");
