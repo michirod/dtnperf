@@ -60,6 +60,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	al_bp_bundle_delivery_opts_t bundle_ack_dopts;
 	al_bp_timestamp_t bundle_creation_timestamp;
 	al_bp_timeval_t bundle_expiration;
+	al_bp_bundle_priority_t bundle_priority;
 	size_t bundle_payload_len;
 	dtnperf_server_ack_payload_t server_ack_payload;
 	HEADER_TYPE bundle_header;
@@ -510,7 +511,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 		}
 		// get bundle expiration time
-
 		if (bundle_ack_options.set_ack_expiration)
 		{
 		// 	al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
@@ -519,6 +519,16 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				bundle_expiration = conn_opt->expiration;
 			else
 				bundle_expiration = bundle_ack_options.ack_expiration;
+		}
+		// get bundle priority
+		if( bundle_ack_options.set_ack_priority)
+		{
+			bundle_priority.ordinal = 0;
+			// is setted the smaller
+			if( conn_opt->priority.priority < bundle_ack_options.ack_priority.priority)
+				bundle_priority.priority = conn_opt->priority.priority;
+			else
+				bundle_priority.priority = bundle_ack_options.ack_priority.priority;
 		}
 
 		// send acks to the client only if requested by client
@@ -655,7 +665,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			{
 				printf("[debug] setting replyto eid of the bundle ack: %s ...", bundle_replyto_addr.uri);
 			}
-			al_bp_bundle_set_replyto(& bundle_ack_object, bundle_replyto_addr);
+			error = al_bp_bundle_set_replyto(& bundle_ack_object, bundle_replyto_addr);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
@@ -669,14 +679,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			{
 				printf("[debug] setting priority of the bundle ack...");
 			}
-			if (bundle_ack_options.set_ack_priority == TRUE)
-			{
-				al_bp_bundle_set_priority(& bundle_ack_object, bundle_ack_options.ack_priority);
-			}
-			else
-			{
-				al_bp_bundle_set_priority(& bundle_ack_object, conn_opt->priority);
-			}
+			error = al_bp_bundle_set_priority(& bundle_ack_object, bundle_priority);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
@@ -685,12 +688,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 			if(debug && debug_level > 0)
 				printf("done\n");
-			printf("EXPIRATION ACK: %lu\n", bundle_expiration);
+
 			if (debug && debug_level > 0)
 			{
 				printf("[debug] setting expiration time of the bundle ack...");
 			}
-			al_bp_bundle_set_expiration(& bundle_ack_object, bundle_expiration);
+			error = al_bp_bundle_set_expiration(& bundle_ack_object, bundle_expiration);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
@@ -699,10 +702,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 			if(debug && debug_level > 0)
 				printf("done\n");
-
-
-
-
+			printf("PRIORITY: %d - LIFETIME: %lu",bundle_priority.priority,bundle_expiration);
 			if (debug && debug_level > 0)
 			{
 				printf("[debug] setting delivery options of the bundle ack...");
