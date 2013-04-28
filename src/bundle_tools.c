@@ -324,7 +324,6 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	fwrite(&options, BUNDLE_OPT_SIZE, 1, f);
 	// write lifetime of ack
 	fwrite(&(opt->bundle_ack_options.ack_expiration),sizeof(al_bp_timeval_t), 1, f);
-	printf("EXPIRATION: %d\n",opt->bundle_ack_options.ack_expiration);
 	// write reply-to eid
 
 	return BP_SUCCESS;
@@ -401,7 +400,6 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 	// read lifetime
 	fread(&ack_lifetime,sizeof(al_bp_timeval_t), 1, pl_stream);
 	options->ack_expiration = ack_lifetime;
-	printf("\nACK_EXPIRATION: %lu\n",options->ack_expiration);
 	return 0;
 }
 
