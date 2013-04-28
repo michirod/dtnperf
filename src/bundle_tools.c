@@ -382,6 +382,7 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 		if (opt & BO_SET_PRIORITY)
 		{
 			options->set_ack_priority = TRUE;
+			options->ack_priority.ordinal = 0;
 			if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_BULK)
 				options->ack_priority.priority = BP_PRIORITY_BULK;
 			else if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_NORMAL)

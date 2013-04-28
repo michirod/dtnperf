@@ -308,4 +308,5 @@ void init_dtnperf_connection_options(dtnperf_connection_options_t* opt)
 	opt->wait_for_report = TRUE;   		// wait for bundle status reports [1]
 	opt->disable_fragmentation = FALSE; //disable bundle fragmentation[0]
 	opt->priority.priority = BP_PRIORITY_NORMAL; // bundle priority [BP_PRIORITY_NORMAL]
+	opt->priority.ordinal = 0;
 }
