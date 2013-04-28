@@ -977,7 +977,6 @@ void * congestion_control(void * opt)
 					fprintf(log_file, "error getting server ack: %d (%s)\n", error, al_bp_strerror(al_bp_errno(handle)));
 				client_clean_exit(1);
 			}
-			printf("CI SONO\n");
 			// Check if is actually a server ack bundle
 			get_bundle_header_and_options(&ack, &ack_header, NULL);
 			if (ack_header != DSA_HEADER)
@@ -1506,9 +1505,10 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			break;
 
 		case 47:
-
 			set_ack_priority_as_bundle = FALSE;
 			perf_opt->bundle_ack_options.set_ack_priority = TRUE;
+			printf("OK\n");
+			perf_opt->bundle_ack_options.ack_priority.ordinal = 0;
 			if (!strcasecmp(optarg, "bulk"))   {
 				perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_BULK;
 			} else if (!strcasecmp(optarg, "normal")) {
@@ -1521,7 +1521,9 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				fprintf(stderr, "Invalid ack priority value %s\n", optarg);
 				exit(1);
 			}
+			printf("OK\n");
 			break;
+
 		case 48:
 			conn_opt->deleted_receipts = TRUE;
 			break;
