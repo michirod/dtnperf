@@ -520,6 +520,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			else
 				bundle_expiration = bundle_ack_options.ack_expiration;
 		}
+		printf("PRIORITY: %d", conn_opt->priority.priority);
 		// get bundle priority
 		if( bundle_ack_options.set_ack_priority)
 		{
