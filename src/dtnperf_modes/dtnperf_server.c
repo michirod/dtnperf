@@ -481,6 +481,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 					is_file_transfer_bundle ? " " : " not ");
 			printf("\n");
 		}
+		printf("CONN_OPT: %lu",conn_opt->expiration);
 
 		// process file transfer bundle
 		if(is_file_transfer_bundle)
@@ -490,7 +491,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 			pthread_mutex_lock(&mutexdata);
 			//set exipiration for ION
-			if(perf_opt->bp_implementation == BP_ION)
+/**/			if(perf_opt->bp_implementation == BP_ION)
 				conn_opt->expiration = 60;
 			indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
 					&bundle_object,conn_opt->expiration ,perf_opt->file_dir);
@@ -509,12 +510,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 					printf("Transfer Completed\n");
 			}
 		}
-		// get bundle expiration time and priority
+		// get bundle expiration time from the DTNperf He
 		if (bundle_ack_options.set_ack_expiration)
 		{
 			al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
 		}
-		printf("DTNPERF: expiration %lu - %lu", bundle_ack_object.spec->expiration, conn_opt->expiration);
+
 		// send acks to the client only if requested by client
 		// send acks to the monitor if:
 		// ack requested by client AND ack-to-monitor option set AND bundle_ack_options.ack_to_mon == ATM_NORMAL
@@ -693,6 +694,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 			if(debug && debug_level > 0)
 				printf("done\n");
+
+
 
 
 			if (debug && debug_level > 0)
