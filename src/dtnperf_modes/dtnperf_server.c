@@ -520,17 +520,20 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			else
 				bundle_expiration = bundle_ack_options.ack_expiration;
 		}
-		printf("PRIORITY: %d", conn_opt->priority.priority);
+		else
+			bundle_expiration = conn_opt->expiration;
+
 		// get bundle priority
 		if( bundle_ack_options.set_ack_priority)
 		{
-			bundle_priority.ordinal = 0;
 			// is setted the smaller
 			if( conn_opt->priority.priority < bundle_ack_options.ack_priority.priority)
-				bundle_priority.priority = conn_opt->priority.priority;
+				bundle_priority = conn_opt->priority;
 			else
-				bundle_priority.priority = bundle_ack_options.ack_priority.priority;
+				bundle_priority = bundle_ack_options.ack_priority;
 		}
+		else
+			bundle_priority.priority = conn_opt->priority.priority;
 
 		// send acks to the client only if requested by client
 		// send acks to the monitor if:
