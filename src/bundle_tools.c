@@ -392,15 +392,17 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 			else if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_RESERVED)
 				options->ack_priority.priority = BP_PRIORITY_RESERVED;
 		}
+
+		// read lifetime
+		fread(&ack_lifetime,sizeof(al_bp_timeval_t), 1, pl_stream);
+		options->ack_expiration = ack_lifetime;
 	}
 	else
 	{
 		// skip option
 		fseek(pl_stream, BUNDLE_OPT_SIZE, SEEK_SET);
 	}
-	// read lifetime
-	fread(&ack_lifetime,sizeof(al_bp_timeval_t), 1, pl_stream);
-	options->ack_expiration = ack_lifetime;
+
 	return 0;
 }
 
