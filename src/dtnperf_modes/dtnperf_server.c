@@ -524,13 +524,14 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			bundle_expiration = conn_opt->expiration;
 
 		// get bundle priority
+		bundle_priority.ordinal = 0;
 		if( bundle_ack_options.set_ack_priority)
 		{
 			// is setted the smaller
 			if( conn_opt->priority.priority < bundle_ack_options.ack_priority.priority)
-				bundle_priority = conn_opt->priority;
+				bundle_priority.priority = conn_opt->priority.priority;
 			else
-				bundle_priority = bundle_ack_options.ack_priority;
+				bundle_priority.priority = bundle_ack_options.ack_priority.priority;
 		}
 		else
 			bundle_priority.priority = conn_opt->priority.priority;
