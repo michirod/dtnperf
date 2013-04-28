@@ -977,6 +977,7 @@ void * congestion_control(void * opt)
 					fprintf(log_file, "error getting server ack: %d (%s)\n", error, al_bp_strerror(al_bp_errno(handle)));
 				client_clean_exit(1);
 			}
+			printf("CI SONO\n");
 			// Check if is actually a server ack bundle
 			get_bundle_header_and_options(&ack, &ack_header, NULL);
 			if (ack_header != DSA_HEADER)
