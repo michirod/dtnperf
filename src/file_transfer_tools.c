@@ -204,7 +204,6 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 
 int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		al_bp_bundle_object_t * bundle,
-		al_bp_timeval_t expiration_setted,
 		char * dir)
 {
 	al_bp_endpoint_id_t client_eid;

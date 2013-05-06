@@ -489,14 +489,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("[debug]\tprocessing file transfer bundle...");
 
 			pthread_mutex_lock(&mutexdata);
-			//set exipiration for ION
-//			if(perf_opt->bp_implementation == BP_ION)
-	//			conn_opt->expiration = 60;
 			indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
-					&bundle_object,conn_opt->expiration ,perf_opt->file_dir);
+					&bundle_object,perf_opt->file_dir);
 
 			pthread_mutex_unlock(&mutexdata);
 			sched_yield();
+
 
 			if (indicator < 0) // error in processing bundle
 			{
@@ -818,7 +816,7 @@ void * file_expiration_timer(void * opt)
 void print_server_usage(char * progname)
 {
 	fprintf(stderr, "\n");
-	fprintf(stderr, "DtnPerf3 server mode\n");
+	fprintf(stderr, "DTNPerf3 server mode\n");
 	fprintf(stderr, "SYNTAX: %s %s [options]\n", progname, SERVER_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
