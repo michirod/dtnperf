@@ -317,15 +317,14 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len, uint16_t monitor_eid_len)
 {
 	u32_t result;
+	printf("PAYLOAD SIZE: %lu\n", payload_size);
+
 	// file fragment size is payload without header, congestion ctrl char , ack lifetime and offset
 	result = payload_size - (HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(uint32_t) + sizeof(al_bp_timeval_t));
-	printf("RESULT %lu\n", result);
 	// ... without monitor_eid_len, monitor eid
 	result -= monitor_eid_len + sizeof(monitor_eid_len);
-	printf("RESULT %lu\n", result);
 	// ... without filename_len, filename, file_size
 	result -= (filename_len + sizeof(filename_len) + sizeof(uint32_t));
-	printf("RESULT %lu\n", result);
 	return result;
 }
 
@@ -355,7 +354,6 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	//write file size
 	fwrite(&file_dim, sizeof(file_dim), 1, f);
 	// get size of fragment and allocate fragment
-	printf("EIDLEN: %lu\n", monitor_eid_len);
 	fragment_len = get_file_fragment_size(opt->bundle_payload, filename_len, monitor_eid_len);
 	fragment = (char *) malloc(fragment_len);
 	printf("FRAGMENT LEN: %lu\n",fragment_len);
