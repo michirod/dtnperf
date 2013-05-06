@@ -232,8 +232,12 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	if (open_payload_stream_read(*bundle, &pl_stream) < 0)
 		return -1;
 
-	// skip header and congestion control char
-	fseek(pl_stream, HEADER_SIZE + BUNDLE_OPT_SIZE, SEEK_SET);
+	// skip header - congestion control char - lifetime ack
+	fseek(pl_stream, HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t), SEEK_SET);
+	// skip monitor eid
+	uint16_t tmp;
+	fread(&tmp, sizeof(tmp), 1, pl_stream);
+	fseek(pl_stream, sizeof(char)*tmp, SEEK_SET);
 
 	info = file_transfer_info_get(info_list, client_eid);
 	if (info == NULL) // this is the first bundle
@@ -282,7 +286,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	else  // first bundle of transfer already received
 	{
 		// skip expiration_ time
-		fseek(pl_stream, sizeof(expiration), SEEK_CUR);
+//		fseek(pl_stream, sizeof(expiration), SEEK_CUR);
 
 		// skip filename_len and filename
 		fseek(pl_stream, sizeof(filename_len) + strlen(info->filename), SEEK_CUR);

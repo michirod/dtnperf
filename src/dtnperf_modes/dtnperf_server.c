@@ -335,7 +335,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			printf("done\n");
 
 		// mark current time
-
 		if ((debug) && (debug_level > 0))
 			printf("[debug] marking time...");
 		current = time(NULL);
