@@ -228,7 +228,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 //	if(al_bp_get_implementation() != BP_ION)
 //		al_bp_bundle_get_expiration(*bundle, &expiration);
 	al_bp_bundle_get_payload_size(*bundle, &pl_size);
-	printf("PAYLOAD SIZE: %lu\n",pl_size);
+
 	// create stream from incoming bundle payload
 	if (open_payload_stream_read(*bundle, &pl_stream) < 0)
 		return -1;
@@ -318,7 +318,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len, uint16_t monitor_eid_len)
 {
 	u32_t result;
-	printf("PAYLOAD SIZE: %lu\n", payload_size);
+	printf("\nPAYLOAD SIZE: %lu\n", payload_size);
 
 	// file fragment size is payload without header, congestion ctrl char , ack lifetime and offset
 	result = payload_size - (HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(uint32_t) + sizeof(al_bp_timeval_t));
