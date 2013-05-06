@@ -237,6 +237,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	// skip monitor eid
 	uint16_t tmp;
 	fread(&tmp, sizeof(tmp), 1, pl_stream);
+	printf("LUNGHEZZA IPN: %d", tmp);
 	fseek(pl_stream, sizeof(char)*tmp, SEEK_SET);
 
 	info = file_transfer_info_get(info_list, client_eid);
@@ -337,6 +338,7 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 
 	// prepare header and congestion control
 	result = prepare_payload_header_and_ack_options(opt, f);
+
 	// write expiration time
 	fwrite(&expiration_time, sizeof(expiration_time), 1, f);
 	// write filename length
