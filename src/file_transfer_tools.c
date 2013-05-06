@@ -305,8 +305,11 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	// assemble file
 	result = assemble_file(info, pl_stream, pl_size, timestamp.secs, expiration);
 	close_payload_stream_read(pl_stream);
-	if (result < 0)// error
+	if (result < 0)
+	{	// error
+		printf("ERROR ASSEMBLE FILE\n");
 		return result;
+	}
 	if (result == 1) // transfer completed
 	{
 		printf("Successfully transfered file: %s%s\n", info->full_dir, info->filename);
