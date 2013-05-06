@@ -152,7 +152,7 @@ void file_transfer_info_list_item_delete(file_transfer_info_list_t * list, file_
 
 
 int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
-		u32_t pl_size, u32_t timestamp_secs, u32_t expiration)
+		u32_t pl_size, u32_t timestamp_secs, u32_t expiration, uint16_t monitor_eid_len)
 {
 	char * transfer;
 	u32_t transfer_len;
@@ -162,7 +162,7 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 
 	// transfer length is total payload length without header,
 	// congestion control char and file fragment offset
-	transfer_len = get_file_fragment_size(pl_size, info->filename_len);
+	transfer_len = get_file_fragment_size(pl_size, info->filename_len, monitor_eid_len);
 
 	// read file fragment offset
 	fread(&offset, sizeof(offset), 1, pl_stream);
@@ -235,11 +235,11 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	// skip header - congestion control char - lifetime ack
 	fseek(pl_stream, HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t), SEEK_SET);
 	// skip monitor eid
-	uint16_t tmp;
+	uint16_t monitor_eid_len;
 	char monitor_eid[256];
-	fread(&tmp, sizeof(tmp), 1, pl_stream);
-	printf("\nLUNGHEZZA EID: %d\n", tmp);
-	fread(monitor_eid, tmp, 1, pl_stream);
+	fread(&monitor_eid_len, sizeof(monitor_eid_len), 1, pl_stream);
+	printf("\nLUNGHEZZA EID: %d\n", monitor_eid_len);
+	fread(monitor_eid, monitor_eid_len, 1, pl_stream);
 	printf("\nMONITOR: %s\n", monitor_eid);
 
 	info = file_transfer_info_get(info_list, client_eid);
@@ -303,13 +303,10 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 
 	}
 	// assemble file
-	result = assemble_file(info, pl_stream, pl_size, timestamp.secs, expiration);
+	result = assemble_file(info, pl_stream, pl_size, timestamp.secs, expiration, monitor_eid_len);
 	close_payload_stream_read(pl_stream);
-	if (result < 0)
-	{	// error
-		printf("ERROR ASSEMBLE FILE\n");
+	if (result < 0)// error
 		return result;
-	}
 	if (result == 1) // transfer completed
 	{
 		printf("Successfully transfered file: %s%s\n", info->full_dir, info->filename);
@@ -322,11 +319,13 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 
 }
 
-u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len)
+u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len, uint16_t monitor_eid_len)
 {
 	u32_t result;
 	// file fragment size is payload without header, congestion ctrl char , ack lifetime and offset
 	result = payload_size - (HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(uint32_t) + sizeof(al_bp_timeval_t));
+	// ... without monitor_eid_len, monitor eid
+	result -= monitor_eid_len + sizeof(monitor_eid_len);
 	// ... without filename_len, filename, file_size
 	result -= (filename_len + sizeof(filename_len) + sizeof(uint32_t));
 	return result;
@@ -344,6 +343,7 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	uint32_t offset;
 	long bytes_read;
 	uint16_t filename_len = strlen(filename);
+	uint16_t monitor_eid_len = strlen(opt->mon_eid);
 
 	// prepare header and congestion control
 	result = prepare_payload_header_and_ack_options(opt, f);
@@ -357,7 +357,7 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	//write file size
 	fwrite(&file_dim, sizeof(file_dim), 1, f);
 	// get size of fragment and allocate fragment
-	fragment_len = get_file_fragment_size(opt->bundle_payload, filename_len);
+	fragment_len = get_file_fragment_size(opt->bundle_payload, filename_len, monitor_eid_len);
 	fragment = (char *) malloc(fragment_len);
 	// get offset of fragment
 	offset = lseek(fd, 0, SEEK_CUR);
