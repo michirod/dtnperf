@@ -84,7 +84,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len);
 
 al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, int fd,
-		char * filename, uint32_t file_dim, boolean_t * eof);
+		char * filename, uint32_t file_dim, al_bp_timeval_t expiration_time, boolean_t * eof);
 
 
 

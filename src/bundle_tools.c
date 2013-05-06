@@ -405,8 +405,6 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 		// monitor
 		fread(&eid_len, sizeof(eid_len), 1, pl_stream);
 		fread(bundle->spec->replyto.uri, eid_len, 1, pl_stream);
-
-		printf("\n\tMONITOR: %s\n",bundle->spec->replyto.uri);
 	}
 	else
 	{

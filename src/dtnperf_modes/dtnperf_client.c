@@ -717,7 +717,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	{
 		open_payload_stream_write(bundle, &stream);
 		error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd,
-				transfer_filename, transfer_filedim, &eof_reached);
+				transfer_filename, transfer_filedim, conn_opt->expiration , &eof_reached);
 		if(error != BP_SUCCESS)
 		{
 			fprintf(stderr, "error preparing file transfer payload\n");
