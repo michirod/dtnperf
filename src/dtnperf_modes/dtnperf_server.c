@@ -504,7 +504,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 			if ((debug) && (debug_level > 0))
 			{
-				printf("done.");
+				printf("done.\n");
 				if (indicator == 1)
 					printf("Transfer Completed\n");
 			}
