@@ -336,8 +336,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	 * select the operative-mode (between Time_Mode, Data_Mode and File_Mode)
 	 * ------------------------------------------------------------------------------ */
 
-	perf_opt->bundle_payload += 4;
-
 	if (perf_opt->op_mode == 'T')	// Time mode
 	{
 
