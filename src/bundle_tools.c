@@ -264,6 +264,7 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 
 	HEADER_TYPE header;
 	BUNDLE_OPT_TYPE options;
+	uint16_t eid_len;
 
 	// header
 	switch(opt->op_mode)
@@ -325,6 +326,9 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	// write lifetime of ack
 	fwrite(&(opt->bundle_ack_options.ack_expiration),sizeof(al_bp_timeval_t), 1, f);
 	// write reply-to eid
+	eid_len = strlen(opt->mon_eid);
+	fwrite(&eid_len, sizeof(eid_len), 1, f);
+	fwrite(opt->mon_eid, eid_len, 1, f);
 
 	return BP_SUCCESS;
 }
@@ -337,6 +341,7 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 	al_bp_timeval_t ack_lifetime;
 	FILE * pl_stream = NULL;
 	open_payload_stream_read(*bundle, &pl_stream);
+	uint16_t eid_len;
 
 	if (header != NULL)
 	{
@@ -393,9 +398,15 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 				options->ack_priority.priority = BP_PRIORITY_RESERVED;
 		}
 
-		// read lifetime
+		// lifetime
 		fread(&ack_lifetime,sizeof(al_bp_timeval_t), 1, pl_stream);
 		options->ack_expiration = ack_lifetime;
+
+		// monitor
+		fread(&eid_len, sizeof(eid_len), 1, pl_stream);
+		fread(bundle->spec->replyto.uri, eid_len, 1, pl_stream);
+
+		printf("\n\tMONITOR: %s\n",bundle->spec->replyto.uri);
 	}
 	else
 	{
