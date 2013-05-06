@@ -293,7 +293,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	else  // first bundle of transfer already received
 	{
 		// skip expiration_ time
-//		fseek(pl_stream, sizeof(expiration), SEEK_CUR);
+		fseek(pl_stream, sizeof(expiration), SEEK_CUR);
 
 		// skip filename_len and filename
 		fseek(pl_stream, sizeof(filename_len) + strlen(info->filename), SEEK_CUR);
