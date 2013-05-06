@@ -163,14 +163,14 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	// transfer length is total payload length without header,
 	// congestion control char and file fragment offset
 	transfer_len = get_file_fragment_size(pl_size, info->filename_len, monitor_eid_len);
-
+	printf("\nTRANSFER LEN: %lu\n", transfer_len);
 	// read file fragment offset
 	fread(&offset, sizeof(offset), 1, pl_stream);
 	// read remaining file fragment
 	transfer = (char*) malloc(transfer_len);
 	if (fread(transfer, transfer_len, 1, pl_stream) != 1)
 		return -1;
-
+	printf("NO NO\n");
 	// open or create destination file
 	char* filename = (char*) malloc(info->filename_len + strlen(info->full_dir) +1);
 	strcpy(filename, info->full_dir);
@@ -238,9 +238,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	uint16_t monitor_eid_len;
 	char monitor_eid[256];
 	fread(&monitor_eid_len, sizeof(monitor_eid_len), 1, pl_stream);
-	printf("\nLUNGHEZZA EID: %d\n", monitor_eid_len);
-	fread(monitor_eid, monitor_eid_len, 1, pl_stream);
-	printf("\nMONITOR: %s\n", monitor_eid);
+	fread(monitor_eid, monitor_eid_len, 1, pl_stream);;
 
 	info = file_transfer_info_get(info_list, client_eid);
 	if (info == NULL) // this is the first bundle
@@ -249,10 +247,8 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		result = fread(&expiration, sizeof(expiration), 1, pl_stream);
 		if( result < 1)
 			perror("fread");
-		printf("EXPIRATION FILE: %lu\n", expiration);
 		// get filename len
 		result = fread(&filename_len, sizeof(filename_len), 1, pl_stream);
-		printf("\nLUNGHEZZA NAME: %d\n", filename_len);
 		// get filename
 		filename = (char *) malloc(filename_len + 1);
 		memset(filename, 0, filename_len + 1);
@@ -261,7 +257,6 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 			perror("fread");
 		filename[filename_len] = '\0';
 		printf("\nNAMEFILE: %s\n", filename);
-
 		//get file size
 		fread(&file_dim, sizeof(file_dim), 1, pl_stream);
 		// create destination dir for file
