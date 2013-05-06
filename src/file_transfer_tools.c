@@ -163,14 +163,12 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	// transfer length is total payload length without header,
 	// congestion control char and file fragment offset
 	transfer_len = get_file_fragment_size(pl_size - 4, info->filename_len, monitor_eid_len);
-	printf("\nTRANSFER LEN: %lu\n", transfer_len);
 	// read file fragment offset
 	fread(&offset, sizeof(offset), 1, pl_stream);
 	// read remaining file fragment
 	transfer = (char*) malloc(transfer_len);
 	if (fread(transfer, transfer_len, 1, pl_stream) != 1)
 		return -1;
-	printf("NO NO\n");
 	// open or create destination file
 	char* filename = (char*) malloc(info->filename_len + strlen(info->full_dir) +1);
 	strcpy(filename, info->full_dir);
@@ -257,7 +255,6 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		if(result < 1 )
 			perror("fread");
 		filename[filename_len] = '\0';
-		printf("\nNAMEFILE: %s\n", filename);
 		//get file size
 		fread(&file_dim, sizeof(file_dim), 1, pl_stream);
 		// create destination dir for file
@@ -318,8 +315,6 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len, uint16_t monitor_eid_len)
 {
 	u32_t result;
-	printf("\nPAYLOAD SIZE: %lu\n", payload_size);
-
 	// file fragment size is payload without header, congestion ctrl char , ack lifetime and offset
 	result = payload_size - (HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(uint32_t) + sizeof(al_bp_timeval_t));
 	// ... without monitor_eid_len, monitor eid
