@@ -228,6 +228,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 //	if(al_bp_get_implementation() != BP_ION)
 //		al_bp_bundle_get_expiration(*bundle, &expiration);
 	al_bp_bundle_get_payload_size(*bundle, &pl_size);
+	printf("PAYLOAD SIZE: %lu\n",pl_size);
 	// create stream from incoming bundle payload
 	if (open_payload_stream_read(*bundle, &pl_stream) < 0)
 		return -1;
@@ -322,7 +323,7 @@ u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len, uint16_t
 	// file fragment size is payload without header, congestion ctrl char , ack lifetime and offset
 	result = payload_size - (HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(uint32_t) + sizeof(al_bp_timeval_t));
 	// ... without monitor_eid_len, monitor eid
-	result -= monitor_eid_len + sizeof(monitor_eid_len);
+	result -= (monitor_eid_len + sizeof(monitor_eid_len));
 	// ... without filename_len, filename, file_size
 	result -= (filename_len + sizeof(filename_len) + sizeof(uint32_t));
 	return result;
@@ -356,7 +357,6 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	// get size of fragment and allocate fragment
 	fragment_len = get_file_fragment_size(opt->bundle_payload, filename_len, monitor_eid_len);
 	fragment = (char *) malloc(fragment_len);
-	printf("FRAGMENT LEN: %lu\n",fragment_len);
 	// get offset of fragment
 	offset = lseek(fd, 0, SEEK_CUR);
 	// write offset in the bundle
