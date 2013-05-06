@@ -740,6 +740,9 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 
 	// close the stream
 	close_payload_stream_write(&bundle, stream);
+	u32_t size;
+	al_bp_bundle_get_payload_size(bundle, &size);
+	printf("PAYLOAD BUNDLE: %lu\n", size);
 
 	if(debug)
 		printf("[debug] payload prepared\n");
