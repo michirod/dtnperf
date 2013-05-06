@@ -429,7 +429,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			strcpy(transfer_filename, temp2);
 
 			transfer_filedim = file.st_size;
-			tot_bundles += bundles_needed(transfer_filedim, get_file_fragment_size(perf_opt->bundle_payload + 4, strlen(transfer_filename), strlen(perf_opt->mon_eid)));
+			tot_bundles += bundles_needed(transfer_filedim, get_file_fragment_size(perf_opt->bundle_payload, strlen(transfer_filename), strlen(perf_opt->mon_eid)));
 		}
 		else // Data mode
 			tot_bundles += bundles_needed(perf_opt->data_qty, perf_opt->bundle_payload);
@@ -740,6 +740,9 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 
 	// close the stream
 	close_payload_stream_write(&bundle, stream);
+	u32_t size;
+	al_bp_bundle_get_payload_size(bundle, &size);
+	printf("PAYLOAD BUNDLE: %lu\n", size);
 
 	if(debug)
 		printf("[debug] payload prepared\n");
