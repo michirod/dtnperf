@@ -211,7 +211,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 {
 	al_bp_endpoint_id_t client_eid;
 	al_bp_timestamp_t timestamp;
-	al_bp_timeval_t expiration = expiration_setted;
+	al_bp_timeval_t expiration;
 	file_transfer_info_t * info;
 	FILE * pl_stream;
 	int result;
@@ -225,8 +225,8 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	// get info from bundle
 	al_bp_bundle_get_source(*bundle, &client_eid);
 	al_bp_bundle_get_creation_timestamp(*bundle, &timestamp);
-	if(al_bp_get_implementation() != BP_ION)
-		al_bp_bundle_get_expiration(*bundle, &expiration);
+//	if(al_bp_get_implementation() != BP_ION)
+//		al_bp_bundle_get_expiration(*bundle, &expiration);
 	al_bp_bundle_get_payload_size(*bundle, &pl_size);
 	// create stream from incoming bundle payload
 	if (open_payload_stream_read(*bundle, &pl_stream) < 0)
@@ -238,6 +238,10 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	info = file_transfer_info_get(info_list, client_eid);
 	if (info == NULL) // this is the first bundle
 	{
+		// get expiration time
+		result = fread(&expiration, sizeof(expiration), 1, pl_stream);
+		if( result < 1)
+			perror("fread");
 		// get filename len
 		result = fread(&filename_len, sizeof(filename_len), 1, pl_stream);
 		// get filename
@@ -277,6 +281,9 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	}
 	else  // first bundle of transfer already received
 	{
+		// skip expiration_ time
+		fseef(pl_stream, sizeof(expiration), SEEK_CUR);
+
 		// skip filename_len and filename
 		fseek(pl_stream, sizeof(filename_len) + strlen(info->filename), SEEK_CUR);
 
@@ -312,7 +319,7 @@ u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len)
 }
 
 al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, int fd,
-		char * filename, uint32_t file_dim, boolean_t * eof)
+		char * filename, uint32_t file_dim, al_bp_timeval_t expiration_time,boolean_t * eof)
 {
 	if (f == NULL)
 		return BP_ENULLPNTR;
@@ -326,6 +333,8 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 
 	// prepare header and congestion control
 	result = prepare_payload_header_and_ack_options(opt, f);
+	// write expiration time
+	fwrite(&expiration_time, sizeof(expiration_time), 1, f);
 	// write filename length
 	fwrite(&filename_len, sizeof(filename_len), 1, f);
 	// write filename
