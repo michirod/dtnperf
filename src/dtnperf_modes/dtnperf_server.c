@@ -348,6 +348,18 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				bundle_payload_len,
 				bundle_object.spec->source.uri);
 
+		// get bundle header and options
+		if ((debug) && (debug_level > 0))
+			printf("[debug]\tgetting bundle header and options...");
+		if (get_bundle_header_and_options(&bundle_object, &bundle_header, &bundle_ack_options) < 0)
+		{
+			printf("Error in getting bundle header and options\n");
+			continue;
+		}
+		if ((debug) && (debug_level > 0))
+		{
+			printf(" done.\n");
+		}
 
 		// get SOURCE eid
 		if ((debug) && (debug_level > 0))
@@ -455,18 +467,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 			printf ("--------------------------------------\n");
 		};
-		// get bundle header and options
-		if ((debug) && (debug_level > 0))
-			printf("[debug]\tgetting bundle header and options...");
-		if (get_bundle_header_and_options(&bundle_object, &bundle_header, &bundle_ack_options) < 0)
-		{
-			printf("Error in getting bundle header and options\n");
-			continue;
-		}
-		if ((debug) && (debug_level > 0))
-		{
-			printf(" done.\n");
-		}
 
 		// check if is file transfer bundle
 		if ((debug) && (debug_level > 0))
@@ -707,7 +707,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 			if(debug && debug_level > 0)
 				printf("done\n");
-			printf("PRIORITY: %d - LIFETIME: %lu",bundle_priority.priority,bundle_expiration);
+
 			if (debug && debug_level > 0)
 			{
 				printf("[debug] setting delivery options of the bundle ack...");
