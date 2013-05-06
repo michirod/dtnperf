@@ -236,9 +236,11 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	fseek(pl_stream, HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t), SEEK_SET);
 	// skip monitor eid
 	uint16_t tmp;
+	char monitor_eid[256];
 	fread(&tmp, sizeof(tmp), 1, pl_stream);
-	printf("LUNGHEZZA IPN: %d", tmp);
-	fseek(pl_stream, sizeof(char)*tmp, SEEK_SET);
+	printf("\nLUNGHEZZA EID: %d\n", tmp);
+	fread(monitor_eid, tmp, 1, pl_stream);
+	printf("\nMONITOR: %s\n", monitor_eid);
 
 	info = file_transfer_info_get(info_list, client_eid);
 	if (info == NULL) // this is the first bundle
@@ -247,8 +249,10 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		result = fread(&expiration, sizeof(expiration), 1, pl_stream);
 		if( result < 1)
 			perror("fread");
+		printf("EXPIRATION FILE: %lu\n", expiration);
 		// get filename len
 		result = fread(&filename_len, sizeof(filename_len), 1, pl_stream);
+		printf("\nLUNGHEZZA NAME: %d\n", filename_len);
 		// get filename
 		filename = (char *) malloc(filename_len + 1);
 		memset(filename, 0, filename_len + 1);
@@ -256,6 +260,8 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		if(result < 1 )
 			perror("fread");
 		filename[filename_len] = '\0';
+		printf("\nNAMEFILE: %s\n", filename);
+
 		//get file size
 		fread(&file_dim, sizeof(file_dim), 1, pl_stream);
 		// create destination dir for file
