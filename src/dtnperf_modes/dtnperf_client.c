@@ -429,7 +429,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			strcpy(transfer_filename, temp2);
 
 			transfer_filedim = file.st_size;
-			tot_bundles += bundles_needed(transfer_filedim, get_file_fragment_size(perf_opt->bundle_payload, strlen(transfer_filename)));
+			tot_bundles += bundles_needed(transfer_filedim, get_file_fragment_size(perf_opt->bundle_payload, strlen(transfer_filename), strlen(perf_opt->mon_eid)));
 		}
 		else // Data mode
 			tot_bundles += bundles_needed(perf_opt->data_qty, perf_opt->bundle_payload);
