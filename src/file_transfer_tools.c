@@ -239,12 +239,12 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	fread(monitor_eid, monitor_eid_len, 1, pl_stream);;
 
 	info = file_transfer_info_get(info_list, client_eid);
+	// get expiration time
+	result = fread(&expiration, sizeof(expiration), 1, pl_stream);
+	if( result < 1)
+		perror("fread");
 	if (info == NULL) // this is the first bundle
 	{
-		// get expiration time
-		result = fread(&expiration, sizeof(expiration), 1, pl_stream);
-		if( result < 1)
-			perror("fread");
 		// get filename len
 		result = fread(&filename_len, sizeof(filename_len), 1, pl_stream);
 		// get filename
@@ -284,9 +284,6 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	}
 	else  // first bundle of transfer already received
 	{
-		// skip expiration_ time
-		fseek(pl_stream, sizeof(expiration), SEEK_CUR);
-
 		// skip filename_len and filename
 		fseek(pl_stream, sizeof(filename_len) + strlen(info->filename), SEEK_CUR);
 
