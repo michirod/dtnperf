@@ -1090,7 +1090,7 @@ void * congestion_window_expiration_timer(void * opt)
 		gettimeofday(&current_time, NULL);
 		printf("\n\tack_recv: %lu + ack_exp %lu < current %lu\n",  ack_recvd.tv_sec,
 				2*perf_opt->bundle_ack_options.ack_expiration,current_time);
-		if( (ack_recvd.tv_sec != 0) && (ack_recvd.tv_sec + 2*perf_opt->bundle_ack_options.ack_expiration < current_time) )
+		if( (ack_recvd.tv_sec != 0) && (ack_recvd.tv_sec + 2*perf_opt->bundle_ack_options.ack_expiration < current_time.tv_sec) )
 		{
 			printf("Expiration timer congestion window\n");
 			pthread_cancel(cong_ctrl);
