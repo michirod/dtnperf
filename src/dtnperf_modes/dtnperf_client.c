@@ -953,6 +953,7 @@ void * congestion_control(void * opt)
 		al_bp_bundle_create(&ack);
 		while ((close_ack_receiver == 0) || (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit))
 		{
+			printf("\n\tACK_RECVD: %lu - TEMP %lu <= WAIT %lu\n", ack_recvd.tv_sec, temp.tv_sec, perf_opt->wait_before_exit);
 			// if there are no bundles without ack, wait
 			pthread_mutex_lock(&mutexdata);
 			if (close_ack_receiver == 0 && count_info(send_info, perf_opt->window) == 0)
