@@ -816,23 +816,22 @@ void * file_expiration_timer(void * opt)
 void print_server_usage(char * progname)
 {
 	fprintf(stderr, "\n");
-	fprintf(stderr, "DTNPerf3 server mode\n");
+	fprintf(stderr, "dtnperf server mode\n");
 	fprintf(stderr, "SYNTAX: %s %s [options]\n", progname, SERVER_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
 			" -a, --daemon                 Start the server as a daemon. Output is redirected to %s.\n"
 			" -o, --output <file>          Change the default output file (only with -a option).\n"
-			" -s, --stop                   Stop a demonized instance of server.\n"
-			"     --ip-addr <addr>         Ip address of the bp daemon api. Default: 127.0.0.1\n"
-			"     --ip-port <port>         Ip port of the bp daemon api. Default: 5010\n"
-			"     --force-eid <[DTN|IPN]  Force the registration EID independently of BP implementation.\n"
-			"     --fdir <dir>             Destination directory of transfered files. Default is %s .\n"
-			"     --debug[=level]          Debug messages [1-2], if level is not indicated level = 1.\n"
+			" -s, --stop                   Stop the server daemon.\n"
+			"     --ip-addr <addr>         IP address of the BP daemon api. Default: 127.0.0.1\n"
+			"     --ip-port <port>         IP port of the BP daemon api. Default: 5010\n"
+			"     --force-eid <[DTN|IPN]   the scheme of the registration EID (ION only).\n"
+			"     --fdir <dir>             Destination directory of files transfered. Default is %s .\n"
+			"     --debug[=level]          Debug messages [1-2], if level is not indicated level = 2.\n"
 			" -M, --memory         	       Save bundles into memory.\n"
 			" -l, --lifetime <sec>         Bundle acks lifetime (s). Max idle time for ongoing file transfers (in ION). Default is 60.\n"
 			" -p, --priority <val>         Bundle acks priority [bulk|normal|expedited|reserved]. Default: normal\n"
-			//"     --acks-to-mon      Send bundle acks to the monitor too\n"
-			//"     --eid [URI|CBHE]   Set type of eid format. CBHE only for ION implementation. Default: URI\n",
+			//"     --acks-to-mon          Send bundle acks to the monitor too\n"
 			" -v, --verbose                Print some information message during the execution.\n"
 			" -h, --help             This help.\n",
 			SERVER_OUTPUT_FILE, FILE_DIR_DEFAULT);
