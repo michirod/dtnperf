@@ -1132,7 +1132,7 @@ void * wait_for_sigint(void * arg)
 	{
 		printf("\nDTNperf client: Expired Timer to receive the Server's Ack\n");
 		if (perf_opt->create_log)
-			fprintf("\nDTNperf client: Expired Timer to receive the Server's Ack\n");
+			fprintf(log_file, "\nDTNperf client: Expired Timer to receive the Server's Ack\n");
 	}
 	else
 	{
