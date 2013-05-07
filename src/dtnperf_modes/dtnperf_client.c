@@ -952,11 +952,9 @@ void * congestion_control(void * opt)
 	if (perf_opt->congestion_ctrl == 'w') // window based congestion control
 	{
 		al_bp_bundle_create(&ack);
-		gettimeofday(&temp, NULL);
+	//	gettimeofday(&temp, NULL);
 		while ((close_ack_receiver == 0) || (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit))
 		{
-			printf("\n\tCLOSE_ACK: %d\n", close_ack_receiver);
-			printf("\n\tACK_RECVD: %lu - TEMP %lu <= WAIT %d\n", ack_recvd.tv_sec, temp.tv_sec, perf_opt->wait_before_exit);
 			pthread_create(&cong_expir_timer, NULL, congestion_window_expiration_timer, NULL);
 			// if there are no bundles without ack, wait
 			pthread_mutex_lock(&mutexdata);
@@ -1086,21 +1084,19 @@ void * congestion_control(void * opt)
 // Congestion window expiration timer thread
 void * congestion_window_expiration_timer(void * opt)
 {
-	u32_t current_dtn_time;
-
+	struct timeval current_time;
 	while(1)
 	{
-		current_dtn_time = get_current_dtn_time();
-		printf("ack_recv: %lu + ack_exp %lu < current %lu",  ack_recvd.tv_sec,
-				2*perf_opt->bundle_ack_options.ack_expiration,current_dtn_time);
-		if( ack_recvd.tv_sec + 2*perf_opt->bundle_ack_options.ack_expiration < current_dtn_time)
+		gettimeofday(&current_time, NULL);
+		printf("\n\tack_recv: %lu + ack_exp %lu < current %lu\n",  ack_recvd.tv_sec,
+				2*perf_opt->bundle_ack_options.ack_expiration,current_time);
+		if( (ack_recvd.tv_sec != 0) && (ack_recvd.tv_sec + 2*perf_opt->bundle_ack_options.ack_expiration < current_time) )
 		{
 			printf("Expiration timer congestion window\n");
 			pthread_cancel(cong_ctrl);
 			pthread_cancel(sender);
 			pthread_exit(NULL);
 		}
-		pthread_mutex_unlock(&mutexdata);
 		sched_yield();
 	}
 	pthread_exit(NULL);
