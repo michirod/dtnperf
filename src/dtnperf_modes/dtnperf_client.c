@@ -515,7 +515,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	pthread_create(&sender, NULL, send_bundles, (void*)perf_g_opt);
 	pthread_create(&cong_ctrl, NULL, congestion_control, (void*)perf_g_opt);
-	//pthread_create(&wait_for_signal, NULL, wait_for_sigint, (void*) client_demux_string);
+	pthread_create(&wait_for_signal, NULL, wait_for_sigint, (void*) client_demux_string);
 
 	pthread_join(cong_ctrl, (void**)&pthread_status);
 	pthread_join(sender, (void**)&pthread_status);
