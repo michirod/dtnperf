@@ -1085,12 +1085,14 @@ void * congestion_window_expiration_timer(void * opt)
 {
 	struct timeval current_time;
 	al_bp_timeval_t expiration = perf_opt->bundle_ack_options.ack_expiration + conn_opt->expiration;
+	if(ack_recvd.tv_sec == 0)
+		ack_recvd.tv_sec = current_time;
 	while(1)
 	{
 		gettimeofday(&current_time, NULL);
-//		printf("\n\tack_recv: %lu + ack_exp %lu < current %lu\n",  ack_recvd.tv_sec,
-//				expiration,current_time.tv_sec);
-		if( (ack_recvd.tv_sec != 0) && (ack_recvd.tv_sec + 2*expiration < current_time.tv_sec) )
+		printf("\n\tcurrent %lu - ack_recv: %lu  >  ack_exp %lu  \n",  current_time.tv_sec, ack_recvd.tv_sec,
+				expiration);
+		if( current_time.tv_sec - ack_recvd.tv_sec >=  expiration)
 		{
 			printf("Expiration timer congestion window\n");
 		//	kill(getpid(), SIGINT);
