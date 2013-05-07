@@ -37,6 +37,7 @@
 // pthread variables
 pthread_t sender;
 pthread_t cong_ctrl;
+pthread_t cong_expir_timer;
 pthread_t wait_for_signal;
 pthread_mutex_t mutexdata;
 pthread_cond_t cond_ackreceiver;
@@ -952,11 +953,11 @@ void * congestion_control(void * opt)
 	{
 		al_bp_bundle_create(&ack);
 		gettimeofday(&temp, NULL);
-		printf("\n\tTEMP: %lu\n", temp.tv_sec);
 		while ((close_ack_receiver == 0) || (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit))
 		{
 			printf("\n\tCLOSE_ACK: %d\n", close_ack_receiver);
 			printf("\n\tACK_RECVD: %lu - TEMP %lu <= WAIT %d\n", ack_recvd.tv_sec, temp.tv_sec, perf_opt->wait_before_exit);
+			pthread_create(&cong_expir_timer, NULL, congestion_window_expiration_timer, NULL);
 			// if there are no bundles without ack, wait
 			pthread_mutex_lock(&mutexdata);
 			if (close_ack_receiver == 0 && count_info(send_info, perf_opt->window) == 0)
@@ -1082,6 +1083,31 @@ void * congestion_control(void * opt)
 	return NULL;
 } // end congestion_control
 
+// Congestion window expiration timer thread
+void * congestion_window_expiration_timer(void * opt)
+{
+	u32_t current_dtn_time;
+
+	while(1)
+	{
+		current_dtn_time = get_current_dtn_time();
+		printf("ack_recv: %lu + ack_exp %lu < current %lu",  ack_recvd.tv_sec,
+				2*perf_opt->bundle_ack_options.ack_expiration,current_dtn_time);
+		if( ack_recvd.tv_sec + 2*perf_opt->bundle_ack_options.ack_expiration < current_dtn_time)
+		{
+			printf("Expiration timer congestion window\n");
+			pthread_cancel(cong_ctrl);
+			pthread_cancel(sender);
+			pthread_exit(NULL);
+		}
+		pthread_mutex_unlock(&mutexdata);
+		sched_yield();
+	}
+	pthread_exit(NULL);
+	return NULL;
+}
+
+
 void * start_dedicated_monitor(void * params)
 {
 	monitor_parameters_t * parameters = (monitor_parameters_t *) params;
@@ -1173,6 +1199,7 @@ void * wait_for_sigint(void * arg)
 	// terminate all child threads
 	pthread_cancel(sender);
 	pthread_cancel(cong_ctrl);
+	pthread_cancel(congestion_window_expiration_timer);
 
 	client_clean_exit(0);
 
