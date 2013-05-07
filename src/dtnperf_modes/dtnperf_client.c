@@ -1093,8 +1093,6 @@ void * congestion_window_expiration_timer(void * opt)
 	while(1)
 	{
 		gettimeofday(&current_time, NULL);
-		printf("\n\tcurrent %lu - ack_recv: %lu  >  ack_exp %lu  \n",  current_time.tv_sec, ack_recvd.tv_sec,
-				expiration);
 		if( current_time.tv_sec - ack_recvd.tv_sec >=  expiration)
 		{
 			printf("Expiration timer congestion window\n");
