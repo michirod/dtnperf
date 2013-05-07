@@ -1086,7 +1086,7 @@ void * congestion_window_expiration_timer(void * opt)
 	struct timeval current_time;
 	al_bp_timeval_t expiration = perf_opt->bundle_ack_options.ack_expiration + conn_opt->expiration;
 	if(ack_recvd.tv_sec == 0)
-		ack_recvd.tv_sec = current_time;
+		ack_recvd.tv_sec = current_time.tv_sec;
 	while(1)
 	{
 		gettimeofday(&current_time, NULL);
