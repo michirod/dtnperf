@@ -56,6 +56,7 @@ int close_ack_receiver = 0;			// to signal the ack receiver to close
 unsigned int data_written = 0;			// num of bytes written on the source file
 
 boolean_t process_interrupted;
+boolean_t expir_timer_cong_window;
 
 
 FILE * log_file = NULL;
@@ -1085,6 +1086,7 @@ void * congestion_window_expiration_timer(void * opt)
 {
 	struct timeval current_time;
 	al_bp_timeval_t expiration = perf_opt->bundle_ack_options.ack_expiration + conn_opt->expiration;
+	expir_timer_cong_window = FALSE;
 
 	gettimeofday(&current_time, NULL);
 	if(ack_recvd.tv_sec == 0)
@@ -1095,7 +1097,8 @@ void * congestion_window_expiration_timer(void * opt)
 		gettimeofday(&current_time, NULL);
 		if( current_time.tv_sec - ack_recvd.tv_sec >=  expiration)
 		{
-			printf("Expiration timer congestion window\n");
+			expir_timer_cong_window = TRUE;
+			printf("\nExpiration timer congestion window\n");
 			kill(getpid(), SIGINT);
 		}
 		sched_yield();
@@ -1125,9 +1128,18 @@ void * wait_for_sigint(void * arg)
 	pthread_sigmask(SIG_UNBLOCK, &sigset, NULL);
 	sigwait(&sigset, &signo);
 
-	printf("\nDTNperf client received SIGINT: Exiting\n");
-	if (perf_opt->create_log)
-		fprintf(log_file, "\nDTNperf client received SIGINT: Exiting\n");
+	if(expir_timer_cong_window)
+	{
+		printf("\nDTNperf client: Expired Timer to receive the Server's Ack\n");
+		if (perf_opt->create_log)
+			fprintf("\nDTNperf client: Expired Timer to receive the Server's Ack\n");
+	}
+	else
+	{
+		printf("\nDTNperf client received SIGINT: Exiting\n");
+		if (perf_opt->create_log)
+			fprintf(log_file, "\nDTNperf client received SIGINT: Exiting\n");
+	}
 
 	// send a signal to the monitor to terminate it
 	if (dedicated_monitor)
