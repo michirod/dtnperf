@@ -104,7 +104,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	char * client_demux_string;
 	int pthread_status;
 
-	char temp1[256]; // buffer for different purpose
+	char temp1[256]; // buffer for various purpose
 	char temp2[256];
 //	FILE * stream; // stream for preparing payolad
 	al_bp_bundle_object_t bundle_stop;
@@ -149,9 +149,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	if (error != BP_SUCCESS)
 	{
-		fprintf(stderr, "fatal error opening bp handle: %s\n", al_bp_strerror(error));
+		fprintf(stderr, "fatal error opening BP handle: %s\n", al_bp_strerror(error));
 		if (create_log)
-			fprintf(log_file, "fatal error opening bp handle: %s\n", al_bp_strerror(error));
+			fprintf(log_file, "fatal error opening BP handle: %s\n", al_bp_strerror(error));
 		client_clean_exit(1);
 	}
 	else
@@ -174,7 +174,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	sprintf(client_demux_string, "%s_%d", CLI_EP_STRING, getpid());
 
 	// parse SERVER EID
-	// if isn't CBHE format append server demux string to destination eid
+	//  if the scheme is not "ipn" append server demux string to destination eid
 	if(strncmp(perf_opt->dest_eid,"ipn",3) != 0)
 		strcat(perf_opt->dest_eid, SERV_EP_STRING);
 
@@ -185,9 +185,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	if (error != BP_SUCCESS)
 	{
-		fprintf(stderr, "fatal error parsing bp EID: invalid eid string '%s'\n", perf_opt->dest_eid);
+		fprintf(stderr, "fatal error parsing BP EID: invalid eid string '%s'\n", perf_opt->dest_eid);
 		if (create_log)
-			fprintf(log_file, "\nfatal error parsing bp EID: invalid eid string '%s'", perf_opt->dest_eid);
+			fprintf(log_file, "\nfatal error parsing BP EID: invalid eid string '%s'", perf_opt->dest_eid);
 		client_clean_exit(1);
 	}
 
@@ -197,7 +197,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if (create_log)
 		fprintf(log_file, "Destination: %s\n", dest_eid.uri);
 
-	//build a local eid
+	//build a local EID
 			if(debug && debug_level > 0)
 				printf("[debug] building a local eid...");
 			al_bp_build_local_eid(handle, &local_eid,client_demux_string,"Client",dest_eid.uri);
@@ -208,15 +208,15 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			if (create_log)
 				fprintf(log_file, "\nSource     : %s\n", local_eid.uri);
 
-	// parse REPLY-TO (if none specified, same as the source)
+	// parse REPLY-TO (if not specified, the same as the source)
 	if (strlen(perf_opt->mon_eid) == 0)
 	{
-		//if isn't CHBE format copy from local eid only the uri (not the demux string)
+		//if the scheme is not "ipn" copy from local EID only the URI (not the demux string)
 		if(strncmp(dest_eid.uri,"ipn",3) != 0){
 			perf_opt->eid_format_forced = 'D';
 			char * ptr;
 			ptr = strstr(local_eid.uri, CLI_EP_STRING);
-			// copy from local eid only the uri (not the demux string)
+			// copy from local EID only the uri (not the demux string)
 			strncpy(perf_opt->mon_eid, local_eid.uri, ptr - local_eid.uri);
 		}
 		else
@@ -232,7 +232,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		}
 
 	}
-	// if isn't CBHE Format append monitor demux string to replyto eid
+	// if the scheme is not "ipn" append monitor demux string to reply-to EID
 	if(strncmp(perf_opt->mon_eid,"ipn",3) != 0)
 		strcat(perf_opt->mon_eid, MON_EP_STRING);
 
@@ -240,9 +240,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	error = al_bp_parse_eid_string(&mon_eid, perf_opt->mon_eid);
 	if (error != BP_SUCCESS)
 	{
-		fprintf(stderr, "fatal error parsing bp EID: invalid eid string '%s'\n", perf_opt->dest_eid);
+		fprintf(stderr, "fatal error parsing BP EID: invalid eid string '%s'\n", perf_opt->dest_eid);
 		if (create_log)
-			fprintf(log_file, "\nfatal error parsing bp EID: invalid eid string '%s'", perf_opt->dest_eid);
+			fprintf(log_file, "\nfatal error parsing BP EID: invalid eid string '%s'", perf_opt->dest_eid);
 		client_clean_exit(1);
 	}
 
@@ -265,7 +265,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			mon_params.client_id = getpid();
 			mon_params.perf_g_opt = perf_g_opt;
 			printf("there is not a monitor on this endpoint.\n");
-			// if isn't CBHE Format append monitor demux string to replyto eid
+			// if the scheme is not "ipn", append monitor demux string to reply-to EID
 			if(strncmp(perf_opt->mon_eid,"ipn",3) != 0)
 				sprintf(temp1, "%s_%d", mon_eid.uri, mon_params.client_id);
 			else
@@ -277,8 +277,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 				start_dedicated_monitor((void *) &mon_params);
 				exit(0);
 			}
-			printf("started a new dedicated monitor\n");
-
+			printf("dedicated (internal) monitor started\n");
 		}
 		if ((debug) && (debug_level > 0))
 			printf(" done\n");
@@ -298,7 +297,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	//create a new registration to the local router based on this eid
 	if(debug && debug_level > 0)
-		printf("[debug] registering to local daemon...");
+		printf("[debug] registering to local BP daemon...");
 	memset(&reginfo, 0, sizeof(reginfo));
 	al_bp_copy_eid(&reginfo.endpoint, &local_eid);
 	reginfo.flags = BP_REG_DEFER;
@@ -329,49 +328,55 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		perf_opt->use_file = 1;
 		perf_opt->bundle_payload = BP_PAYLOAD_FILE;
 		if (verbose)
-			printf("Payload %f > %d: Using file instead of memory\n", perf_opt->bundle_payload, MAX_MEM_PAYLOAD);
+			printf("Payload %f > %d: using file instead of memory\n", perf_opt->bundle_payload, MAX_MEM_PAYLOAD);
 		if (create_log)
-			fprintf(log_file, "Payload %f > %d: Using file instead of memory\n", perf_opt->bundle_payload, MAX_MEM_PAYLOAD);
+			fprintf(log_file, "Payload %f > %d: using file instead of memory\n", perf_opt->bundle_payload, MAX_MEM_PAYLOAD);
 	}
 
 	/* ------------------------------------------------------------------------------
-	 * select the operative-mode (between Time_Mode, Data_Mode and File_Mode)
+	 * select the operative-mode (between Time_mode, Data_mode and File_mode)
 	 * ------------------------------------------------------------------------------ */
 
 	if (perf_opt->op_mode == 'T')	// Time mode
 	{
 
 		if (verbose)
-			printf("Working in Time_Mode\n");
+			printf("Working in Time_mode\n");
 
 		if (create_log)
-			fprintf(log_file, "Working in Time_Mode\n");
+			fprintf(log_file, "Working in Time_mode\n");
 
 		if (verbose)
-			printf("requested %d second(s) of transmission\n", perf_opt->transmission_time);
+			printf("requested Tx lenght %d (s) \n", perf_opt->transmission_time);
 
 		if (create_log)
-			fprintf(log_file, "requested %d second(s) of transmission\n", perf_opt->transmission_time);
+			fprintf(log_file, "requested Tx lenght %d (s)\n", perf_opt->transmission_time);
 	}
 	else if (perf_opt->op_mode == 'D') // Data mode
 	{
 		if (verbose)
-			printf("Working in Data_Mode\n");
+			printf("Working in Data_mode\n");
+
 		if (create_log)
-			fprintf(log_file, "Working in Data_Mode\n");
+			fprintf(log_file, "Working in Data_mode\n");
+
 		if (verbose)
-			printf("requested transmission of %f bytes of data\n", perf_opt->data_qty);
+			printf("requested Transmission of %f bytes of data\n", perf_opt->data_qty);
+
 		if (create_log)
-			fprintf(log_file, "requested transmission of %f bytes of data\n", perf_opt->data_qty);
+			fprintf(log_file, "requested Transmission of %f bytes of data\n", perf_opt->data_qty);
 	}
 	else if (perf_opt->op_mode == 'F') // File mode
 	{
 		if (verbose)
-			printf("Working in File_Mode\n");
+			printf("Working in File_mode\n");
+
 		if (create_log)
-			fprintf(log_file, "Working in File_Mode\n");
+			fprintf(log_file, "Working in File_mode\n");
+
 		if (verbose)
 			printf("requested transmission of file %s\n", perf_opt->F_arg);
+
 		if (create_log)
 			fprintf(log_file, "requested transmission of file %s\n", perf_opt->F_arg);
 
@@ -383,15 +388,16 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		fprintf(log_file, " transmitting data %s\n", perf_opt->use_file ? "using a file" : "using memory");
 
 	if (verbose)
-		printf("%s based congestion control:\n", perf_opt->congestion_ctrl == 'w' ? "sliding window" : "rate");
+		printf("%s based congestion control:\n", perf_opt->congestion_ctrl == 'w' ? "window" : "rate");
+
 	if (create_log)
-		fprintf(log_file, "%s based congestion control:\n", perf_opt->congestion_ctrl == 'w' ? "sliding window" : "rate");
+		fprintf(log_file, "%s based congestion control:\n", perf_opt->congestion_ctrl == 'w' ? "window" : "rate");
 	if(perf_opt->congestion_ctrl == 'w')
 	{
 		if (verbose)
-			printf("\twindow is %d bundles\n", perf_opt->window);
+			printf("\twindow is %d bundle\n", perf_opt->window);
 		if (create_log)
-			fprintf(log_file, "\twindow is %d bundles\n", perf_opt->window);
+			fprintf(log_file, "\twindow is %d bundle\n", perf_opt->window);
 	}
 	else
 	{
@@ -401,9 +407,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			fprintf(log_file, "\trate is %f %c\n", perf_opt->rate, perf_opt->rate_unit);
 	}
 	if (verbose)
-		printf("payload is %f bytes\n", perf_opt->bundle_payload);
+		printf("payload is %f byte\n", perf_opt->bundle_payload);
 	if (create_log)
-		fprintf(log_file, "payload is %f bytes\n", perf_opt->bundle_payload);
+		fprintf(log_file, "payload is %f byte\n", perf_opt->bundle_payload);
 
 
 	sent_bundles = 0;
@@ -540,7 +546,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	gettimeofday(&end, NULL);
 
 	if ((debug) && (debug_level > 0))
-		printf(" end.tv_sec = %u secs\n", (u_int)end.tv_sec);
+		printf(" end.tv_sec = %u s\n", (u_int)end.tv_sec);
 
 	// Print final report
 	print_final_report(NULL);
@@ -668,10 +674,10 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 
 		if (stream == NULL)
 		{
-			fprintf(stderr, "ERROR: couldn't create file %s.\n \b Maybe you don't have permissions\n", source_file);
+			fprintf(stderr, "ERROR: couldn't create file %s.\n \b Maybe you have not permissions\n", source_file);
 
 			if (create_log)
-				fprintf(log_file, "ERROR: couldn't create file %s.\n \b Maybe you don't have permissions\n", source_file);
+				fprintf(log_file, "ERROR: couldn't create file %s.\n \b Maybe you have not permissions\n", source_file);
 
 			client_clean_exit(2);
 		}
@@ -769,9 +775,9 @@ void * send_bundles(void * opt)
 	gettimeofday(&start, NULL);
 
 	if ((debug) && (debug_level > 0))
-		printf(" start.tv_sec = %d secs\n", (u_int)start.tv_sec);
+		printf(" start.tv_sec = %d s\n", (u_int)start.tv_sec);
 	if (create_log)
-		fprintf(log_file, " start.tv_sec = %d secs\n", (u_int)start.tv_sec);
+		fprintf(log_file, " start.tv_sec = %d s\n", (u_int)start.tv_sec);
 
 	if (perf_opt->op_mode == 'T')		// TIME MODE
 	{									// Calculate end-time
@@ -785,10 +791,10 @@ void * send_bundles(void * opt)
 		end.tv_sec = start.tv_sec + perf_opt->transmission_time;
 
 		if ((debug) && (debug_level > 0))
-			printf(" end.tv_sec = %d secs\n", (u_int)end.tv_sec);
+			printf(" end.tv_sec = %d s\n", (u_int)end.tv_sec);
 
 		if (create_log)
-			fprintf(log_file, " end.tv_sec = %d secs\n", (u_int)end.tv_sec);
+			fprintf(log_file, " end.tv_sec = %d s\n", (u_int)end.tv_sec);
 	}
 
 	if ((debug) && (debug_level > 0))
@@ -1058,7 +1064,7 @@ void * congestion_control(void * opt)
 		}
 
 		if (debug)
-			printf("[debug cong ctrl] wait time for each bundle: %.4f secs\n", interval_secs);
+			printf("[debug cong ctrl] wait time for each bundle: %.4f s\n", interval_secs);
 
 		pthread_mutex_lock(&mutexdata);
 		while(close_ack_receiver == 0)
@@ -1230,29 +1236,29 @@ void print_final_report(FILE * f)
 	if (sent_data / (1000 * 1000) >= 1)
 	{
 		sent = (double) sent_data / (1000 * 1000);
-		sent_unit = "Mbytes";
+		sent_unit = "Mbyte";
 	}
 	else if (sent_data / 1000 >= 1)
 	{
 		sent = (double) sent_data / 1000;
-		sent_unit = "Kbytes";
+		sent_unit = "Kbyte";
 	}
 	else
-		sent_unit = "bytes";
+		sent_unit = "byte";
 
 	goodput = sent_data * 8 / total_secs;
 	if (goodput / (1000 * 1000) >= 1)
 	{
 		goodput /= 1000 * 1000;
-		gput_unit = "Mbit/sec";
+		gput_unit = "Mbit/s";
 	}
 	else if (goodput / 1000 >= 1)
 	{
 		goodput /= 1000;
-		gput_unit = "Kbit/sec";
+		gput_unit = "Kbit/s";
 	}
 	else
-		gput_unit = "bit/sec";
+		gput_unit = "bit/s";
 
 	fprintf(f, "\nBundles sent = %d , total data sent = %.3f %s\n", sent_bundles, sent, sent_unit);
 	fprintf(f, "Total execution time = %.1f\n", total_secs);
@@ -1262,13 +1268,13 @@ void print_final_report(FILE * f)
 void print_client_usage(char* progname)
 {
 	fprintf(stderr, "\n");
-	fprintf(stderr, "DtnPerf3 client mode\n");
+	fprintf(stderr, "dtnperf client mode\n");
 	fprintf(stderr, "SYNTAX: %s %s -d <dest_eid> <[-T <s> | -D <num> | -F <filename>]> [-W <size> | -R <rate>] [options]\n", progname, CLIENT_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
-			" -d, --destination <eid>     Destination eid (i.e. server EID)(required).\n"
+			" -d, --destination <eid>     Destination EID (i.e. server EID)(required).\n"
 			" -T, --time <seconds>        Time-mode: seconds of transmission.\n"
-			" -D, --data <num[B|k|M]>     Data-mode: amount data to transmit; B = Bytes, k = kBytes, M = MBytes. Default 'M' (MB). Note: following the SI and the IEEE standards 1 MB=10^6 bytes\n"
+			" -D, --data <num[B|k|M]>     Data-mode: amount data to transmit; B = Byte, k = kByte, M = MByte. Default 'M' (MB). Note: following the SI and the IEEE standards 1 MB=10^6 byte\n"
 			" -F, --file <filename>       File-mode: file to transfer\n"
 			" -W, --window <size>         Window-based congestion control: size of DTNperf transmission window, i.e. max number of bundles \"in flight\" (not still ACKed by a server ack); default: 1.\n"
 			" -R, --rate <rate[k|M|b]>    Rate-based congestion control: Tx rate. k = kbit/s, M = Mbit/s, b = bundle/s. Default is kb/s\n"
@@ -1701,7 +1707,7 @@ void check_options(dtnperf_global_options_t * global_options)
 
 	if (perf_opt->window <= 0)
 	{
-		fprintf(stderr, "\nSYNTAX ERROR: (-w option) you should specify a positive value of window\n\n");
+		fprintf(stderr, "\nSYNTAX ERROR: (-W option) the window must be set to a posotive integer value \n\n");
 		exit(2);
 	}
 
@@ -1709,9 +1715,9 @@ void check_options(dtnperf_global_options_t * global_options)
 
 void client_handler(int sig)
 {
-	printf("\nDTNperf client received SIGINT: Exiting\n");
+	printf("\nDTNperf client received SIGINT: exiting\n");
 	if (perf_opt->create_log)
-		fprintf(log_file, "\nDTNperf client received SIGINT: Exiting\n");
+		fprintf(log_file, "\nDTNperf client received SIGINT: exiting\n");
 
 	client_clean_exit(0);
 } // end client_handler
