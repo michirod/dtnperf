@@ -90,7 +90,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		setlinebuf(stderr);
 	}
 
-	// create dir where dtnperf monitor will save logs
+	// create dir for dtnperf monitor logs
 	// command should be: mkdir -p "logs_dir"
 	if(debug && debug_level > 0)
 		printf("[debug] initializing shell command...");
@@ -136,7 +136,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	if(debug && debug_level > 0)
 		printf("done\n");
 
-	//build a local eid
+	//build a local EID
 	if (parameters->dedicated_monitor)
 		sprintf(temp, "%s_%d", MON_EP_STRING, parameters->client_id);
 	else
@@ -146,8 +146,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	{
 		if(debug && debug_level > 0)
 		{
-			printf("[debug] building local eid in format ");
-			perf_opt->eid_format_forced == 'D' ? printf("DTN...") : printf("IPN...");
+			printf("[debug] building local EID in format ");
+			perf_opt->eid_format_forced == 'D' ? printf("dtn...") : printf("ipn...");
 		}
 		if(perf_opt->eid_format_forced == 'I')
 			al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Monitor-CBHE",NULL);
@@ -162,7 +162,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	else
 	{
 		if(debug && debug_level > 0)
-			printf("[debug] building a local eid...");
+			printf("[debug] building a local EID...");
 		if(perf_opt->bp_implementation == BP_ION)
 			al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Monitor-CBHE",NULL);
 		if(perf_opt->bp_implementation == BP_DTN)
@@ -177,13 +177,13 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 	// checking if there is already a registration
 	if(debug && debug_level > 0)
-		printf("[debug] checking for existing registration...");
+		printf("[debug] checking for an existing registration...");
 	error = al_bp_find_registration(handle, &local_eid, &regid);
 	if ( (error == BP_SUCCESS && perf_opt->bp_implementation == BP_DTN)
 			|| (perf_opt->bp_implementation == BP_ION && (error == BP_EBUSY || error == BP_EPARSEEID)))
 	{
 		fflush(stdout);
-		fprintf(stderr, "error: there is a registration with the same eid.\n");
+		fprintf(stderr, "error: there is a registration with the same EID.\n");
 		fprintf(stderr, "regid 0x%x\n", (unsigned int) regid);
 		monitor_clean_exit(1);
 	}
@@ -192,7 +192,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 	//create a new registration to the local router based on this eid
 	if(debug && debug_level > 0)
-		printf("[debug] registering to local daemon...");
+		printf("[debug] registering to local BP daemon...");
 	memset(&reginfo, 0, sizeof(reginfo));
 	al_bp_copy_eid(&reginfo.endpoint, &local_eid);
 	reginfo.flags = BP_REG_DEFER;
@@ -257,12 +257,12 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 		// get SOURCE eid
 		if ((debug) && (debug_level > 0))
-			printf("[debug]\tgetting source eid...");
+			printf("[debug]\tgetting source EID...");
 		error = al_bp_bundle_get_source(bundle_object, &bundle_source_addr);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
-			fprintf(stderr, "error getting bundle source eid: %s\n",
+			fprintf(stderr, "error getting bundle source EID: %s\n",
 					al_bp_strerror(error));
 			monitor_clean_exit(1);
 		}
@@ -320,7 +320,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 		// check if bundle is a status report
 		if ((debug) && (debug_level > 0))
-			printf("[debug] check if bundle is a status report...\n");
+			printf("[debug] check if the bundle is a status report...\n");
 		error = al_bp_bundle_get_status_report(bundle_object, &status_report);
 		if (error != BP_SUCCESS)
 		{
@@ -452,19 +452,19 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		switch (bundle_type)
 		{
 		case CLIENT_STOP:
-			csv_print(file, "CLIENT_STOP");
+			csv_print(file, "Client_STOP");
 			break;
 		case CLIENT_FORCE_STOP:
-			csv_print(file, "CLIENT_FORCE_STOP");
+			csv_print(file, "Client_FORCE_STOP");
 			break;
 		case SERVER_ACK:
-			csv_print(file, "SERVER_ACK");
+			csv_print(file, "Server_ACK");
 			break;
 		case STATUS_REPORT:
-			csv_print(file, "STATUS_REPORT");
+			csv_print(file, "Statys_Report");
 			break;
 		default:
-			csv_print(file, "UNKNOWN");
+			csv_print(file, "Unknow");
 			break;
 		}
 
@@ -499,7 +499,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		}
 		else if (bundle_type == CLIENT_FORCE_STOP)
 		{
-			printf("DTNperf monitor: received forced end session bundle\n");
+			printf("DTNperf monitor: FORCE_STOP received from client, corresponding session closed\n");
 			session_close(session_list, session);
 		}
 
@@ -532,7 +532,7 @@ void * session_expiration_timer(void * opt)
 		{
 			next = session->next;
 
-			// all status reports has been received: close session
+			// all delivered status reports has been received: close session
 			if (session->total_to_receive > 0 && session->delivered_count == session->total_to_receive)
 			{
 				// close monitor if dedicated
@@ -549,7 +549,7 @@ void * session_expiration_timer(void * opt)
 			// stop bundle arrived but not all the status reports have arrived and the timer has expired
 			else if (session->total_to_receive > 0 &&session->stop_arrival_time->tv_sec + session->wait_after_stop < current_time.tv_sec)
 			{
-				fprintf(stdout, "DTNperf monitor: Session Expired: Bundle stop arrived, but not all the status reports did\n");
+				fprintf(stdout, "DTNperf monitor. Session expired: bundle STOP received, but not all the expected \"delivered\" SRs\n");
 
 				// close monitor if dedicated
 				if (dedicated_monitor)
@@ -560,14 +560,14 @@ void * session_expiration_timer(void * opt)
 				{
 					fprintf(stdout, "\tsaved log file: %s\n\n", session->full_filename);
 					if (fclose(session->file) < 0)
-						perror("Error closing expired file:");
+						perror("Error closing session file:");
 					session_del(session_list, session);
 				}
 			}
 			// stop bundle is not yet arrived and the last bundle has expired
 			else if (session->last_bundle_time + session->expiration < current_dtn_time)
 			{
-				fprintf(stdout, "DTNperf monitor: Session Expired: Bundle stop did not arrive\n");
+				fprintf(stdout, "DTNperf monitor. Session expired: the bundle stop did not arrive\n");
 
 				// close monitor if dedicated
 				if (dedicated_monitor)
@@ -578,7 +578,7 @@ void * session_expiration_timer(void * opt)
 				{
 					fprintf(stdout,"\tsaved log file: %s\n\n", session->full_filename);
 					if (fclose(session->file) < 0)
-						perror("Error closing expired file:");
+						perror("Error closing session file:");
 					session_del(session_list, session);
 				}
 			}
@@ -627,27 +627,27 @@ void monitor_clean_exit(int status)
 void session_close(session_list_t * list, session_t * session)
 {
 	fclose(session->file);
-	fprintf(stdout, "DTNperf monitor: saved log file: %s\n\n", session->full_filename);
-	session_del(session_list, session);
+	fprintf(stdout, "DTNperf monitor. Session log file saved as: %s\n\n",
+			session->full_filename);
 }
 
 void print_monitor_usage(char * progname)
 {
 	fprintf(stderr, "\n");
-	fprintf(stderr, "DtnPerf3 monitor mode\n");
+	fprintf(stderr, "dtnperf monitor mode\n");
 	fprintf(stderr, "SYNTAX: %s %s [options]\n", progname, MONITOR_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
 			" -a, --daemon                Start the monitor as a daemon. Output is redirected to %s .\n"
 			" -o, --output <file>         Change the default output file (only with -a option).\n"
-			" -s, --stop                  Stop a demonized instance of monitor.\n"
-			" -l, --lifetime <s>          Max idle time of log files (s) (in ION). Default: 60"
-			"     --ip-addr <addr>        Ip address of the bp daemon api. Default: 127.0.0.1 (Only in DTN2)\n"
-			"     --ip-port <port>        Ip port of the bp daemon api. Default: 5010 (Only in DTN2)\n"
-			"     --force-eid <[DTN|IPN]  Force the registration EID independently of BP implementation.\n"
+			" -s, --stop                  Stop the monitor daemon.\n"
+			" -l, --lifetime <s>          Max idle time before closing a session log file (s) (ION only). Default:60s."
+			"     --ip-addr <addr>        IP address of the BP daemon api. Default: 127.0.0.1 (DTN2 only)\n"
+			"     --ip-port <port>        IP port of the BP daemon api. Default: 5010 (DTN2 only)\n"
+			"     --force-eid <[DTN|IPN]  Force the registration EID (ION only).\n"
 			"     --ldir <dir>            Logs directory. Default: %s .\n"
-			"     --debug[=level]         Debug messages [0-1], if level is not indicated level = 1.\n"
-			" -v, --verbose               Print some information message during the execution.\n"
+			"     --debug[=level]         Debug messages [0-1], if level is not indicated level = 2.\n"
+			" -v, --verbose               Print some information messages during the execution.\n"
 			" -h, --help                  This help.\n",
 			MONITOR_OUTPUT_FILE, LOGS_DIR_DEFAULT);
 	fprintf(stderr, "\n");
