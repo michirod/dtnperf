@@ -515,7 +515,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	pthread_create(&sender, NULL, send_bundles, (void*)perf_g_opt);
 	pthread_create(&cong_ctrl, NULL, congestion_control, (void*)perf_g_opt);
-	pthread_create(&wait_for_signal, NULL, wait_for_sigint, (void*) client_demux_string);
+	//pthread_create(&wait_for_signal, NULL, wait_for_sigint, (void*) client_demux_string);
 
 	pthread_join(cong_ctrl, (void**)&pthread_status);
 	pthread_join(sender, (void**)&pthread_status);
@@ -955,7 +955,7 @@ void * congestion_control(void * opt)
 	//	gettimeofday(&temp, NULL);
 		while ((close_ack_receiver == 0) || (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit))
 		{
-			pthread_create(&cong_expir_timer, NULL, congestion_window_expiration_timer, NULL);
+		//	pthread_create(&cong_expir_timer, NULL, congestion_window_expiration_timer, NULL);
 			// if there are no bundles without ack, wait
 			pthread_mutex_lock(&mutexdata);
 			if (close_ack_receiver == 0 && count_info(send_info, perf_opt->window) == 0)
@@ -1081,7 +1081,7 @@ void * congestion_control(void * opt)
 	return NULL;
 } // end congestion_control
 
-void * congestion_window_expiration_timer(void * opt)
+/*void * congestion_window_expiration_timer(void * opt)
 {
 	struct timeval current_time;
 	al_bp_timeval_t expiration = perf_opt->bundle_ack_options.ack_expiration;
@@ -1100,7 +1100,7 @@ void * congestion_window_expiration_timer(void * opt)
 	pthread_exit(NULL);
 	return NULL;
 } // end congestion_window_expiration_timer
-
+*/
 void * start_dedicated_monitor(void * params)
 {
 	monitor_parameters_t * parameters = (monitor_parameters_t *) params;
@@ -1192,7 +1192,7 @@ void * wait_for_sigint(void * arg)
 	// terminate all child threads
 	pthread_cancel(sender);
 	pthread_cancel(cong_ctrl);
-	pthread_cancel(cong_expir_timer);
+//	pthread_cancel(cong_expir_timer);
 
 	client_clean_exit(0);
 
