@@ -1199,7 +1199,7 @@ void * wait_for_sigint(void * arg)
 	// terminate all child threads
 	pthread_cancel(sender);
 	pthread_cancel(cong_ctrl);
-	pthread_cancel(congestion_window_expiration_timer);
+	pthread_cancel(cong_expir_timer);
 
 	client_clean_exit(0);
 
