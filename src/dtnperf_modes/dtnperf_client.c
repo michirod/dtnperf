@@ -1081,28 +1081,25 @@ void * congestion_control(void * opt)
 	return NULL;
 } // end congestion_control
 
-// Congestion window expiration timer thread
 void * congestion_window_expiration_timer(void * opt)
 {
 	struct timeval current_time;
+	al_bp_timeval_t expiration = perf_opt->bundle_ack_options.ack_expiration;
 	while(1)
 	{
 		gettimeofday(&current_time, NULL);
 		printf("\n\tack_recv: %lu + ack_exp %lu < current %lu\n",  ack_recvd.tv_sec,
-				2*perf_opt->bundle_ack_options.ack_expiration,current_time.tv_sec);
-		if( (ack_recvd.tv_sec != 0) && (ack_recvd.tv_sec + 2*perf_opt->bundle_ack_options.ack_expiration < current_time.tv_sec) )
+				2*expiration,current_time.tv_sec);
+		if( (ack_recvd.tv_sec != 0) && (ack_recvd.tv_sec + 2*expiration < current_time.tv_sec) )
 		{
 			printf("Expiration timer congestion window\n");
-			pthread_cancel(cong_ctrl);
-			pthread_cancel(sender);
-			pthread_exit(NULL);
+			kill(getpid(), SIGINT);
 		}
 		sched_yield();
 	}
 	pthread_exit(NULL);
 	return NULL;
-}
-
+} // end congestion_window_expiration_timer
 
 void * start_dedicated_monitor(void * params)
 {
