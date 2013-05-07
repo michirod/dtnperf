@@ -951,9 +951,11 @@ void * congestion_control(void * opt)
 	if (perf_opt->congestion_ctrl == 'w') // window based congestion control
 	{
 		al_bp_bundle_create(&ack);
+		gettimeofday(&temp, NULL);
 		printf("\n\tTEMP: %lu\n", temp.tv_sec);
 		while ((close_ack_receiver == 0) || (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit))
 		{
+			printf("\n\tCLOSE_ACK: %d\n", close_ack_receiver);
 			printf("\n\tACK_RECVD: %lu - TEMP %lu <= WAIT %d\n", ack_recvd.tv_sec, temp.tv_sec, perf_opt->wait_before_exit);
 			// if there are no bundles without ack, wait
 			pthread_mutex_lock(&mutexdata);
