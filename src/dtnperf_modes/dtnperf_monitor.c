@@ -309,7 +309,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		}
 		else if(perf_opt->bp_implementation == BP_ION || bundle_expiration == 0)
 		{
-			bundle_expiration = perf_opt->expiration_session;
+		//	bundle_expiration = perf_opt->expiration_session;
+			bundle_expiration = 60;
 		}
 		if ((debug) && (debug_level > 0))
 		{

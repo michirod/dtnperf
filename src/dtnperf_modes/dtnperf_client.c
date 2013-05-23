@@ -1433,8 +1433,6 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				fprintf(stderr, "ERROR: Unable to open file %s: %s\n", perf_opt->F_arg, strerror(errno));
 				exit(1);
 			}
-			printf("\n\t I AM HERE\n\n");
-			printf("OP_MODE %c\n",perf_opt->op_mode);
 			break;
 
 		case 'P':
@@ -1524,8 +1522,6 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			}
 			else
 				perf_opt->debug_level = 2;
-
-			printf("OP_MODE %c\n",perf_opt->op_mode);
 			break;
 
 		case 34: // incoming bundle destination directory
@@ -1617,7 +1613,6 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	// TEMP: ordinal = 0
 	conn_opt->priority.ordinal = 0;
 	perf_opt->bundle_ack_options.ack_priority.ordinal = conn_opt->priority.ordinal;
-
 
 #define CHECK_SET(_arg, _what)                                          	\
 		if (_arg == 0) {                                                    	\
