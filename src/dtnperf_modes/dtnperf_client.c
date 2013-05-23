@@ -137,7 +137,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		}
 		log_open = TRUE;
 	}
-	printf("\n\tWORKING IN : %c\n\n", perf_opt->op_mode);
+
 	// Connect to BP Daemon
 	if ((debug) && (debug_level > 0))
 		printf("[debug] opening connection to local BP daemon...");
@@ -1613,6 +1613,8 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	// TEMP: ordinal = 0
 	conn_opt->priority.ordinal = 0;
 	perf_opt->bundle_ack_options.ack_priority.ordinal = conn_opt->priority.ordinal;
+
+	printf("\n\tWORKING IN : %c\n\n", perf_opt->op_mode);
 
 #define CHECK_SET(_arg, _what)                                          	\
 		if (_arg == 0) {                                                    	\
