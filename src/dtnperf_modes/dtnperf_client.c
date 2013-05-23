@@ -1614,7 +1614,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	conn_opt->priority.ordinal = 0;
 	perf_opt->bundle_ack_options.ack_priority.ordinal = conn_opt->priority.ordinal;
 
-	printf("\n\tWORKING IN : %c\n\n", perf_opt->op_mode);
+	printf("\n\tWORKING IN OO: %c\n\n", perf_opt->op_mode);
 
 #define CHECK_SET(_arg, _what)                                          	\
 		if (_arg == 0) {                                                    	\
