@@ -568,9 +568,8 @@ void * session_expiration_timer(void * opt)
 				}
 			}
 			// stop bundle is not yet arrived and the last bundle has expired
-			else if (session->last_bundle_time + session->expiration < current_dtn_time)
+			else if (session->last_bundle_time + session->expiration < current_dtn_time && (session->last_bundle_time + session->expiration != 0))
 			{
-				printf("%lu + %lu < %lu",session->last_bundle_time,session->expiration,current_dtn_time );
 				fprintf(stdout, "DTNperf monitor: Session Expired: Bundle stop did not arrive\n");
 
 				// close monitor if dedicated
