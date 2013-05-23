@@ -1433,6 +1433,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				fprintf(stderr, "ERROR: Unable to open file %s: %s\n", perf_opt->F_arg, strerror(errno));
 				exit(1);
 			}
+			printf("\n\t I AM HERE\n\n");
 			break;
 
 		case 'P':
@@ -1614,7 +1615,6 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	conn_opt->priority.ordinal = 0;
 	perf_opt->bundle_ack_options.ack_priority.ordinal = conn_opt->priority.ordinal;
 
-	printf("\n\tWORKING IN OO: %c\n\n", perf_opt->op_mode);
 
 #define CHECK_SET(_arg, _what)                                          	\
 		if (_arg == 0) {                                                    	\
