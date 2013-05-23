@@ -1262,7 +1262,10 @@ void print_final_report(FILE * f)
 
 	fprintf(f, "\nBundles sent = %d , total data sent = %.3f %s\n", sent_bundles, sent, sent_unit);
 	fprintf(f, "Total execution time = %.1f\n", total_secs);
-	fprintf(f, "Goodput = %.3f %s\n", goodput, gput_unit);
+	if(perf_opt->congestion_ctrl == 'w')
+		fprintf(f, "Goodput = %.3f %s\n", goodput, gput_unit);
+	else
+		fprintf(f, "Throughput = %.3f %s\n", goodput, gput_unit);
 } // end print_final_report
 
 void print_client_usage(char* progname)
@@ -1296,8 +1299,8 @@ void print_client_usage(char* progname)
 			" -p, --priority <val>        Bundle  priority [bulk|normal|expedited|reserved]. Default is normal.\n"
 			"     --ack-to-mon            Force server to send ACKs to the monitor (indipendently of server settings. DTN2 only.\n"
 			"     --no-ack-to-mon         Force server not to send  ACKs to the monitor (DTN2 only)\n"
-			"     --ack-lifetime <time>   ACK lifetime (desired value asked to the server). Default is bundle lifetime\n"
-            "     --ack-priority <val>    ACK priority (desired value asked to the server) [bulk|normal|expedited|reserved]. Default is bundle priority\n"
+			"     --ack-lifetime <time>   ACK lifetime (desired value asked to the server). Default is the same as bundle lifetime\n"
+            "     --ack-priority <val>    ACK priority (desired value asked to the server) [bulk|normal|expedited|reserved]. Default is the same as bundle priority\n"
 			" -v, --verbose               Print some information messages during execution.\n"
 			" -h, --help                  This help.\n",
 			(int) (HEADER_SIZE + BUNDLE_OPT_SIZE), LOG_FILENAME, LOGS_DIR_DEFAULT);
