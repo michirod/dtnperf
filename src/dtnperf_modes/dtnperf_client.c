@@ -1434,6 +1434,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				exit(1);
 			}
 			printf("\n\t I AM HERE\n\n");
+			printf("OP_MODE %c\n",perf_opt->op_mode);
 			break;
 
 		case 'P':
@@ -1523,6 +1524,8 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			}
 			else
 				perf_opt->debug_level = 2;
+
+			printf("OP_MODE %c\n",perf_opt->op_mode);
 			break;
 
 		case 34: // incoming bundle destination directory
