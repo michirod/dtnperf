@@ -212,7 +212,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if (strlen(perf_opt->mon_eid) == 0)
 	{
 		//if the scheme is not "ipn" copy from local EID only the URI (not the demux string)
-		if(strncmp(dest_eid.uri,"ipn",3) != 0){
+		if(strncmp(dest_eid.uri,"ipn",3) != 0 || perf_opt->bp_implementation == BP_DTN){
 			perf_opt->eid_format_forced = 'D';
 			char * ptr;
 			ptr = strstr(local_eid.uri, CLI_EP_STRING);
