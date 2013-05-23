@@ -535,7 +535,7 @@ void * session_expiration_timer(void * opt)
 		for(session = session_list->first; session != NULL; session = next)
 		{
 			next = session->next;
-
+			printf("%lu + %lu < %lu",session->last_bundle_time,session->expiration,current_dtn_time );
 			// all status reports has been received: close session
 			if (session->total_to_receive > 0 && session->delivered_count == session->total_to_receive)
 			{
