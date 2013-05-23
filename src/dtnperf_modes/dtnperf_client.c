@@ -137,7 +137,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		}
 		log_open = TRUE;
 	}
-
+	printf("\n\tWORKING IN : %c\n\n", perf_opt->op_mode);
 	// Connect to BP Daemon
 	if ((debug) && (debug_level > 0))
 		printf("[debug] opening connection to local BP daemon...");
