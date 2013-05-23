@@ -494,7 +494,10 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			get_info_from_stop(&bundle_object, &total_to_receive);
 			pthread_mutex_lock(&mutexdata);
 			session->total_to_receive = total_to_receive;
-			session->wait_after_stop = bundle_expiration;
+			if(perf_opt->bp_implementation == BP_ION)
+				session->wait_after_stop = 60;
+			else
+				session->wait_after_stop = bundle_expiration;
 			gettimeofday(session->stop_arrival_time, NULL);
 			pthread_mutex_unlock(&mutexdata);
 		}
