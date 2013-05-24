@@ -309,8 +309,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		}
 		else if(perf_opt->bp_implementation == BP_ION || bundle_expiration == 0)
 		{
-		//	bundle_expiration = perf_opt->expiration_session;
-			bundle_expiration = 60;
+			bundle_expiration = perf_opt->expiration_session;
 		}
 		if ((debug) && (debug_level > 0))
 		{
@@ -429,7 +428,11 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 		// update session infos
 		session->last_bundle_time = bundle_creation_timestamp.secs;
-		session->expiration = bundle_expiration;
+		if(perf_opt->bp_implementation != BP_ION)
+		{
+			if(session->expiration > bundle_expiration)
+				session->expiration = bundle_expiration;
+		}
 		file = session->file;
 		memcpy(&start, session->start, sizeof(struct timeval));
 
@@ -641,17 +644,17 @@ void print_monitor_usage(char * progname)
 	fprintf(stderr, "SYNTAX: %s %s [options]\n", progname, MONITOR_STRING);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "options:\n"
-			" -a, --daemon                Start the monitor as a daemon. Output is redirected to %s .\n"
-			" -o, --output <file>         Change the default output file (only with -a option).\n"
-			" -s, --stop                  Stop a demonized instance of monitor.\n"
-			" -l, --lifetime <s>          Max idle time of log files (s) (in ION). Default: 60"
-			"     --ip-addr <addr>        Ip address of the bp daemon api. Default: 127.0.0.1 (Only in DTN2)\n"
-			"     --ip-port <port>        Ip port of the bp daemon api. Default: 5010 (Only in DTN2)\n"
-			"     --force-eid <[DTN|IPN]  Force the registration EID independently of BP implementation.\n"
-			"     --ldir <dir>            Logs directory. Default: %s .\n"
-			"     --debug[=level]         Debug messages [0-1], if level is not indicated level = 1.\n"
-			" -v, --verbose               Print some information message during the execution.\n"
-			" -h, --help                  This help.\n",
+			" -a, --daemon                  Start the monitor as a daemon. Output is redirected to %s.\n"
+			" -o, --output <file>           Change the default output file (Only with -a option).\n"
+			" -s, --stop                    Stop a demonized instance of monitor.\n"
+			" -e, --expiration-session <s>  Max idle time of log files (s). Default: 60.\n"
+			"     --ip-addr <addr>          Ip address of the bp daemon api. Default: 127.0.0.1 (Only in DTN2)\n"
+			"     --ip-port <port>          Ip port of the bp daemon api. Default: 5010 (Only in DTN2)\n"
+			"     --force-eid <[DTN|IPN]    Force the registration EID independently of BP implementation.\n"
+			"     --ldir <dir>              Logs directory. Default: %s .\n"
+			"     --debug[=level]           Debug messages [0-1], if level is not indicated level = 1.\n"
+			" -v, --verbose                 Print some information message during the execution.\n"
+			" -h, --help                    This help.\n",
 			MONITOR_OUTPUT_FILE, LOGS_DIR_DEFAULT);
 	fprintf(stderr, "\n");
 	exit(1);
@@ -677,7 +680,7 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 					{"ip-addr", required_argument, 0, 37},
 					{"ip-port", required_argument, 0, 38},
 					{"force-eid", required_argument, 0, 50},
-					{"lifetime", required_argument,0,'l'},
+					{"expiration-session", required_argument, 0,'e'},
 					{"daemon", no_argument, 0, 'a'},
 					{"output", required_argument, 0, 'o'},
 					{"stop", no_argument, 0, 's'},
@@ -698,9 +701,8 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 				perf_opt->verbose = TRUE;
 				break;
 
-			case 'l':
-				if(al_bp_get_implementation() != BP_ION)
-					perf_opt->expiration_session = atoi(optarg);
+			case 'e':
+				perf_opt->expiration_session = atoi(optarg);
 				break;
 
 			case 33: // debug
@@ -720,11 +722,23 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 				break;
 
 			case 37:
+				if(perf_opt->bp_implementation != BP_ION)
+				{
+					fprintf(stderr, "--ip-addr supported only in DTN2\n");
+					exit(1);
+					return;
+				}
 				perf_opt->ip_addr = strdup(optarg);
 				perf_opt->use_ip = TRUE;
 				break;
 
 			case 38:
+				if(perf_opt->bp_implementation != BP_DTN)
+				{
+					fprintf(stderr, "----ip-port supported only in DTN2\n");
+					exit(1);
+					return;
+				}
 				perf_opt->ip_port = atoi(optarg);
 				perf_opt->use_ip = TRUE;
 				break;
