@@ -1040,7 +1040,7 @@ void * congestion_control(void * opt)
 			sched_yield();
 		} // end while(n_bundles)
 
-		//al_bp_bundle_free(&ack);
+		al_bp_bundle_free(&ack);
 	}
 	else if (perf_opt->congestion_ctrl == 'r') // Rate based congestion control
 	{
