@@ -880,7 +880,7 @@ void * send_bundles(void * opt)
 			printf(" bundle sent\n");
 		if ((debug) && (debug_level > 0))
 			printf("\t[debug send thread] ");
-		printf("\n\t YESSSS\n");
+
 		printf("bundle sent timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
 		if (create_log)
 			fprintf(log_file, "\t bundle sent timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
