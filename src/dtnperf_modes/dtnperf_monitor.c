@@ -293,11 +293,12 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			printf("\n");
 		}
 
-		// get bundle EXPIRATION TIME
-		if ((debug) && (debug_level > 0))
-			printf("[debug]\tgetting bundle expiration time...");
+		// get bundle EXPIRATION TIME only in DTN2
 		if(perf_opt->bp_implementation == BP_DTN)
 		{
+			if ((debug) && (debug_level > 0))
+			printf("[debug]\tgetting bundle expiration time...");
+
 			error = al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
 			if (error != BP_SUCCESS)
 			{
@@ -306,16 +307,12 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 						al_bp_strerror(error));
 				monitor_clean_exit(1);
 			}
-		}
-		else if(perf_opt->bp_implementation == BP_ION || bundle_expiration == 0)
-		{
-			bundle_expiration = perf_opt->expiration_session;
-		}
-		if ((debug) && (debug_level > 0))
-		{
-			printf(" done:\n");
-			printf("\tbundle expiration: %lu\n", bundle_expiration);
-			printf("\n");
+			if ((debug) && (debug_level > 0))
+			{
+				printf(" done:\n");
+				printf("\tbundle expiration: %lu\n", bundle_expiration);
+				printf("\n");
+			}
 		}
 
 		// check if bundle is a status report
@@ -428,11 +425,16 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 		// update session infos
 		session->last_bundle_time = bundle_creation_timestamp.secs;
-		if(perf_opt->bp_implementation != BP_ION)
+		if(perf_opt->bp_implementation == BP_ION)
 		{
-			if(session->expiration > bundle_expiration)
+			session->expiration = perf_opt->expiration_session;
+		}
+		else
+		{
+			if(perf_opt->expiration_session > bundle_expiration)
 				session->expiration = bundle_expiration;
 		}
+
 		file = session->file;
 		memcpy(&start, session->start, sizeof(struct timeval));
 
