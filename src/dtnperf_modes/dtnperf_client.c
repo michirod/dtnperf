@@ -857,7 +857,7 @@ void * send_bundles(void * opt)
 		// Send the bundle
 		if (debug)
 			printf("sending the bundle...");
-		printf("\n\t YESSSS\n");
+
 		if (perf_opt->congestion_ctrl == 'w')
 			pthread_mutex_lock(&mutexdata);
 
@@ -880,7 +880,7 @@ void * send_bundles(void * opt)
 			printf(" bundle sent\n");
 		if ((debug) && (debug_level > 0))
 			printf("\t[debug send thread] ");
-
+		printf("\n\t YESSSS\n");
 		printf("bundle sent timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
 		if (create_log)
 			fprintf(log_file, "\t bundle sent timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
@@ -913,6 +913,7 @@ void * send_bundles(void * opt)
 		{								// update condition
 			condition = sent_bundles < tot_bundles;
 		}
+		printf("\n\t YESSSS\n");
 	} // while
 	if ((debug) && (debug_level > 0))
 		printf("[debug send thread] ...out from loop\n");
