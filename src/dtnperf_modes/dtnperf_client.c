@@ -824,7 +824,7 @@ void * send_bundles(void * opt)
 			create_fill_payload_buf(debug, debug_level, create_log, i);
 		}
 	}
-
+	printf("\n\t YESSSS\n");
 	// send bundles loop
 	while (condition)				//LOOP
 	{
