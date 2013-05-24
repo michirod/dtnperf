@@ -650,9 +650,9 @@ void print_monitor_usage(char * progname)
 			" -o, --output <file>           Change the default output file (Only with -a option).\n"
 			" -s, --stop                    Stop a demonized instance of monitor.\n"
 			" -e, --expiration-session <s>  Max idle time of log files (s). Default: 60.\n"
-			"     --ip-addr <addr>          Ip address of the bp daemon api. Default: 127.0.0.1 (Only in DTN2)\n"
-			"     --ip-port <port>          Ip port of the bp daemon api. Default: 5010 (Only in DTN2)\n"
-			"     --force-eid <[DTN|IPN]    Force the registration EID independently of BP implementation.\n"
+			"     --ip-addr <addr>          Ip address of the bp daemon api. Default: 127.0.0.1 (DTN2 only)\n"
+			"     --ip-port <port>          Ip port of the bp daemon api. Default: 5010 (DTN2 only)\n"
+			"     --force-eid <[DTN|IPN]    Force the registration EID independently of BP implementation. (ION only)\n"
 			"     --ldir <dir>              Logs directory. Default: %s .\n"
 			"     --debug[=level]           Debug messages [0-1], if level is not indicated level = 1.\n"
 			" -v, --verbose                 Print some information message during the execution.\n"
@@ -681,7 +681,7 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 					{"ldir", required_argument, 0, 40},
 					{"ip-addr", required_argument, 0, 37},
 					{"ip-port", required_argument, 0, 38},
-					{"force-eid", required_argument, 0, 50},
+					{"force-eid", required_argument, 0, 51},
 					{"expiration-session", required_argument, 0,'e'},
 					{"daemon", no_argument, 0, 'a'},
 					{"output", required_argument, 0, 'o'},
@@ -724,7 +724,7 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 				break;
 
 			case 37:
-				if(perf_opt->bp_implementation != BP_ION)
+				if(perf_opt->bp_implementation != BP_DTN)
 				{
 					fprintf(stderr, "--ip-addr supported only in DTN2\n");
 					exit(1);
@@ -737,7 +737,7 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 			case 38:
 				if(perf_opt->bp_implementation != BP_DTN)
 				{
-					fprintf(stderr, "----ip-port supported only in DTN2\n");
+					fprintf(stderr, "--ip-port supported only in DTN2\n");
 					exit(1);
 					return;
 				}
@@ -749,7 +749,13 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 				perf_opt->logs_dir = strdup(optarg);
 				break;
 
-			case 50:
+			case 51:
+				if(perf_opt->bp_implementation != BP_ION)
+				{
+					fprintf(stderr, "--force-eid supported only in ION\n");
+					exit(1);
+					return;
+				}
 				switch( find_forced_eid(strdup(optarg)) )
 				{
 					case 'D':
