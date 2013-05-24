@@ -938,11 +938,23 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			break;
 
 		case 37:
+			if(perf_opt->bp_implementation != BP_DTN)
+			{
+				fprintf(stderr, "--ip-addr supported only in DTN2\n");
+				exit(1);
+				return;
+			}
 			perf_opt->ip_addr = strdup(optarg);
 			perf_opt->use_ip = TRUE;
 			break;
 
 		case 38:
+			if(perf_opt->bp_implementation != BP_DTN)
+			{
+				fprintf(stderr, "--ip-port supported only in DTN2\n");
+				exit(1);
+				return;
+			}
 			perf_opt->ip_port = atoi(optarg);
 			perf_opt->use_ip = TRUE;
 			break;
@@ -952,6 +964,12 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			break;
 
 		case 50:
+			if(perf_opt->bp_implementation != BP_ION)
+			{
+				fprintf(stderr, "--force-eid supported only in ION\n");
+				exit(1);
+				return;
+			}
 			switch( find_forced_eid(strdup(optarg)) )
 			{
 				case 'D':

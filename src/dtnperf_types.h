@@ -93,7 +93,7 @@ typedef struct dtnperf_options
 	boolean_t no_acks;		// do not send ACKs (for retro-compatibility purpose)
 	//monitor options
 	char * logs_dir;		// dir where are saved monitor logs [LOGS_DIR_DEFAULT]
-	int expiration_session; // expiration time of session Client-Server [3600]
+	int expiration_session; // expiration time of session log file [60]
 } dtnperf_options_t;
 
 /**
@@ -103,6 +103,9 @@ typedef struct dtnperf_connection_options
 	{
 		al_bp_timeval_t expiration;			// bundle expiration time (sec)
 		al_bp_bundle_priority_t priority;		// bundle priority
+		boolean_t unreliable;   // unrelabiable value [FALSE]
+		boolean_t critical;		// critical value [FALSE]
+		u32_t flow_label;		// flow label value [0]
 		boolean_t delivery_receipts;
 		boolean_t forwarding_receipts;
 		boolean_t custody_transfer;
