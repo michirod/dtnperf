@@ -824,7 +824,7 @@ void * send_bundles(void * opt)
 			create_fill_payload_buf(debug, debug_level, create_log, i);
 		}
 	}
-	printf("\n\t YESSSS\n");
+
 	// send bundles loop
 	while (condition)				//LOOP
 	{
@@ -857,7 +857,7 @@ void * send_bundles(void * opt)
 		// Send the bundle
 		if (debug)
 			printf("sending the bundle...");
-
+		printf("\n\t YESSSS\n");
 		if (perf_opt->congestion_ctrl == 'w')
 			pthread_mutex_lock(&mutexdata);
 
