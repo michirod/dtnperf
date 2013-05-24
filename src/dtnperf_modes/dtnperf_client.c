@@ -1298,9 +1298,13 @@ void print_client_usage(char* progname)
 			" -l, --lifetime <time>       Bundle lifetime (s). Default is 60 s.\n"
 			" -p, --priority <val>        Bundle  priority [bulk|normal|expedited|reserved]. Default is normal.\n"
 			"     --ack-to-mon            Force server to send ACKs to the monitor (indipendently of server settings. DTN2 only.\n"
-			"     --no-ack-to-mon         Force server not to send  ACKs to the monitor (DTN2 only)\n"
+			"     --no-ack-to-mon         Force server not to send  ACKs to the monitor (DTN2 only).\n"
 			"     --ack-lifetime <time>   ACK lifetime (desired value asked to the server). Default is the same as bundle lifetime\n"
             "     --ack-priority <val>    ACK priority (desired value asked to the server) [bulk|normal|expedited|reserved]. Default is the same as bundle priority\n"
+			"     --ordinal <num>         Ordinal number [0-254]. Default: 0 (ION Only).\n"
+			"     --unreliable            Set unreliable value to True. Default: False (ION Only).\n"
+			"     --critical              Set critical value to True. Default: False (ION Only).\n"
+			"     --flow-label <num>      Flow label number. Default: 0 (ION Only).\n"
 			" -v, --verbose               Print some information messages during execution.\n"
 			" -h, --help                  This help.\n",
 			(int) (HEADER_SIZE + BUNDLE_OPT_SIZE), LOG_FILENAME, LOGS_DIR_DEFAULT);
@@ -1349,6 +1353,10 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"no-ack-to-mon", no_argument, 0, 45},		// force server to NOT send acks to monitor
 				{"ack-lifetime", required_argument, 0, 46}	,			// set server ack expiration equal to client bundles
 				{"ack-priority", required_argument, 0, 47},	// set server ack priority as indicated or equal to client bundles
+				{"ordinal", required_argument, 0, 52},
+				{"unreliable", no_argument, 0, 53},
+				{"critical", no_argument, 0, 54},
+				{"flow-label", required_argument, 0, 55},
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
 		};
@@ -1529,21 +1537,45 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			break;
 
 		case 37:
+			if(perf_opt->bp_implementation != BP_DTN)
+			{
+				fprintf(stderr, "--ip-addr supported only in DTN2\n");
+				exit(1);
+				return;
+			}
 			perf_opt->ip_addr = strdup(optarg);
 			perf_opt->use_ip = TRUE;
 			break;
 
 		case 38:
+			if(perf_opt->bp_implementation != BP_DTN)
+			{
+				fprintf(stderr, "--ip-port supported only in DTN2\n");
+				exit(1);
+				return;
+			}
 			perf_opt->ip_port = atoi(optarg);
 			perf_opt->use_ip = TRUE;
 			break;
 
 
 		case 44:
+			if(perf_opt->bp_implementation != BP_DTN)
+			{
+				fprintf(stderr, "--ack-to-mon supported only in DTN2\n");
+				exit(1);
+				return;
+			}
 			perf_opt->bundle_ack_options.ack_to_mon = ATM_FORCE_YES;
 			break;
 
 		case 45:
+			if(perf_opt->bp_implementation != BP_DTN)
+			{
+				fprintf(stderr, "--no-ack-to-mon supported only in DTN2\n");
+				exit(1);
+				return;
+			}
 			perf_opt->bundle_ack_options.ack_to_mon = ATM_FORCE_NO;
 			break;
 
@@ -1575,6 +1607,49 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 48:
 			conn_opt->deleted_receipts = TRUE;
 			break;
+
+		case 52:
+			if( perf_opt->bp_implementation != BP_ION){
+				fprintf(stderr, "--ordinal supported only in ION\n");
+				exit(1);
+				return;
+			}
+			conn_opt->priority.ordinal = atoi(optarg);
+			if(conn_opt->priority.ordinal > 254)
+			{
+				fprintf(stderr, "Invalid ordinal number %lu\n", conn_opt->priority.ordinal);
+				exit(1);
+				return;
+			}
+			break;
+
+		case 53:
+			if( perf_opt->bp_implementation != BP_ION){
+				fprintf(stderr, "--unreliable supported only in ION\n");
+				exit(1);
+				return;
+			}
+			conn_opt->unreliable = TRUE;
+			break;
+
+		case 54:
+			if( perf_opt->bp_implementation != BP_ION){
+				fprintf(stderr, "--critical supported only in ION\n");
+				exit(1);
+				return;
+			}
+			conn_opt->critical = TRUE;
+			break;
+
+		case 55:
+			if( perf_opt->bp_implementation != BP_ION){
+				fprintf(stderr, "--flow-label supported only in ION\n");
+				exit(1);
+				return;
+			}
+			conn_opt->flow_label = atoi(optarg);
+			break;
+
 		case '?':
 			fprintf(stderr, "Unknown option: %c\n", optopt);
 			exit(1);
@@ -1611,7 +1686,6 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	if (set_ack_priority_as_bundle)
 		perf_opt->bundle_ack_options.ack_priority = conn_opt->priority;
 	// TEMP: ordinal = 0
-	conn_opt->priority.ordinal = 0;
 	perf_opt->bundle_ack_options.ack_priority.ordinal = conn_opt->priority.ordinal;
 
 #define CHECK_SET(_arg, _what)                                          	\

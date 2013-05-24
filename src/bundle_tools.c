@@ -151,6 +151,15 @@ void set_bp_options(al_bp_bundle_object_t *bundle, dtnperf_connection_options_t 
 	// Bundle priority
 	al_bp_bundle_set_priority(bundle, opt->priority);
 
+	// Bundle unreliable
+	al_bp_bundle_set_unreliable(bundle, opt->unreliable);
+
+	// Bundle critical
+	al_bp_bundle_set_critical(bundle, opt->critical);
+
+	// Bundle flow label
+	al_bp_bundle_set_flow_label(bundle, opt->flow_label);
+
 	// Delivery receipt option
 	if (opt->delivery_receipts)
 		dopts |= BP_DOPTS_DELIVERY_RCPT;
