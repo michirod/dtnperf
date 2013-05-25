@@ -649,9 +649,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		// the last one is the last bundle sent
 		for (i = 0; i< ( tot_bundles -1) ; i++ )
 		{
-			tmp_payload.filename.filename_len = strlen(&file_bundle_names[i]);
-			tmp_payload.filename.filename_val = &file_bundle_names[i];
-			printf("FREE %s\n", file_bundle_names[i][0]);
+			tmp_payload.filename.filename_len = strlen(file_bundle_names[i][0]);
+			tmp_payload.filename.filename_val = file_bundle_names[i][0];
+			printf("FREE %s\n", file_bundle_names[i]);
 			al_bp_free_payload(&tmp_payload);
 		}
 		//free(file_bundle_names);
