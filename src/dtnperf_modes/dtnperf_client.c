@@ -647,11 +647,16 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		al_bp_bundle_payload_t tmp_payload;
 		tmp_payload.location = bundle.payload->location;
 		// the last one is the last bundle sent
-		for (i = 0; i< ( tot_bundles -1) ; i++ )
+		for (i = 0; i< tot_bundles ; i++ )
 		{
-			tmp_payload.filename.filename_len = strlen(file_bundle_names[i]);
-			tmp_payload.filename.filename_val = file_bundle_names[i];
-			al_bp_free_payload(&tmp_payload);
+		// The last bundle delivered is not deleted here
+		// Is deleted with the free(&bundle)
+			if( strcmp(bundle.payload->filename.filename_val,file_bundle_names[i]) != 0)
+			{
+				tmp_payload.filename.filename_len = strlen(file_bundle_names[i]);
+				tmp_payload.filename.filename_val = file_bundle_names[i];
+				al_bp_free_payload(&tmp_payload);
+			}
 		}
 	}
 	//structure bundle is always free in every op mode
