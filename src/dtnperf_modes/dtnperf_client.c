@@ -87,7 +87,7 @@ al_bp_endpoint_id_t local_eid;
 al_bp_endpoint_id_t dest_eid;
 al_bp_endpoint_id_t mon_eid;
 al_bp_bundle_object_t bundle;
-al_bp_bundle_payload_t * bundle_payloads_file;
+char * file_bundle_names;
 al_bp_bundle_object_t ack;
 
 dtnperf_options_t * perf_opt;
@@ -440,7 +440,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			transfer_filedim = file.st_size;
 			tot_bundles += bundles_needed(transfer_filedim, get_file_fragment_size(perf_opt->bundle_payload, strlen(transfer_filename), strlen(perf_opt->mon_eid)));
 
-			bundle_payloads_file = (al_bp_bundle_payload_t *) malloc(sizeof(al_bp_bundle_payload_t) * tot_bundles);
+			file_bundle_names = (char *) malloc(sizeof(char) * tot_bundles);
 		}
 		else // Data mode
 			tot_bundles += bundles_needed(perf_opt->data_qty, perf_opt->bundle_payload);
@@ -644,11 +644,15 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if(perf_opt->op_mode == 'F')
 	{
 		int i;
+		al_bp_bundle_payload_t tmp_payload;
+		tmp_payload.location = bundle.payload->location;
 		for (i = 0; i<tot_bundles ; i++ )
 		{
-			al_bp_free_payload(&bundle_payloads_file[i]);
+			tmp_payload.filename.filename_len = strlen(file_bundle_names[i]);
+			tmp_payload.filename.filename_val = file_bundle_names[i];
+			al_bp_free_payload(tmp_payload);
 		}
-		free(bundle_payloads_file);
+		free(file_bundle_names);
 	}
 	//structure bundle is always free in every op mode
 	al_bp_bundle_free(&bundle);
@@ -851,7 +855,7 @@ void * send_bundles(void * opt)
 			else
 				error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
 
-			bundle_payloads_file[sent_bundles] = * bundle.payload;
+			file_bundle_names[sent_bundles] = bundle.payload->filename.filename_val;
 		}
 		// window debug
 		if ((debug) && (debug_level > 1))
