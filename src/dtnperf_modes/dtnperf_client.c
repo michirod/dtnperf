@@ -648,9 +648,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		tmp_payload.location = bundle.payload->location;
 		for (i = 0; i<tot_bundles ; i++ )
 		{
-			tmp_payload.filename.filename_len = strlen(file_bundle_names[i]);
+			tmp_payload.filename.filename_len = strlen(&file_bundle_names[i]);
 			tmp_payload.filename.filename_val = file_bundle_names[i];
-			al_bp_free_payload(tmp_payload);
+			al_bp_free_payload(& tmp_payload);
 		}
 		free(file_bundle_names);
 	}
@@ -832,7 +832,7 @@ void * send_bundles(void * opt)
 	//Only for DATA e TIME MODE is the payload is the same for all bundle
 	if (perf_opt->op_mode == 'T' || perf_opt->op_mode == 'D')
 	{
-		create_fill_payload_buf(debug, debug_level, create_log, 0);
+		create_fill_payload_buf(debug, debug_level, create_log, 0);_
 	}
 	else //For FILE MODE created all the payload necessary
 	{
