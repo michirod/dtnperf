@@ -646,19 +646,18 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		int i;
 		al_bp_bundle_payload_t tmp_payload;
 		tmp_payload.location = bundle.payload->location;
-		for (i = 0; i<tot_bundles ; i++ )
+		// the last one is the last bundle sent
+		for (i = 0; i< ( tot_bundles -1) ; i++ )
 		{
 			tmp_payload.filename.filename_len = strlen(&file_bundle_names[i]);
 			tmp_payload.filename.filename_val = &file_bundle_names[i];
-			printf("\nOK\n");
 			al_bp_free_payload(&tmp_payload);
 		}
-		//free(file_bundle_names);
+		// the last file bundles name only
+		free(file_bundle_names + tot_bundles);
 		printf("\nOK-OK\n");
 	}
 	//structure bundle is always free in every op mode
-	if( bundle.payload->filename.filename_val != NULL)
-		printf("%s\n",bundle.payload->filename.filename_val);
 	al_bp_bundle_free(&bundle);
 	printf("\nOK-OK-OK\n");
 	al_bp_bundle_free(&bundle_stop);
