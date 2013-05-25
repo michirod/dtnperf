@@ -854,8 +854,9 @@ void * send_bundles(void * opt)
 				error = al_bp_bundle_set_payload_file(&bundle, source_file, strlen(source_file));
 			else
 				error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
-
-			file_bundle_names[sent_bundles] = bundle.payload->filename.filename_val;
+			// memorized source_file
+			file_bundle_names[sent_bundles] = (char *) malloc(sizeof(char) * bundle.payload->filename.filename_len);
+			strcpy(file_bundle_names[sent_bundles], bundle.payload->filename.filename_val);
 		}
 		// window debug
 		if ((debug) && (debug_level > 1))
