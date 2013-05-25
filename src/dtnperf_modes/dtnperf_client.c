@@ -649,7 +649,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		for (i = 0; i<tot_bundles ; i++ )
 		{
 			tmp_payload.filename.filename_len = strlen(&file_bundle_names[i]);
-			tmp_payload.filename.filename_val = file_bundle_names[i];
+			tmp_payload.filename.filename_val = &file_bundle_names[i];
 			al_bp_free_payload(& tmp_payload);
 		}
 		free(file_bundle_names);
@@ -832,7 +832,7 @@ void * send_bundles(void * opt)
 	//Only for DATA e TIME MODE is the payload is the same for all bundle
 	if (perf_opt->op_mode == 'T' || perf_opt->op_mode == 'D')
 	{
-		create_fill_payload_buf(debug, debug_level, create_log, 0);_
+		create_fill_payload_buf(debug, debug_level, create_log, 0);
 	}
 	else //For FILE MODE created all the payload necessary
 	{
@@ -855,7 +855,7 @@ void * send_bundles(void * opt)
 			else
 				error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
 			// memorized source_file
-			&file_bundle_names[sent_bundles] = (char *) malloc(sizeof(char) * bundle.payload->filename.filename_len);
+			(file_bundle_names + sent_bundles) = (char *) malloc(sizeof(char) * bundle.payload->filename.filename_len);
 			strcpy(&file_bundle_names[sent_bundles], bundle.payload->filename.filename_val);
 		}
 		// window debug
@@ -934,7 +934,6 @@ void * send_bundles(void * opt)
 		{								// update condition
 			condition = sent_bundles < tot_bundles;
 		}
-		printf("\n\t YESSSS\n");
 	} // while
 	if ((debug) && (debug_level > 0))
 		printf("[debug send thread] ...out from loop\n");
