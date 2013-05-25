@@ -646,7 +646,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		int i;
 		for (i = 0; i<tot_bundles ; i++ )
 		{
-			al_bp_bundle_free(&bundle_payloads_file[i]);
+			al_bp_free_payload(&bundle_payloads_file[i]);
 		}
 		free(bundle_payloads_file);
 	}
