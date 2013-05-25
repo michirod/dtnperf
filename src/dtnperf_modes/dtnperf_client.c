@@ -440,8 +440,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			transfer_filedim = file.st_size;
 			tot_bundles += bundles_needed(transfer_filedim, get_file_fragment_size(perf_opt->bundle_payload, strlen(transfer_filename), strlen(perf_opt->mon_eid)));
 
-			if(perf_opt->bp_implementation == BP_ION)
-				file_bundle_names = (char * *) malloc(sizeof(char *) * tot_bundles);
+			file_bundle_names = (char * *) malloc(sizeof(char *) * tot_bundles);
 		}
 		else // Data mode
 			tot_bundles += bundles_needed(perf_opt->data_qty, perf_opt->bundle_payload);
@@ -642,22 +641,34 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	free(client_demux_string);
 	free(transfer_filename);
 	free(send_info);
-	if(perf_opt->op_mode == 'F' && perf_opt->bp_implementation == BP_ION)
+	if(perf_opt->op_mode == 'F')
 	{
 		int i;
 		al_bp_bundle_payload_t tmp_payload;
 		tmp_payload.location = bundle.payload->location;
-		// the last one is the last bundle sent
-		for (i = 0; i< tot_bundles ; i++ )
+
+		if( perf_opt->bp_implementation == BP_ION)
 		{
-		// The last bundle delivered is not deleted here
-		// Is deleted with the free(&bundle)
-			if( strcmp(bundle.payload->filename.filename_val,file_bundle_names[i]) != 0)
+			for (i = 0; i< tot_bundles ; i++ )
 			{
-				tmp_payload.filename.filename_len = strlen(file_bundle_names[i]);
-				tmp_payload.filename.filename_val = file_bundle_names[i];
-				al_bp_free_payload(&tmp_payload);
+			// The last bundle delivered is not deleted here
+			// Is deleted with the free(&bundle)
+				if( strcmp(bundle.payload->filename.filename_val,file_bundle_names[i]) != 0)
+				{
+					tmp_payload.filename.filename_len = strlen(file_bundle_names[i]);
+					tmp_payload.filename.filename_val = file_bundle_names[i];
+					al_bp_free_payload(&tmp_payload);
+				}
 			}
+		}
+		else
+		{
+			for (i = 0; i< tot_bundles ; i++ )
+			{
+				remove(file_bundle_names[i]);
+				free(file_bundle_names[i]);
+			}
+			free(file_bundle_names);
 		}
 	}
 	//structure bundle is always free in every op mode
@@ -860,12 +871,9 @@ void * send_bundles(void * opt)
 				error = al_bp_bundle_set_payload_file(&bundle, source_file, strlen(source_file));
 			else
 				error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
-			if(perf_opt->bp_implementation == BP_ION)
-			{
-				// memorized source_file
-				file_bundle_names[sent_bundles] = (char *) malloc(sizeof(char) * bundle.payload->filename.filename_len);
-				strcpy(file_bundle_names[sent_bundles], bundle.payload->filename.filename_val);
-			}
+			// memorized source_file
+			file_bundle_names[sent_bundles] = (char *) malloc(sizeof(char) * bundle.payload->filename.filename_len);
+			strcpy(file_bundle_names[sent_bundles], bundle.payload->filename.filename_val);
 		}
 		// window debug
 		if ((debug) && (debug_level > 1))
