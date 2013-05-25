@@ -653,7 +653,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			printf("\nOK\n");
 			al_bp_free_payload(& tmp_payload);
 		}
-		free(file_bundle_names);
+		//free(file_bundle_names);
 		printf("\nOK-OK\n");
 	}
 	//structure bundle is always free in every op mode
