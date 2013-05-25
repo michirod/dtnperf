@@ -87,7 +87,7 @@ al_bp_endpoint_id_t local_eid;
 al_bp_endpoint_id_t dest_eid;
 al_bp_endpoint_id_t mon_eid;
 al_bp_bundle_object_t bundle;
-char * file_bundle_names;
+char ** file_bundle_names;
 al_bp_bundle_object_t ack;
 
 dtnperf_options_t * perf_opt;
@@ -651,7 +651,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		{
 			tmp_payload.filename.filename_len = strlen(&file_bundle_names[i]);
 			tmp_payload.filename.filename_val = &file_bundle_names[i];
-			printf("FREE %s\n", file_bundle_names[i]);
+			printf("FREE %s\n", file_bundle_names[i][0]);
 			al_bp_free_payload(&tmp_payload);
 		}
 		//free(file_bundle_names);
@@ -859,7 +859,7 @@ void * send_bundles(void * opt)
 			else
 				error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
 			// memorized source_file
-			file_bundle_names[sent_bundles] = (char *) malloc(sizeof(char) * bundle.payload->filename.filename_len);
+			file_bundle_names[sent_bundles][0] = (char *) malloc(sizeof(char) * bundle.payload->filename.filename_len);
 			strcpy(&file_bundle_names[sent_bundles], bundle.payload->filename.filename_val);
 		}
 		// window debug
