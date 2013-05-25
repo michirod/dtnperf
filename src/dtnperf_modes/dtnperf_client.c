@@ -440,7 +440,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			transfer_filedim = file.st_size;
 			tot_bundles += bundles_needed(transfer_filedim, get_file_fragment_size(perf_opt->bundle_payload, strlen(transfer_filename), strlen(perf_opt->mon_eid)));
 
-			file_bundle_names = (char * *) malloc(sizeof(char *) * tot_bundles);
+			if(perf_opt->bp_implementation == BP_ION)
+				file_bundle_names = (char * *) malloc(sizeof(char *) * tot_bundles);
 		}
 		else // Data mode
 			tot_bundles += bundles_needed(perf_opt->data_qty, perf_opt->bundle_payload);
@@ -641,7 +642,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	free(client_demux_string);
 	free(transfer_filename);
 	free(send_info);
-	if(perf_opt->op_mode == 'F')
+	if(perf_opt->op_mode == 'F' && perf_opt->bp_implementation == BP_ION)
 	{
 		int i;
 		al_bp_bundle_payload_t tmp_payload;
@@ -859,9 +860,12 @@ void * send_bundles(void * opt)
 				error = al_bp_bundle_set_payload_file(&bundle, source_file, strlen(source_file));
 			else
 				error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
-			// memorized source_file
-			file_bundle_names[sent_bundles] = (char *) malloc(sizeof(char) * bundle.payload->filename.filename_len);
-			strcpy(file_bundle_names[sent_bundles], bundle.payload->filename.filename_val);
+			if(perf_opt->bp_implementation == BP_ION)
+			{
+				// memorized source_file
+				file_bundle_names[sent_bundles] = (char *) malloc(sizeof(char) * bundle.payload->filename.filename_len);
+				strcpy(file_bundle_names[sent_bundles], bundle.payload->filename.filename_val);
+			}
 		}
 		// window debug
 		if ((debug) && (debug_level > 1))
