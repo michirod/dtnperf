@@ -651,14 +651,16 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			tmp_payload.filename.filename_len = strlen(&file_bundle_names[i]);
 			tmp_payload.filename.filename_val = &file_bundle_names[i];
 			printf("\nOK\n");
-			al_bp_free_payload(& tmp_payload);
+			al_bp_free_payload(&tmp_payload);
 		}
 		//free(file_bundle_names);
 		printf("\nOK-OK\n");
 	}
 	//structure bundle is always free in every op mode
+	if( bundle.payload->filename.filename_val != NULL)
+		printf("%s\n",bundle.payload->filename.filename_val);
 	al_bp_bundle_free(&bundle);
-	printf("\nOK-OK\n");
+	printf("\nOK-OK-OK\n");
 	al_bp_bundle_free(&bundle_stop);
 
 	if (perf_opt->create_log)
