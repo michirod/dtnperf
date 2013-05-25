@@ -87,6 +87,7 @@ al_bp_endpoint_id_t local_eid;
 al_bp_endpoint_id_t dest_eid;
 al_bp_endpoint_id_t mon_eid;
 al_bp_bundle_object_t bundle;
+al_bp_bundle_object_t * bundles_file_array;
 al_bp_bundle_object_t ack;
 
 dtnperf_options_t * perf_opt;
@@ -438,6 +439,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 			transfer_filedim = file.st_size;
 			tot_bundles += bundles_needed(transfer_filedim, get_file_fragment_size(perf_opt->bundle_payload, strlen(transfer_filename), strlen(perf_opt->mon_eid)));
+
+			bundles_file_array = (al_bp_bundle_object_t *) malloc(sizeof(al_bp_bundle_object_t) * tot_bundles);
 		}
 		else // Data mode
 			tot_bundles += bundles_needed(perf_opt->data_qty, perf_opt->bundle_payload);
@@ -638,6 +641,16 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	free(client_demux_string);
 	free(transfer_filename);
 	free(send_info);
+	if(perf_opt->op_mode == 'F')
+	{
+		int i;
+		for (i = 0; i<tot_bundles ; i++ )
+		{
+			al_bp_bundle_free(&bundles_file_array[i]);
+		}
+		free(bundles_file_array);
+	}
+	//structure bundle is always free in every op mode
 	al_bp_bundle_free(&bundle);
 	al_bp_bundle_free(&bundle_stop);
 
@@ -658,7 +671,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	FILE * stream;
 	boolean_t eof_reached;
 
-	if(perf_opt->op_mode == 'F') // File mode
+	if(perf_opt->op_mode == 'F')// File mode
 		sprintf(source_file, "%s_%d_%d", SOURCE_FILE, getpid(),num_bundle);
 	else 						// Time and Data mode
 		sprintf(source_file, "%s_%d", SOURCE_FILE, getpid());
@@ -829,6 +842,7 @@ void * send_bundles(void * opt)
 	while (condition)				//LOOP
 	{
 		// Set Payload FILE MODE
+		// Add in bundles_file_array the bundle to send for free at the end every bundle
 		if (perf_opt->op_mode == 'F')
 		{
 			sprintf(source_file, "%s_%d_%d", SOURCE_FILE, getpid(),sent_bundles);
@@ -836,6 +850,8 @@ void * send_bundles(void * opt)
 				error = al_bp_bundle_set_payload_file(&bundle, source_file, strlen(source_file));
 			else
 				error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
+
+			bundles_file_array[sent_bundles] = bundle;
 		}
 		// window debug
 		if ((debug) && (debug_level > 1))
@@ -1305,7 +1321,7 @@ void print_client_usage(char* progname)
 			"     --ordinal <num>         Ordinal number [0-254]. Default: 0 (ION Only).\n"
 			"     --unreliable            Set unreliable value to True. Default: False (ION Only).\n"
 			"     --critical              Set critical value to True. Default: False (ION Only).\n"
-			"     --flow-label <num>      Flow label number. Default: 0 (ION Only).\n"
+			"     --flow <num>      Flow label number. Default: 0 (ION Only).\n"
 			" -v, --verbose               Print some information messages during execution.\n"
 			" -h, --help                  This help.\n",
 			(int) (HEADER_SIZE + BUNDLE_OPT_SIZE), LOG_FILENAME, LOGS_DIR_DEFAULT);
@@ -1357,7 +1373,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"ordinal", required_argument, 0, 52},
 				{"unreliable", no_argument, 0, 53},
 				{"critical", no_argument, 0, 54},
-				{"flow-label", required_argument, 0, 55},
+				{"flow", required_argument, 0, 55},
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
 		};
