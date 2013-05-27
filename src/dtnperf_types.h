@@ -95,7 +95,7 @@ typedef struct dtnperf_options
 	char * logs_dir;		// dir where are saved monitor logs [LOGS_DIR_DEFAULT]
 	int expiration_session; // expiration time of session log file [60]
 	// block options
-	u32_t num_blocks;     // number of extension and metadata blocks
+	u16_t num_blocks;     // number of extension and metadata blocks
 	u64_t metadata_type;     // metadata type code
 } dtnperf_options_t;
 
