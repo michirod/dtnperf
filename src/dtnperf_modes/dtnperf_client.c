@@ -1442,7 +1442,7 @@ void print_client_usage(char* progname)
 			" -v, --verbose               Print some information messages during execution.\n"
 			" -h, --help                  This help.\n",
 			(int) (HEADER_SIZE + BUNDLE_OPT_SIZE), LOG_FILENAME, LOGS_DIR_DEFAULT);
-	fprintf(stderr, "\n");111
+	fprintf(stderr, "\n");
 	exit(1);
 } // end print_client_usage
 
