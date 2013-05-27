@@ -72,7 +72,7 @@ al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t
 /**
  * MetaBlock utility funtions
  */
-check_metadata(extension_block_info_t* ext_block);
+boolean_t check_metadata(extension_block_info_t* ext_block);
 void set_metadata_type(extension_block_info_t* ext_block, u_int64_t metadata_type);
 void get_extension_block(extension_block_info_t* ext_block,
 			al_bp_extension_block_t * extension_block);
