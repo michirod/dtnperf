@@ -141,4 +141,37 @@
 // unix time of 1/1/2000
 #define DTN_EPOCH 946684800
 
+/**
+ * Metadata type code numbers used in Metadata Blocks - see RFC 6258
+ */
+typedef enum {
+	METADATA_TYPE_URI		        = 0x01,  ///< Metadata block carries URI
+	METADATA_TYPE_EXPT_MIN			= 0xc0,  ///< Low end of experimental range
+	METADATA_TYPE_EXPT_MAX			= 0xff,  ///< High end of experimental range
+} metadata_type_code_t;
+
+/**
+ * Valid type codes for bundle blocks.
+ * (See http://www.dtnrg.org/wiki/AssignedNamesAndNumbers)
+ * THis is copied from servlib/bundling/BundleProtcocol.h
+ */
+typedef enum {
+    PRIMARY_BLOCK               = 0x000, ///< INTERNAL ONLY -- NOT IN SPEC
+    PAYLOAD_BLOCK               = 0x001, ///< Defined in RFC5050
+    BUNDLE_AUTHENTICATION_BLOCK = 0x002, ///< Defined in RFC6257
+    PAYLOAD_SECURITY_BLOCK      = 0x003, ///< Defined in RFC6257
+    CONFIDENTIALITY_BLOCK       = 0x004, ///< Defined in RFC6257
+    PREVIOUS_HOP_BLOCK          = 0x005, ///< Defined in RFC6259
+    METADATA_BLOCK              = 0x008, ///< Defined in RFC6258
+    EXTENSION_SECURITY_BLOCK    = 0x009, ///< Defined in RFC6257
+    SESSION_BLOCK               = 0x00c, ///< NOT IN SPEC YET
+    AGE_BLOCK                   = 0x00a, ///< draft-irtf-dtnrg-bundle-age-block-01
+    QUERY_EXTENSION_BLOCK       = 0x00b, ///< draft-irtf-dtnrg-bpq-00
+    SEQUENCE_ID_BLOCK           = 0x010, ///< NOT IN SPEC YET
+    OBSOLETES_ID_BLOCK          = 0x011, ///< NOT IN SPEC YET
+    API_EXTENSION_BLOCK         = 0x100, ///< INTERNAL ONLY -- NOT IN SPEC
+    UNKNOWN_BLOCK               = 0x101, ///< INTERNAL ONLY -- NOT IN SPEC
+} bundle_block_type_t;
+
+
 #endif /* DEFINITIONS_H_ */

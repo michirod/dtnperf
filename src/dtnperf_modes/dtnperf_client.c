@@ -93,6 +93,10 @@ al_bp_bundle_object_t ack;
 dtnperf_options_t * perf_opt;
 dtnperf_connection_options_t * conn_opt;
 
+extension_block_info_t * ext_blocks;
+static u_int num_meta_blocks = 0;
+static u_int num_ext_blocks = 0;
+
 
 /*  ----------------------------
  *          CLIENT CODE
@@ -111,6 +115,10 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	al_bp_bundle_object_t bundle_stop;
 	monitor_parameters_t mon_params;
 
+	void * ext_buf;
+	void * meta_buf;
+	al_bp_extension_block_t * ext_bp;
+	al_bp_extension_block_t * meta_bp;
 
 	/* ------------------------
 	 * initialize variables
@@ -465,6 +473,77 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
 
+	 if ((debug) && (debug_level > 0))
+		 printf("[debug] number of blocks: %d\n", perf_opt->num_blocks);
+
+	// set extension block information
+	if (num_ext_blocks > 0)
+	{
+		ext_buf = malloc(num_ext_blocks * sizeof(al_bp_extension_block_t));
+		memset(ext_buf, 0, num_ext_blocks * sizeof(al_bp_extension_block_t));
+		int i=0;
+
+		ext_bp = (al_bp_extension_block_t *)ext_buf;
+		for (i = 0; i < num_ext_blocks; i++)
+		{
+			if (check_metadata(&ext_blocks[i]))
+			{
+				continue;
+			}
+			ext_bp->type = ext_blocks[i].block.type;
+			ext_bp->flags = ext_blocks[i].block.flags;
+			ext_bp->data.data_len = ext_blocks[i].block.data.data_len;
+			ext_bp->data.data_val = ext_blocks[i].block.data.data_val;;
+			ext_bp++;
+		}
+		bundle.spec->blocks.blocks_len = num_ext_blocks;
+		bundle.spec->blocks.blocks_val = (al_bp_extension_block_t *)ext_buf;
+	}
+
+	// set metadata block information
+	if (num_meta_blocks > 0)
+	{
+		meta_buf = malloc(num_meta_blocks * sizeof(al_bp_extension_block_t));
+		memset(meta_buf, 0, num_meta_blocks * sizeof(al_bp_extension_block_t));
+		int i=0;
+
+		meta_bp = (al_bp_extension_block_t *)meta_buf;
+		for (i = 0; i < num_meta_blocks; i++)
+		{
+			if (!check_metadata(&ext_blocks[i]))
+			{
+				continue;
+			}
+			meta_bp->type = ext_blocks[i].block.type;
+			meta_bp->flags = ext_blocks[i].block.flags;
+			meta_bp->data.data_len = ext_blocks[i].block.data.data_len;
+			meta_bp->data.data_val = ext_blocks[i].block.data.data_val;;
+			meta_bp++;
+		}
+		bundle.spec->metadata.metadata_len = num_meta_blocks;
+		bundle.spec->metadata.metadata_val = (al_bp_extension_block_t *)meta_buf;
+	}
+
+	if ((debug) && (debug_level > 0))
+	{
+		int i=0;
+		printf("==============================\n");
+		printf("[debug] number of metadata blocks: %d\n", bundle.spec->metadata.metadata_len);
+		for (i = 0; i < num_meta_blocks; i++)
+		{
+			if (!check_metadata(&ext_blocks[i]))
+			{
+				continue;
+			}
+			printf("Metada Block[%d]\tmetadata_type [%d]\n", i, ext_blocks[i].metadata_type);
+			printf("---type: %d\n", bundle.spec->metadata.metadata_val[i].type);
+			printf("---flags: %d\n", bundle.spec->metadata.metadata_val[i].flags);
+			printf("---data_len: %d\n", bundle.spec->metadata.metadata_val[i].data.data_len);
+			printf("---data_val: %s\n", bundle.spec->metadata.metadata_val[i].data.data_val);
+		}
+		printf("-------------------------------\n");
+	}
+
 	// Create the array for the bundle send info (only for sliding window congestion control)
 	if (perf_opt->congestion_ctrl == 'w') {
 		if ((debug) && (debug_level > 0))
@@ -674,6 +753,19 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	//structure bundle is always free in every op mode
 	al_bp_bundle_free(&bundle);
 	al_bp_bundle_free(&bundle_stop);
+	free(ext_buf);
+	free(meta_buf);
+	if (perf_opt->num_blocks > 0)
+	{
+		int i;
+		for ( i=0; i<perf_opt->num_blocks; i++ )
+		{
+			printf("Freeing extension block info [%d].data at 0x%08X\n",
+					i, ext_blocks[i].block.data.data_val);
+			free(ext_blocks[i].block.data.data_val);
+		}
+		ext_blocks = NULL;
+	}
 
 	if (perf_opt->create_log)
 		printf("\nClient log saved: %s\n", perf_opt->log_filename);
@@ -1343,11 +1435,14 @@ void print_client_usage(char* progname)
 			"     --ordinal <num>         Ordinal number [0-254]. Default: 0 (ION Only).\n"
 			"     --unreliable            Set unreliable value to True. Default: False (ION Only).\n"
 			"     --critical              Set critical value to True. Default: False (ION Only).\n"
-			"     --flow <num>      Flow label number. Default: 0 (ION Only).\n"
+			"     --flow <num>            Flow label number. Default: 0 (ION Only).\n"
+	//		" -n  --num-ext-blocks <val>  Number of extension/metadata blocks\n"
+			"     --mb-type <type>        Include metadata block and specify type (DTN2 Only).\n"
+			"     --mb-string <string>    Extension/metadata block content (DTN2 Only).\n"
 			" -v, --verbose               Print some information messages during execution.\n"
 			" -h, --help                  This help.\n",
 			(int) (HEADER_SIZE + BUNDLE_OPT_SIZE), LOG_FILENAME, LOGS_DIR_DEFAULT);
-	fprintf(stderr, "\n");
+	fprintf(stderr, "\n");111
 	exit(1);
 } // end print_client_usage
 
@@ -1359,6 +1454,9 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	boolean_t w = FALSE, r = FALSE;
 	boolean_t set_ack_priority_as_bundle = TRUE;
 	boolean_t set_ack_expiration_as_bundle = TRUE;
+	boolean_t flags_set;
+	boolean_t data_set;
+	char * block_buf;
 
 	while (!done)
 	{
@@ -1396,12 +1494,17 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"unreliable", no_argument, 0, 53},
 				{"critical", no_argument, 0, 54},
 				{"flow", required_argument, 0, 55},
+				//{"num-ext-blocks", required_argument, 0, 'n'},
+				{"mb-type", required_argument, 0, 56},   // set metadata extension block type
+				{"mb-string", required_argument, 0, 57},          // set metadata/extension block content
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
 		};
 
 		int option_index = 0;
 		c = getopt_long(argc, argv, "hvMCW:d:m:i:T:D:F:P:l:R:p:NrfL::", long_options, &option_index);
+
+		perf_opt->num_blocks = 1;
 
 		switch (c)
 		{
@@ -1688,6 +1791,62 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			}
 			conn_opt->flow_label = atoi(optarg);
 			break;
+/*		 case 'n':
+		                        perf_opt->num_blocks = atoi(optarg);
+		                        ext_blocks = malloc(perf_opt->num_blocks * sizeof(extension_block_info_t));
+		                        break;*/
+			case 56:
+				if(perf_opt->bp_implementation != BP_DTN)
+				{
+					fprintf(stderr, "--mb-type supported only in DTN2\n");
+					exit(1);
+					return;
+				}
+				perf_opt->metadata_type = atoi(optarg);
+		        if((num_meta_blocks + 1) > perf_opt->num_blocks)
+		        {
+		        	fprintf(stderr, "ERROR: Specified only %d extension/metadata blocks\n",
+		        			perf_opt->num_blocks);
+		        	exit(1);
+		        }
+                if (!((perf_opt->metadata_type == METADATA_TYPE_URI) ||
+                		((perf_opt->metadata_type >= METADATA_TYPE_EXPT_MIN) &&
+                	     (perf_opt->metadata_type <= METADATA_TYPE_EXPT_MAX))))
+                {
+                	fprintf(stderr, "-M - metadata type code is not in use - available 1, 192-255\n");
+		            exit(1);
+                }
+                ext_blocks[num_meta_blocks].block.type = METADATA_BLOCK;
+                set_metadata(&ext_blocks[num_meta_blocks], perf_opt->metadata_type);
+                num_meta_blocks++;
+		        flags_set = false;
+		        data_set = false;
+		        break;
+
+		case 57:
+			if(perf_opt->bp_implementation != BP_DTN)
+			{
+				fprintf(stderr, "--mb-string supported only in DTN2\n");
+				exit(1);
+				return;
+			}
+			if ((perf_opt->num_blocks > 0) && !data_set)
+			{
+				block_buf = strdup(optarg);
+				set_block_buf(&ext_blocks[(num_meta_blocks + num_ext_blocks) - 1],
+						block_buf, strlen(block_buf));
+				data_set = true;
+			}
+			else if (data_set)
+			{
+				fprintf(stderr, "Ignoring duplicate data setting\n");
+			}
+			else
+			{
+				fprintf(stderr, "No extension or metadata block defined to receive data\n");
+                exit(1);
+			}
+			break;
 
 		case '?':
 			fprintf(stderr, "Unknown option: %c\n", optopt);
@@ -1864,4 +2023,3 @@ void client_clean_exit(int status)
 	al_bp_unregister(handle,regid,local_eid);
 	exit(status);
 } // end client_clean_exit
-
