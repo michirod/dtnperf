@@ -528,7 +528,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	{
 		int i=0;
 		printf("==============================\n");
-		printf("[debug] number of metadata blocks: %d\n", bundle.spec->metadata.metadata_len);
+		printf("[debug] number of metadata blocks: %lu\n", bundle.spec->metadata.metadata_len);
 		for (i = 0; i < num_meta_blocks; i++)
 		{
 			if (!check_metadata(&ext_blocks[i]))
@@ -536,7 +536,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 				continue;
 			}
 			printf("Metada Block[%d]\tmetadata_type [%hu]\n", i, ext_blocks[i].metadata_type);
-			printf("---type: %lu\n", bundle.spec->metadata.metadata_val[i].type);
+			printf("---type: %ll\n", bundle.spec->metadata.metadata_val[i].type);
 			printf("---flags: %lu\n", bundle.spec->metadata.metadata_val[i].flags);
 			printf("---data_len: %lu\n", bundle.spec->metadata.metadata_val[i].data.data_len);
 			printf("---data_val: %s\n", bundle.spec->metadata.metadata_val[i].data.data_val);
@@ -1454,7 +1454,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	boolean_t w = FALSE, r = FALSE;
 	boolean_t set_ack_priority_as_bundle = TRUE;
 	boolean_t set_ack_expiration_as_bundle = TRUE;
-//	boolean_t flags_set;
+	boolean_t flags_set;
 	boolean_t data_set;
 	char * block_buf;
 
