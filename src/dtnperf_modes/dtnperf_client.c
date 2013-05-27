@@ -753,10 +753,10 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	//structure bundle is always free in every op mode
 	al_bp_bundle_free(&bundle);
 	al_bp_bundle_free(&bundle_stop);
-	free(ext_buf);
-	free(meta_buf);
 	if (perf_opt->num_blocks > 0)
 	{
+		free(ext_buf);
+		free(meta_buf);
 		int i;
 		for ( i=0; i<perf_opt->num_blocks; i++ )
 		{
@@ -1504,8 +1504,6 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		int option_index = 0;
 		c = getopt_long(argc, argv, "hvMCW:d:m:i:T:D:F:P:l:R:p:NrfL::", long_options, &option_index);
 
-		perf_opt->num_blocks = 1;
-
 		switch (c)
 		{
 		case 'h':
@@ -1802,6 +1800,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 					exit(1);
 					return;
 				}
+				perf_opt->num_blocks = 1;
 				perf_opt->metadata_type = atoi(optarg);
 		        if((num_meta_blocks + 1) > perf_opt->num_blocks)
 		        {
