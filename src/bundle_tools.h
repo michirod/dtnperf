@@ -23,6 +23,16 @@ typedef struct
 }
 send_information_t;
 
+/*
+ * extension/metadata block information
+ */
+typedef struct extension_block_info
+{
+    boolean_t metadata;
+    u_int64_t metadata_type;
+    al_bp_extension_block_t block;
+} extension_block_info_t;
+
 
 
 long bundles_needed (long data, long pl);
@@ -56,7 +66,18 @@ al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char 
  * Get reported eid and timestamp from bundle ack
  * If you don't need either eid or timestamp, just put NULL in eid or timestamp.
  */
-al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t * reported_eid, al_bp_timestamp_t * report_timestamp);
+al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t
+		* reported_eid, al_bp_timestamp_t * report_timestamp);
+
+/**
+ * MetaBlock utility funtions
+ */
+check_metadata(extension_block_info_t* ext_block);
+void set_metadata_type(extension_block_info_t* ext_block, u_int64_t metadata_type);
+void get_extension_block(extension_block_info_t* ext_block,
+			al_bp_extension_block_t * extension_block);
+void set_block_buf(extension_block_info_t* ext_block, char * buf, u32_t len);
+
 
 u32_t get_current_dtn_time();
 

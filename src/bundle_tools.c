@@ -169,7 +169,7 @@ void set_bp_options(al_bp_bundle_object_t *bundle, dtnperf_connection_options_t 
 		dopts |= BP_DOPTS_FORWARD_RCPT;
 
 	// Custody transfer
-	if (opt->custody_transfer)
+	if (opt->custody_transfer && (opt->critical == FALSE))
 		dopts |= BP_DOPTS_CUSTODY;
 
 	// Custody receipts
@@ -576,6 +576,46 @@ al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t
 	close_payload_stream_read(pl_stream);
 	return error;
 }
+
+boolean_t check_metadata(extension_block_info_t* ext_block)
+{
+    return ext_block->metadata;
+} // end check_metadata
+
+void set_metadata_type(extension_block_info_t* ext_block, u_int64_t metadata_type)
+{
+    if (metadata_type > METADATA_TYPE_EXPT_MAX) {
+            fprintf(stderr, "Value of metadata_type greater than maximum allowed\n");
+            exit(1);
+    }
+    ext_block->metadata = TRUE;
+    ext_block->metadata_type = metadata_type;
+} // end set_metadata
+
+void get_extension_block(extension_block_info_t* ext_block, al_bp_extension_block_t * extension_block)
+{
+	*extension_block = ext_block->block;
+} // end get_extension_block
+
+void set_block_buf(extension_block_info_t* ext_block, char * buf, u32_t len)
+{
+    if (ext_block->block.data.data_val != NULL) {
+        free(ext_block->block.data.data_val);
+        ext_block->block.data.data_val = NULL;
+        ext_block->block.data.data_len = 0;
+    }
+    if (ext_block->metadata) {
+        ext_block->block.data.data_val =
+                (char *)malloc(sizeof(char) * (len + 1));
+        ext_block->block.data.data_len = len;
+        strncpy(ext_block->block.data.data_val, buf, len);
+        free(buf);
+    }
+    else {
+        ext_block->block.data.data_val = buf;
+        ext_block->block.data.data_len = len;
+    }
+} // end set_block_buf
 
 u32_t get_current_dtn_time()
 {

@@ -94,27 +94,30 @@ typedef struct dtnperf_options
 	//monitor options
 	char * logs_dir;		// dir where are saved monitor logs [LOGS_DIR_DEFAULT]
 	int expiration_session; // expiration time of session log file [60]
+	// block options
+	u_int num_blocks;     // number of extension and metadata blocks
+	u_int64_t metadata_type;     // metadata type code
 } dtnperf_options_t;
 
 /**
  * To change default values go to init_dtnperf_connection_options()
  */
 typedef struct dtnperf_connection_options
-	{
-		al_bp_timeval_t expiration;			// bundle expiration time (sec)
-		al_bp_bundle_priority_t priority;		// bundle priority
-		boolean_t unreliable;   // unrelabiable value [FALSE]
-		boolean_t critical;		// critical value [FALSE]
-		u32_t flow_label;		// flow label value [0]
-		boolean_t delivery_receipts;
-		boolean_t forwarding_receipts;
-		boolean_t custody_transfer;
-		boolean_t custody_receipts;
-		boolean_t receive_receipts;
-		boolean_t deleted_receipts;
-		boolean_t wait_for_report;
-		boolean_t disable_fragmentation;
-	} dtnperf_connection_options_t;
+{
+	al_bp_timeval_t expiration;			// bundle expiration time (sec)
+	al_bp_bundle_priority_t priority;		// bundle priority
+	boolean_t unreliable;   // unrelabiable value [FALSE]
+	boolean_t critical;		// critical value [FALSE]
+	u32_t flow_label;		// flow label value [0]
+	boolean_t delivery_receipts;
+	boolean_t forwarding_receipts;
+	boolean_t custody_transfer;
+	boolean_t custody_receipts;
+	boolean_t receive_receipts;
+	boolean_t deleted_receipts;
+	boolean_t wait_for_report;
+	boolean_t disable_fragmentation;
+} dtnperf_connection_options_t;
 
 typedef struct dtnperf_global_options
 {
