@@ -535,7 +535,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			{
 				continue;
 			}
-			printf("Metada Block[%d]\tmetadata_type [%ll]\n", i, ext_blocks[i].metadata_type);
+			printf("Metada Block[%d]\tmetadata_type [%L]\n", i, ext_blocks[i].metadata_type);
 			printf("---type: %lu\n", bundle.spec->metadata.metadata_val[i].type);
 			printf("---flags: %lu\n", bundle.spec->metadata.metadata_val[i].flags);
 			printf("---data_len: %lu\n", bundle.spec->metadata.metadata_val[i].data.data_len);
