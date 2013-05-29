@@ -162,7 +162,7 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 
 	// transfer length is total payload length without header,
 	// congestion control char and file fragment offset
-	transfer_len = get_file_fragment_size(pl_size - 4, info->filename_len, monitor_eid_len);
+	transfer_len = get_file_fragment_size(pl_size, info->filename_len, monitor_eid_len);
 	// read file fragment offset
 	fread(&offset, sizeof(offset), 1, pl_stream);
 	// read remaining file fragment
