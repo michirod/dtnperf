@@ -338,6 +338,8 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	eid_len = strlen(opt->mon_eid);
 	fwrite(&eid_len, sizeof(eid_len), 1, f);
 	fwrite(opt->mon_eid, eid_len, 1, f);
+	fwrite(opt->mon_eid, eid_len, 1, f);
+
 
 	return BP_SUCCESS;
 }
@@ -431,15 +433,21 @@ al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 		return BP_ENULLPNTR;
 
 	char * pattern = PL_PATTERN;
-	long remaining;
+	long remaining, tot_sum;
 	int i;
+	u16_t len_mon = 0;
 	al_bp_error_t result;
 
 	// prepare header and congestion control
 	result = prepare_payload_header_and_ack_options(opt, f);
 
 	// remaining = bundle_payload - HEADER_SIZE - congestion control char - ack_lifetime
-	remaining = opt->bundle_payload - HEADER_SIZE - 2 - sizeof(al_bp_timeval_t);
+	len_mon = strlen(opt->mon_eid);
+	tot_sum = HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) +sizeof(len_mon) - len_mon;
+	remaining = opt->bundle_payload - sizeof(len_mon) - len_mon;
+	printf(" %l = %f - %l",remaining,opt->bundle_payload,tot_sum);
+//
+//	remaining = sizeof(len_mon) - len_mon;
 
 	// fill remainig payload with a pattern
 	for (i = remaining; i > strlen(pattern); i -= strlen(pattern))
