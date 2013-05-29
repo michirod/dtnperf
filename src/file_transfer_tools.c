@@ -167,6 +167,7 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	fread(&offset, sizeof(offset), 1, pl_stream);
 	// read remaining file fragment
 	transfer = (char*) malloc(transfer_len);
+	memset(transfer, 0, transfer_len);
 	if (fread(transfer, transfer_len, 1, pl_stream) != 1)
 		return -1;
 	// open or create destination file
