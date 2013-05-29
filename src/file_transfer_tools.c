@@ -236,7 +236,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	uint16_t monitor_eid_len;
 	char monitor_eid[256];
 	fread(&monitor_eid_len, sizeof(monitor_eid_len), 1, pl_stream);
-	fread(monitor_eid, monitor_eid_len, 1, pl_stream);;
+	fread(monitor_eid, monitor_eid_len, 1, pl_stream);
 
 	info = file_transfer_info_get(info_list, client_eid);
 	// get expiration time
