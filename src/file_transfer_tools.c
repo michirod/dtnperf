@@ -175,10 +175,8 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	strcat(filename, info->filename);
 	fd = open(filename, O_WRONLY | O_CREAT, 0755);
 	if (fd < 0)
-	{
 		return -1;
-	}
-	printf("\n\tFRAGMENT:\n\t%s\n", transfer);
+
 	// write fragment
 	lseek(fd, offset, SEEK_SET);
 	if (write(fd, transfer, transfer_len) < 0)
@@ -353,7 +351,7 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	// get size of fragment and allocate fragment
 	fragment_len = get_file_fragment_size(opt->bundle_payload, filename_len, monitor_eid_len);
 	fragment = (char *) malloc(fragment_len);
-	memset(fragment,0,fragment_len);
+	memset(fragment, 0 ,fragment_len);
 	// get offset of fragment
 	offset = lseek(fd, 0, SEEK_CUR);
 	// write offset in the bundle
@@ -368,8 +366,7 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 
 	// write fragment in the bundle
 	fwrite(fragment, bytes_read, 1, f);
-	printf("\n\tFRAGMENT:\n\t%s\n", fragment);
-	printf("\n\tByte Fragment written:\n%lu\n\n",bytes_read);
+
 	return result;
 }
 
