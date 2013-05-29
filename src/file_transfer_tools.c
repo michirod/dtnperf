@@ -353,6 +353,7 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	// get size of fragment and allocate fragment
 	fragment_len = get_file_fragment_size(opt->bundle_payload, filename_len, monitor_eid_len);
 	fragment = (char *) malloc(fragment_len);
+	memset(fragment,0,fragment_len);
 	// get offset of fragment
 	offset = lseek(fd, 0, SEEK_CUR);
 	// write offset in the bundle
@@ -364,7 +365,7 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 		*eof = TRUE;
 	else
 		*eof = FALSE;
-	fragment[fragment_len] = '\0';
+
 	// write fragment in the bundle
 	fwrite(fragment, bytes_read, 1, f);
 	printf("\n\tFRAGMENT:\n\t%s\n", fragment);
