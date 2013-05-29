@@ -364,7 +364,7 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 		*eof = TRUE;
 	else
 		*eof = FALSE;
-
+	fragment[fragment_len] = '\0';
 	// write fragment in the bundle
 	fwrite(fragment, bytes_read, 1, f);
 	printf("\n\tFRAGMENT:\n\t%s\n", fragment);
