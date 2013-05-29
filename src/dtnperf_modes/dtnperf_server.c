@@ -693,6 +693,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("done\n");
 /**************************************************************/
 			printf("\n\t SET CRITICAL - FLOW - UNREL\n");
+			bundle_ack_object.spec->priority.ordinal = 0;
 			bundle_ack_object.spec->critical = FALSE;
 			bundle_ack_object.spec->flow_label = 0;
 			bundle_ack_object.spec->unreliable = FALSE;
