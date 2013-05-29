@@ -137,7 +137,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	}
 
 	//Ctrl+C handler
-	signal(SIGINT, server_handler);
+//	signal(SIGINT, server_handler);
 
 	// create dir where dtnperf server will save incoming bundles
 	// command should be: mkdir -p "dest_dir"
@@ -811,12 +811,10 @@ void * file_expiration_timer(void * opt)
 				file_transfer_info_list_item_delete(&file_transfer_info_list, item);
 				free(filename);
 			}
-			printf("\n\tFOR\n");
 		}
 		pthread_mutex_unlock(&mutexdata);
 		sched_yield();
 	}
-	printf("\n\t\tHERE\n");
 	pthread_exit(NULL);
 }
 
