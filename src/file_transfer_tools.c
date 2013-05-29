@@ -179,7 +179,6 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 		return -1;
 	}
 
-	printf("\n\tFRAGMENT:\n%s\n\n",transfer);
 	// write fragment
 	lseek(fd, offset, SEEK_SET);
 	if (write(fd, transfer, transfer_len) < 0)
@@ -369,7 +368,7 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	// write fragment in the bundle
 	fwrite(fragment, bytes_read, 1, f);
 
-	printf("\n\tFRAGMENT:\n%s\n\n",fragment);
+	printf("\n\tByte Fragment written:\n%lu\n\n",bytes_read);
 	return result;
 }
 
