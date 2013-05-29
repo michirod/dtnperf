@@ -309,9 +309,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		if ((debug) && (debug_level > 0))
 			printf("[debug] waiting for bundles...\n");
 
-		printf("\n\tPAUSE\n");
-		pthread_sleep(1);
-		printf("\n\t OK\n");
 		error = al_bp_bundle_receive(handle, bundle_object, pl_location, -1);
 		if (error != BP_SUCCESS)
 		{
@@ -802,6 +799,7 @@ void * file_expiration_timer(void * opt)
 
 		for(item = file_transfer_info_list.first; item != NULL; item = next)
 		{
+			printf("PRINT YES");
 			next = item->next;
 			if (item->info->last_bundle_time + item->info->expiration < current_dtn_time)
 			{
