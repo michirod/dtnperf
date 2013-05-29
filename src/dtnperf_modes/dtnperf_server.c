@@ -137,7 +137,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	}
 
 	//Ctrl+C handler
-//	signal(SIGINT, server_handler);
+	signal(SIGINT, server_handler);
 
 	// create dir where dtnperf server will save incoming bundles
 	// command should be: mkdir -p "dest_dir"
@@ -494,7 +494,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 			pthread_mutex_unlock(&mutexdata);
 			sched_yield();
-
 
 			if (indicator < 0) // error in processing bundle
 			{
