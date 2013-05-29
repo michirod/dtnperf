@@ -314,7 +314,7 @@ u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len, uint16_t
 	long tot_sum, tot_file;
 	// file fragment size is payload without header, congestion ctrl char , ack lifetime and offset
 	tot_sum = HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(uint32_t) + sizeof(al_bp_timeval_t) + monitor_eid_len + sizeof(monitor_eid_len);
-	tot_file = filename_len + sizeof(filename_len) + sizeof(uint32_t));
+	tot_file = filename_len + sizeof(filename_len) + sizeof(uint32_t);
 	result = payload_size - tot_sum - tot_file;
 	//result = payload_size - (HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(uint32_t) + sizeof(al_bp_timeval_t));
 	printf("%lu = %l - %l", payload_size,tot_sum, tot_file);
