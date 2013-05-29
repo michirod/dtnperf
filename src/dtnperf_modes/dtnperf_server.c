@@ -36,12 +36,6 @@ al_bp_endpoint_id_t local_eid;
 // flags to exit cleanly
 boolean_t bp_handle_open;
 
-void handler_SIGKILL(int sig);
-void handler_SIGUSR1(int sig);
-void handler_SIGUSR2(int sig);
-void handler_SIGTERM(int sig);
-void handler_SIGSTOP(int sig);
-
 
 /*  ----------------------------
  *          SERVER CODE
@@ -144,11 +138,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 	//Ctrl+C handler
 	signal(SIGINT, server_handler);
-	signal(SIGKILL, handler_SIGKILL);
-	signal(SIGUSR1, handler_SIGUSR1);
-	signal(SIGTERM, handler_SIGTERM);
-	signal(SIGUSR2, handler_SIGUSR2);
-	signal(SIGSTOP, handler_SIGSTOP);
 
 	// create dir where dtnperf server will save incoming bundles
 	// command should be: mkdir -p "dest_dir"
@@ -822,10 +811,12 @@ void * file_expiration_timer(void * opt)
 				file_transfer_info_list_item_delete(&file_transfer_info_list, item);
 				free(filename);
 			}
+			printf("\n\tFOR\n");
 		}
 		pthread_mutex_unlock(&mutexdata);
 		sched_yield();
 	}
+	printf("\n\t\tHERE\n");
 	pthread_exit(NULL);
 }
 
@@ -1086,30 +1077,4 @@ void server_clean_exit(int status)
 	exit(status);
 }
 
-/**/
-void handler_SIGKILL(int sig)
-{
-	printf("\nDTNperf server received SIGKILL: Exiting\n");
-	server_clean_exit(0);
-}
-/**/
-void handler_SIGUSR1(int sig)
-{
-	printf("\nDTNperf server received SIGUSR1: Exiting\n");
-	server_clean_exit(0);
-}
-void handler_SIGUSR2(int sig)
-{
-	printf("\nDTNperf server received SIGUSR2: Exiting\n");
-	server_clean_exit(0);
-}
-void handler_SIGTERM(int sig)
-{
-	printf("\nDTNperf server received SIGTERM: Exiting\n");
-	server_clean_exit(0);
-}
-void handler_SIGSTOP(int sig){
-	printf("\nDTNperf server received SIGSTOP: Exiting\n");
-		server_clean_exit(0);
-}
 
