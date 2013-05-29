@@ -318,7 +318,7 @@ u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len, uint16_t
 	tot_file = sizeof(al_bp_timeval_t) + filename_len + sizeof(filename_len) + sizeof(uint32_t) + sizeof(uint32_t);
 	result = payload_size - tot_sum - tot_file;
 	//result = payload_size - (HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(uint32_t) + sizeof(al_bp_timeval_t));
-	printf(" result: %lu\n",result);
+	printf("\n result: %lu\n",result);
 	printf(" payload size: %lu\n",payload_size);
 	printf(" Header Fisso: %lu\n",tot_sum);
 	printf(" Header File: %lu\n",tot_file);
