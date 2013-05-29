@@ -835,13 +835,6 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
 
-	u32_t dimFile = 0;
-	struct stat st;
-	memset(&st, 0, sizeof(st));
-	stat(bundle.payload->filename.filename_val, &st);
-	dimFile = st.st_size;
-	printf("\n\t DIM FILE: %lu\n", dimFile);
-
 	// open payload stream in write mode
 	if (open_payload_stream_write(bundle, &stream) < 0)
 	{

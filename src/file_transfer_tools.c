@@ -313,6 +313,7 @@ u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len, uint16_t
 	u32_t result;
 	// file fragment size is payload without header, congestion ctrl char , ack lifetime and offset
 	result = payload_size - (HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(uint32_t) + sizeof(al_bp_timeval_t));
+	//printf("%lu = %lu - (%lu + %hu + %lu + % ")
 	// ... without monitor_eid_len, monitor eid
 	result -= (monitor_eid_len + sizeof(monitor_eid_len));
 	// ... without filename_len, filename, file_size
