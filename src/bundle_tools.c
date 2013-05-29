@@ -445,7 +445,7 @@ al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 	len_mon = strlen(opt->mon_eid);
 	tot_sum = HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) +sizeof(len_mon) - len_mon;
 	remaining = opt->bundle_payload - sizeof(len_mon) - len_mon;
-	printf(" %l = %f - %l",remaining,opt->bundle_payload,tot_sum);
+	printf(" %lu = %f - %lu", remaining, (*opt->bundle_payload), tot_sum);
 //
 //	remaining = sizeof(len_mon) - len_mon;
 
