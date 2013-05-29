@@ -338,8 +338,6 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	eid_len = strlen(opt->mon_eid);
 	fwrite(&eid_len, sizeof(eid_len), 1, f);
 	fwrite(opt->mon_eid, eid_len, 1, f);
-	fwrite(opt->mon_eid, eid_len, 1, f);
-
 
 	return BP_SUCCESS;
 }
