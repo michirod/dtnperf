@@ -311,21 +311,17 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len, uint16_t monitor_eid_len)
 {
 	u32_t result;
-	long tot_sum, tot_file;
-	// file fragment size is payload without header, congestion ctrl char , ack lifetime and offset
-	tot_sum = HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) + monitor_eid_len + sizeof(monitor_eid_len);
-	// bundle lifetime + file + len fil + dim file + offset
-	tot_file = sizeof(al_bp_timeval_t) + filename_len + sizeof(filename_len) + sizeof(uint32_t) + sizeof(uint32_t);
-	result = payload_size - tot_sum - tot_file;
-	//result = payload_size - (HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(uint32_t) + sizeof(al_bp_timeval_t));
-	printf("\n result: %lu\n",result);
-	printf(" payload size: %lu\n",payload_size);
-	printf(" Header Fisso: %lu\n",tot_sum);
-	printf(" Header File: %lu\n",tot_file);
-	// ... without monitor_eid_len, monitor eid
-	//result -= (monitor_eid_len + sizeof(monitor_eid_len));
-	// ... without filename_len, filename, file_size
-	//result -= (filename_len + sizeof(filename_len) + sizeof(uint32_t));
+	long header_dtnperf, header_file;
+	// size header + congestion ctrl char + ack lifetime + monitor eid len + monitor eid
+	header_dtnperf = HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) + monitor_eid_len + sizeof(monitor_eid_len);
+	// bundle lifetime + filename + filename len + dim file + offset
+	header_file = sizeof(al_bp_timeval_t) + filename_len + sizeof(filename_len) + sizeof(uint32_t) + sizeof(uint32_t);
+	// fragment size is without dtnperf header and file header
+	result = payload_size - header_dtnperf - header_file;
+	printf("\nfile segment: %lu\n",result);
+	printf("payload size: %lu\n", payload_size);
+	printf("Header Fisso: %lu\n", header_dtnperf);
+	printf("Header File: %lu\n", header_file);
 	return result;
 }
 
