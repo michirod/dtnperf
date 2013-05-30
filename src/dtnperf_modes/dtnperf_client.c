@@ -535,7 +535,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			{
 				continue;
 			}
-			printf("Metada Block[%d]\tmetadata_type [%L]\n", i, ext_blocks[i].metadata_type);
+		//	printf("Metada Block[%d]\tmetadata_type [%L]\n", i, ext_blocks[i].metadata_type);
 			printf("---type: %lu\n", bundle.spec->metadata.metadata_val[i].type);
 			printf("---flags: %lu\n", bundle.spec->metadata.metadata_val[i].flags);
 			printf("---data_len: %lu\n", bundle.spec->metadata.metadata_val[i].data.data_len);
@@ -760,8 +760,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		int i;
 		for ( i=0; i<perf_opt->num_blocks; i++ )
 		{
-			printf("Freeing extension block info [%d].data at 0x%08X\n",
-					i, ext_blocks[i].block.data.data_val);
+	/*		printf("Freeing extension block info [%d].data at 0x%08X\n",
+					i, ext_blocks[i].block.data.data_val);*/
 			free(ext_blocks[i].block.data.data_val);
 		}
 		ext_blocks = NULL;
@@ -879,7 +879,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		printf("[debug] payload prepared\n");
 	if((debug) && (debug_level > 0))
 	{
-		double h_size;
+		u32_t h_size;
 		uint16_t filename_len, monitor_eid_len;
 		monitor_eid_len = strlen(perf_opt->mon_eid);
 		if(perf_opt->op_mode == 'F')
