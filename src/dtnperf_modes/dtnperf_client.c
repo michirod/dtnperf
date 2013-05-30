@@ -877,6 +877,16 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 
 	if(debug)
 		printf("[debug] payload prepared\n");
+	if((debug) && (debug_level > 0))
+	{
+		double h_size;
+		if(perf_opt->op_mode == 'F')
+			h_size =  get_header_size(perf_opt->op_mode,
+					bundle->payload->filename.filename_len, strlen(perf_opt->mon_eid));
+		else
+			h_size = get_header_size(perf_opt->op_mode, 0, strlen(perf_opt->mon_eid));
+		printf("[debug] dtnperf header size %f b\n", h_size);
+	}
 
 } // end create_fill_payload_buf
 

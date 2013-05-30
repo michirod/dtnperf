@@ -312,17 +312,13 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len, uint16_t monitor_eid_len)
 {
 	u32_t result;
-	long header_dtnperf, header_file;
+/*	long header_dtnperf, header_file;
 	// size header + congestion ctrl char + ack lifetime + monitor eid len + monitor eid
 	header_dtnperf = HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) + monitor_eid_len + sizeof(monitor_eid_len);
 	// bundle lifetime + filename + filename len + dim file + offset
 	header_file = sizeof(al_bp_timeval_t) + filename_len + sizeof(filename_len) + sizeof(uint32_t) + sizeof(uint32_t);
-	// fragment size is without dtnperf header and file header
-	result = payload_size - header_dtnperf - header_file;
-	printf("\nfile segment: %lu\n",result);
-	printf("payload size: %lu\n", payload_size);
-	printf("Header Fisso: %lu\n", header_dtnperf);
-	printf("Header File: %lu\n", header_file);
+	// fragment size is without dtnperf header and file header*/
+	result = payload_size - get_header_size('F', filename_len, monitor_eid_len);
 	return result;
 }
 
@@ -372,7 +368,7 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 
 	// write fragment in the bundle
 	fwrite(fragment, bytes_read, 1, f);
-	printf("\n\tFRAGMENT:\n\t%s\n", fragment);
+	//printf("\n\tFRAGMENT:\n\t%s\n", fragment);
 	printf("\n\tByte Fragment written:\n%lu\n\n",bytes_read);
 	return result;
 }
