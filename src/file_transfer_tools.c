@@ -165,7 +165,6 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	transfer_len = get_file_fragment_size(pl_size, info->filename_len, monitor_eid_len);
 	// read file fragment offset
 	fread(&offset, sizeof(offset), 1, pl_stream);
-	printf("\nOFFSET: %du\nDIM FRAG: %du\n", offset, transfer_len);
 	// read remaining file fragment
 	transfer = (char*) malloc(transfer_len);
 	memset(transfer, 0, transfer_len);
@@ -299,7 +298,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		return result;
 	if (result == 1) // transfer completed
 	{
-		printf("Successfully transfered file: %s%s\n", info->full_dir, info->filename);
+		printf(" Successfully transfered file: %s%s\n", info->full_dir, info->filename);
 		// remove info from list
 		file_transfer_info_del(info_list, client_eid);
 		return 1;
@@ -357,7 +356,6 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	fwrite(&offset, sizeof(offset), 1, f);
 	// read fragment from file
 	bytes_read = read(fd, fragment, fragment_len);
-	printf("\nOFFSET: %du\nDIM FRAG: %du\n", offset, fragment_len);
 	if (bytes_read < fragment_len)// reached EOF
 	{
 		*eof = TRUE;
@@ -369,7 +367,6 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	// write fragment in the bundle
 	fwrite(fragment, bytes_read, 1, f);
 	//printf("\n\tFRAGMENT:\n\t%s\n", fragment);
-	printf("\n\tByte Fragment written:\n%lu\n\n",bytes_read);
 	return result;
 }
 
