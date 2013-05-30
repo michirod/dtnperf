@@ -889,7 +889,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		}
 		else
 			h_size = get_header_size(perf_opt->op_mode, 0, monitor_eid_len);
-		printf("[debug] dtnperf header size %f b\n", h_size);
+		printf("[debug] dtnperf header size %lu byte\n", h_size);
 	}
 
 } // end create_fill_payload_buf
