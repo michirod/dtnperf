@@ -880,11 +880,15 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	if((debug) && (debug_level > 0))
 	{
 		double h_size;
+		uint16_t filename_len, monitor_eid_len;
+		monitor_eid_len = strlen(perf_opt->mon_eid);
 		if(perf_opt->op_mode == 'F')
-			h_size =  get_header_size(perf_opt->op_mode,
-					bundle->payload->filename.filename_len, strlen(perf_opt->mon_eid));
+		{
+			filename_len = strlen(bundle.payload->filename.filename_val);
+			h_size =  get_header_size(perf_opt->op_mode, filename_len, monitor_eid_len);
+		}
 		else
-			h_size = get_header_size(perf_opt->op_mode, 0, strlen(perf_opt->mon_eid));
+			h_size = get_header_size(perf_opt->op_mode, 0, monitor_eid_len);
 		printf("[debug] dtnperf header size %f b\n", h_size);
 	}
 
