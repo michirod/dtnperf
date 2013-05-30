@@ -165,6 +165,7 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	transfer_len = get_file_fragment_size(pl_size, info->filename_len, monitor_eid_len);
 	// read file fragment offset
 	fread(&offset, sizeof(offset), 1, pl_stream);
+	printf("\nOFFSET: %lu\nDIM FRAG: %lu\n", offset, transfer_len);
 	// read remaining file fragment
 	transfer = (char*) malloc(transfer_len);
 	memset(transfer, 0, transfer_len);
@@ -179,7 +180,6 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	{
 		return -1;
 	}
-	printf("\n\tFRAGMENT:\n\t%s\n", transfer);
 	// write fragment
 	lseek(fd, offset, SEEK_SET);
 	if (write(fd, transfer, transfer_len) < 0)
@@ -357,7 +357,7 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	fwrite(&offset, sizeof(offset), 1, f);
 	// read fragment from file
 	bytes_read = read(fd, fragment, fragment_len);
-
+	printf("\nOFFSET: %lu\nDIM FRAG: %lu\n", offset, fragment_len);
 	if (bytes_read < fragment_len)// reached EOF
 	{
 		*eof = TRUE;
