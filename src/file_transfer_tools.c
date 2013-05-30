@@ -363,7 +363,10 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	bytes_read = read(fd, fragment, fragment_len);
 
 	if (bytes_read < fragment_len)// reached EOF
+	{
 		*eof = TRUE;
+		fragment[bytes_read] = EOF;
+	}
 	else
 		*eof = FALSE;
 
