@@ -884,7 +884,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		monitor_eid_len = strlen(perf_opt->mon_eid);
 		if(perf_opt->op_mode == 'F')
 		{
-			filename_len = strlen(bundle.payload->filename.filename_val);
+			filename_len = strlen(source_file);
 			h_size =  get_header_size(perf_opt->op_mode, filename_len, monitor_eid_len);
 		}
 		else
