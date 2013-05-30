@@ -425,9 +425,9 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 	return 0;
 }
 
-double get_header_size(char mode, uint16_t filename_len, uint16_t monitor_eid_len)
+u32_t get_header_size(char mode, uint16_t filename_len, uint16_t monitor_eid_len)
 {
-	double result;
+	u32_t result = 0;
 	// Header Type,  congenstion char,  ack lifetime,  monitor eid,  monitor eid length
 	result = HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) + sizeof(monitor_eid_len) + monitor_eid_len;
 	if(mode == 'F')
