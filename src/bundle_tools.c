@@ -445,14 +445,15 @@ al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 		return BP_ENULLPNTR;
 
 	char * pattern = PL_PATTERN;
-	long remaining, tot_sum;
+	long remaining;
 	int i;
+	uint16_t monitor_eid_len;
 	al_bp_error_t result;
 
 	// prepare header and congestion control
 	result = prepare_payload_header_and_ack_options(opt, f);
-
-	remaining = opt->bundle_payload - get_header_size(opt->bundle_payload, opt->mon_eid);
+	monitor_eid_len = strlen(opt->mon_eid);
+	remaining = opt->bundle_payload - get_header_size(opt->op_mode, 0, monitor_eid_len);
 
 	// fill remainig payload with a pattern
 	for (i = remaining; i > strlen(pattern); i -= strlen(pattern))
