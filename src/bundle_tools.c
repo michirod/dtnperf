@@ -425,6 +425,20 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 	return 0;
 }
 
+double get_header_size(char mode, uint16_t filename_len, uint16_t monitor_eid_len)
+{
+	double result;
+	// Header Type,  congenstion char,  ack lifetime,  monitor eid,  monitor eid length
+	result = HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) + sizeof(monitor_eid_len) + monitor_eid_len;
+	if(mode == 'F')
+	{
+		// bundle lifetime, filename, filename len, dim file, offset
+		result += sizeof(al_bp_timeval_t) + filename_len + sizeof(filename_len) + sizeof(uint32_t) + sizeof(uint32_t);
+	}
+	return result;
+}
+
+
 al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 {
 	if (f == NULL)
@@ -433,19 +447,12 @@ al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 	char * pattern = PL_PATTERN;
 	long remaining, tot_sum;
 	int i;
-	u16_t len_mon = 0;
 	al_bp_error_t result;
 
 	// prepare header and congestion control
 	result = prepare_payload_header_and_ack_options(opt, f);
 
-	// remaining = bundle_payload - HEADER_SIZE - congestion control char - ack_lifetime
-	len_mon = strlen(opt->mon_eid);
-	tot_sum = HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) + sizeof(len_mon) + len_mon;
-	remaining = opt->bundle_payload - tot_sum;
-	printf(" %lu = %f - %lu\n", remaining, opt->bundle_payload, tot_sum);
-//
-//	remaining = sizeof(len_mon) - len_mon;
+	remaining = opt->bundle_payload - get_header_size(opt->bundle_payload, opt->mon_eid);
 
 	// fill remainig payload with a pattern
 	for (i = remaining; i > strlen(pattern); i -= strlen(pattern))
