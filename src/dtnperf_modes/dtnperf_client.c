@@ -1063,7 +1063,7 @@ void * send_bundles(void * opt)
 		printf("[debug send thread] ...out from loop\n");
 	if (create_log)
 		fprintf(log_file, " ...out from loop\n");
-
+	pthread_sleep(3);
 	pthread_mutex_lock(&mutexdata);
 	close_ack_receiver = 1;
 	if (perf_opt->congestion_ctrl == 'r')
