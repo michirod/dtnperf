@@ -715,6 +715,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("[debug] setting delivery options of the bundle ack...");
 			}
 			//bundle_ack_dopts = BP_DOPTS_CUSTODY;
+			bundle_ack_dopts = 0;
 			al_bp_bundle_set_delivery_opts(& bundle_ack_object, bundle_ack_dopts);
 			if (error != BP_SUCCESS)
 			{
