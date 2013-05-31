@@ -301,6 +301,9 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		printf(" Successfully transfered file: %s%s\n", info->full_dir, info->filename);
 		// remove info from list
 		file_transfer_info_del(info_list, client_eid);
+		printf("Before Sleep\n");
+			pthread_sleep(3);
+			printf("After Sleep\n");
 		return 1;
 	}
 	return 0;
