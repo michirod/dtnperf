@@ -1,0 +1,19 @@
+diff -ruB /home/luca/sources/DTN2/servlib/bundling/BundleProtocol.cc /home/luca/sources/DTN2.1//servlib/bundling/BundleProtocol.cc
+--- a/servlib/bundling/BundleProtocol.cc	2013-05-24 20:22:12.000000000 +0200
++++ b/servlib/bundling/BundleProtocol.cc	2013-05-31 17:45:41.000000000 +0200
+@@ -213,12 +213,13 @@
+          ++iter)
+     {
+         log_debug_p(LOG, "adding api_block");
+-        if(BP_FAIL == iter->owner()->prepare(bundle, xmit_blocks, 
++        /*if(BP_FAIL == iter->owner()->prepare(bundle, xmit_blocks, 
+                                &*iter, link, BlockInfo::LIST_API)){
+ 
+             log_err_p(LOG, "BundleProtocol::prepare_blocks: %d->prepare returned BP_FAIL on bundle %d", iter->owner()->block_type(), bundle->bundleid());
+             goto fail;
+-        }
++        }*/
++        iter->owner()->prepare(bundle, xmit_blocks, &*iter, link, BlockInfo::LIST_API);
+     }
+ 
+     //+[AEB]
