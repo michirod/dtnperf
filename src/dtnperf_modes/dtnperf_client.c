@@ -1064,7 +1064,7 @@ void * send_bundles(void * opt)
 	if (create_log)
 		fprintf(log_file, " ...out from loop\n");
 	printf("Before Sleep\n");
-	pthread_sleep(3);
+	sleep(3);
 	printf("After Sleep\n");
 	pthread_mutex_lock(&mutexdata);
 	close_ack_receiver = 1;
