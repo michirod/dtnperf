@@ -302,7 +302,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		// remove info from list
 		file_transfer_info_del(info_list, client_eid);
 		printf("Before Sleep\n");
-			pthread_sleep(3);
+			sleep(3);
 			printf("After Sleep\n");
 		return 1;
 	}
