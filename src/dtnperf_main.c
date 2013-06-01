@@ -294,6 +294,7 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->bundle_ack_options.set_ack_priority = FALSE;
 	opt->expiration_session = 60;
 	opt->num_blocks = 0;
+	opt->wait_before_exit = -1;
 }
 
 
