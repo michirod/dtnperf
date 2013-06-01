@@ -2032,6 +2032,7 @@ void client_clean_exit(int status)
 
 	if (bp_handle_open)
 		al_bp_close(handle);
-	al_bp_unregister(handle,regid,local_eid);
+	if( perf_opt->bp_implementation == BP_ION)
+		al_bp_unregister(handle,regid,local_eid);
 	exit(status);
 } // end client_clean_exit
