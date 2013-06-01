@@ -1343,7 +1343,7 @@ void * wait_for_sigint(void * arg)
 			error = al_bp_bundle_send(force_stop_handle, regid, &bundle_force_stop);
 		else if(perf_opt->bp_implementation == BP_ION)
 			error = al_bp_bundle_send(handle, regid, &bundle_force_stop);
-		if ((error) != 0)
+		if ((error) != BP_SUCCESS)
 		{
 			fprintf(stderr, "error sending the force stop bundle: %d (%s)\n", error, al_bp_strerror(error));
 			if (perf_opt->create_log)
@@ -1916,7 +1916,6 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	CHECK_SET(perf_opt->op_mode, "-T or -D or -F");
 
 	if (w && r)
-	{
 	{
 		fprintf(stderr, "\nSYNTAX ERROR: -w and -r options are mutually exclusive\n");   \
 		print_client_usage(argv[0]);                                               \
