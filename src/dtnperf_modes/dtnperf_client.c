@@ -1326,6 +1326,7 @@ void * wait_for_sigint(void * arg)
 		if ((perf_opt->debug) && (perf_opt->debug_level > 0))
 			printf("done\n");
 
+		printf("\nHERE\n");
 		// create the bundle force stop
 		al_bp_bundle_create(&bundle_force_stop);
 
