@@ -634,7 +634,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	print_final_report(NULL);
 	if(perf_opt->create_log)
 		print_final_report(log_file);
-
+/*
 	// fill the stop bundle
 	prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority, sent_bundles);
 	al_bp_bundle_set_source(&bundle_stop, local_eid);
@@ -651,7 +651,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	if (debug)
 		printf("done.\n");
-
+*/
 	// waiting monitor stops
 	if (dedicated_monitor)
 	{
