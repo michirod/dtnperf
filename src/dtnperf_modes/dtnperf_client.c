@@ -1108,6 +1108,7 @@ void * congestion_control(void * opt)
 		{
 			// if there are no bundles without ack, wait
 			pthread_mutex_lock(&mutexdata);
+
 			al_bp_bundle_create(&ack);
 			if (close_ack_receiver == 0 && count_info(send_info, perf_opt->window) == 0)
 			{
@@ -1181,6 +1182,7 @@ void * congestion_control(void * opt)
 				printf("\t[debug cong ctrl] window is %d\n", cur);
 			}
 			al_bp_bundle_free(&ack);
+
 			pthread_mutex_unlock(&mutexdata);
 			//pthread_yield();
 			sched_yield();
