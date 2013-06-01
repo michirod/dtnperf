@@ -1102,13 +1102,13 @@ void * congestion_control(void * opt)
 
 	if (perf_opt->congestion_ctrl == 'w') // window based congestion control
 	{
-		al_bp_bundle_create(&ack);
 	//	gettimeofday(&temp, NULL);
 		pthread_create(&cong_expir_timer, NULL, congestion_window_expiration_timer, NULL);
 		while ((close_ack_receiver == 0) || (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit))
 		{
 			// if there are no bundles without ack, wait
 			pthread_mutex_lock(&mutexdata);
+			al_bp_bundle_create(&ack);
 			if (close_ack_receiver == 0 && count_info(send_info, perf_opt->window) == 0)
 			{
 				pthread_cond_wait(&cond_ackreceiver, &mutexdata);
@@ -1120,7 +1120,9 @@ void * congestion_control(void * opt)
 			// Wait for the reply
 			if ((debug) && (debug_level > 0))
 				printf("\t[debug cong ctrl] waiting for the reply...\n");
-
+/*****************************************************************************
+ * wait_before_exit
+ * */
 			if ((error = al_bp_bundle_receive(handle, ack, BP_PAYLOAD_MEM, count_info(send_info, perf_opt->window) == 0 ? perf_opt->wait_before_exit : -1)) != BP_SUCCESS)
 			{
 				if(count_info(send_info, perf_opt->window) == 0 && close_ack_receiver == 1)
@@ -1178,13 +1180,12 @@ void * congestion_control(void * opt)
 				sem_getvalue(&window, &cur);
 				printf("\t[debug cong ctrl] window is %d\n", cur);
 			}
-
+			al_bp_bundle_free(&ack);
 			pthread_mutex_unlock(&mutexdata);
 			//pthread_yield();
 			sched_yield();
 		} // end while(n_bundles)
 
-		al_bp_bundle_free(&ack);
 	}
 	else if (perf_opt->congestion_ctrl == 'r') // Rate based congestion control
 	{
