@@ -1352,6 +1352,9 @@ void * wait_for_sigint(void * arg)
 		}
 		printf("done.\n");
 
+		if(perf_opt->bp_implementation == BP_DTN)
+			al_bp_close(force_stop_handle);
+
 
 		al_bp_bundle_free(&bundle_force_stop);
 	}
@@ -1913,6 +1916,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 
 	if (w && r)
 	{
+	{
 		fprintf(stderr, "\nSYNTAX ERROR: -w and -r options are mutually exclusive\n");   \
 		print_client_usage(argv[0]);                                               \
 		exit(1);
@@ -2019,7 +2023,7 @@ void client_clean_exit(int status)
 	// terminate all child threads
 	pthread_cancel(sender);
 	pthread_cancel(cong_ctrl);
-	pthread_cancel(cong_expir_timer);
+
 
 	if (perf_opt->create_log)
 		printf("\nClient log saved: %s\n", perf_opt->log_filename);
