@@ -608,6 +608,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	pthread_join(cong_ctrl, (void**)&pthread_status);
 	pthread_join(sender, (void**)&pthread_status);
+	pthread_join(wait_for_signal, (void**)&pthread_status);
 
 	pthread_mutex_destroy(&mutexdata);
 	sem_destroy(&window);
@@ -1362,8 +1363,8 @@ void * wait_for_sigint(void * arg)
 	process_interrupted = TRUE;
 
 	// terminate all child threads
-	pthread_cancel(sender);
-	pthread_cancel(cong_ctrl);
+//	pthread_cancel(sender);
+//	pthread_cancel(cong_ctrl);
 	pthread_cancel(cong_expir_timer);
 
 	client_clean_exit(0);
