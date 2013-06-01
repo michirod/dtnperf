@@ -680,9 +680,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	{
 		if (al_bp_unregister(handle,regid,local_eid) != BP_SUCCESS)
 		{
-			fprintf(stderr, "fatal error unregister endpoint: %s\n", strerror(errno));
+			fprintf(stderr, "fatal error unregisted endpoint: %s\n", strerror(errno));
 			if (create_log)
-				fprintf(log_file, "fatal error unregister endpoint: %s\n", strerror(errno));
+				fprintf(log_file, "fatal error unregisted endpoint: %s\n", strerror(errno));
 				client_clean_exit(1);
 		}
 		else
@@ -1060,9 +1060,9 @@ void * send_bundles(void * opt)
 
 	} // while
 	if ((debug) && (debug_level > 0))
-		printf("[debug send thread] ...out from loop\n");
+		printf("[debug send thread] ...out from sending loop\n");
 	if (create_log)
-		fprintf(log_file, " ...out from loop\n");
+		fprintf(log_file, " ...out from sending loop\n");
 	pthread_mutex_lock(&mutexdata);
 	close_ack_receiver = 1;
 	if (perf_opt->congestion_ctrl == 'r')
@@ -1121,9 +1121,7 @@ void * congestion_control(void * opt)
 			// Wait for the reply
 			if ((debug) && (debug_level > 0))
 				printf("\t[debug cong ctrl] waiting for the reply...\n");
-/*****************************************************************************
- * wait_before_exit
- * */
+
 			if ((error = al_bp_bundle_receive(handle, ack, BP_PAYLOAD_MEM, count_info(send_info, perf_opt->window) == 0 ? perf_opt->wait_before_exit : -1)) != BP_SUCCESS)
 			{
 				if(count_info(send_info, perf_opt->window) == 0 && close_ack_receiver == 1)
