@@ -634,24 +634,27 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	print_final_report(NULL);
 	if(perf_opt->create_log)
 		print_final_report(log_file);
-/*
-	// fill the stop bundle
-	prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority, sent_bundles);
-	al_bp_bundle_set_source(&bundle_stop, local_eid);
 
-	// send stop bundle to monitor
-	if (debug)
-		printf("sending the stop bundle to the monitor...");
-	if ((error = al_bp_bundle_send(handle, regid, &bundle_stop)) != 0)
+	if(!expir_timer_cong_window)
 	{
-		fprintf(stderr, "error sending the stop bundle: %d (%s)\n", error, al_bp_strerror(error));
-		if (create_log)
-			fprintf(log_file, "error sending the stop bundle: %d (%s)\n", error, al_bp_strerror(error));
-		client_clean_exit(1);
+		// fill the stop bundle
+		prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority, sent_bundles);
+		al_bp_bundle_set_source(&bundle_stop, local_eid);
+
+		// send stop bundle to monitor
+		if (debug)
+			printf("sending the stop bundle to the monitor...");
+		if ((error = al_bp_bundle_send(handle, regid, &bundle_stop)) != 0)
+		{
+			fprintf(stderr, "error sending the stop bundle: %d (%s)\n", error, al_bp_strerror(error));
+			if (create_log)
+				fprintf(log_file, "error sending the stop bundle: %d (%s)\n", error, al_bp_strerror(error));
+			client_clean_exit(1);
+		}
+		if (debug)
+			printf("done.\n");
 	}
-	if (debug)
-		printf("done.\n");
-*/
+
 	// waiting monitor stops
 	if (dedicated_monitor)
 	{
@@ -1326,7 +1329,6 @@ void * wait_for_sigint(void * arg)
 		if ((perf_opt->debug) && (perf_opt->debug_level > 0))
 			printf("done\n");
 
-		printf("\nHERE\n");
 		// create the bundle force stop
 		al_bp_bundle_create(&bundle_force_stop);
 
@@ -2017,6 +2019,7 @@ void client_clean_exit(int status)
 	// terminate all child threads
 	pthread_cancel(sender);
 	pthread_cancel(cong_ctrl);
+	pthread_cancel(cong_expir_timer);
 
 	if (perf_opt->create_log)
 		printf("\nClient log saved: %s\n", perf_opt->log_filename);
