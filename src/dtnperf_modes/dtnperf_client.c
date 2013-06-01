@@ -1253,6 +1253,8 @@ void * congestion_window_expiration_timer(void * opt)
 			expir_timer_cong_window = TRUE;
 			printf("\nExpiration timer congestion window\n");
 			kill(getpid(), SIGINT);
+			pthread_exit(NULL);
+			return NULL;
 		}
 		sched_yield();
 	}
