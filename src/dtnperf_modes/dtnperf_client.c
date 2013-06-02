@@ -1122,7 +1122,9 @@ void * congestion_control(void * opt)
 			if ((debug) && (debug_level > 0))
 				printf("\t[debug cong ctrl] waiting for the reply...\n");
 
-			if ((error = al_bp_bundle_receive(handle, ack, BP_PAYLOAD_FILE, count_info(send_info, perf_opt->window) == 0 ? perf_opt->wait_before_exit : -1)) != BP_SUCCESS)
+			if ((error = al_bp_bundle_receive(handle, ack, BP_PAYLOAD_FILE,
+					(count_info(send_info, perf_opt->window) == 0 && perf_opt->wait_before_exit > 0) ? perf_opt->wait_before_exit : -1))
+					!= BP_SUCCESS)
 			{
 				if(count_info(send_info, perf_opt->window) == 0 && close_ack_receiver == 1)
 					// send_bundles is terminated
