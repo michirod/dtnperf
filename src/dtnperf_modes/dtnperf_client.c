@@ -1122,6 +1122,9 @@ void * congestion_control(void * opt)
 			if ((debug) && (debug_level > 0))
 				printf("\t[debug cong ctrl] waiting for the reply...\n");
 
+			printf("BEFORE SLEEP\n");
+			pthread_sleep(3);
+			printf("AFTER SLEEP\n");
 			if ((error = al_bp_bundle_receive(handle, ack, BP_PAYLOAD_MEM,
 					count_info(send_info, perf_opt->window) == 0 ? perf_opt->wait_before_exit : -1))
 					!= BP_SUCCESS)
