@@ -309,6 +309,10 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		if ((debug) && (debug_level > 0))
 			printf("[debug] waiting for bundles...\n");
 
+		printf("BEFORE SLEEP\n");
+		if(perf_opt->bp_implementation == BP_ION)
+						pthread_sleep(0.5);
+		printf("AFTER SLEEEP\n");
 		error = al_bp_bundle_receive(handle, bundle_object, pl_location, -1);
 		if (error != BP_SUCCESS)
 		{
