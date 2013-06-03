@@ -1174,7 +1174,7 @@ void * congestion_control(void * opt)
 				fprintf(stderr, "error removing bundle info\n");
 				if (create_log)
 					fprintf(log_file, "error removing bundle info\n");
-				client_clean_exit(1);
+				//client_clean_exit(1);
 			}
 			remove_from_info(send_info, position);
 			if ((debug) && (debug_level > 0))
