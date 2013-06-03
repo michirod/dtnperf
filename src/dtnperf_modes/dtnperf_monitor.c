@@ -237,285 +237,290 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// wait until receive a bundle
 		if ((debug) && (debug_level > 0))
 			printf("[debug] waiting for bundles...\n");
-		printf("BEFORE SLEEP\n");
-		if(perf_opt->bp_implementation == BP_ION)
-						pthread_sleep(0.5);
-		printf("AFTER SLEEEP\n");
 		error = al_bp_bundle_receive(handle, bundle_object, BP_PAYLOAD_MEM, -1);
-		if (error != BP_SUCCESS)
+		if(error == BP_ERECVINT)
 		{
 			fflush(stdout);
-			fprintf(stderr, "error getting recv reply: %d (%s)\n",
-					error, al_bp_strerror(al_bp_errno(handle)));
-			monitor_clean_exit(1);
+			fprintf(stderr, "receive intrettupted\n");
+			// free memory for bundle
+			al_bp_bundle_free(&bundle_object);
 		}
-		if ((debug) && (debug_level > 0))
-			printf(" bundle received\n");
-
-		// mark current time
-		if ((debug) && (debug_level > 0))
-			printf("[debug] marking time...");
-		gettimeofday(&current, NULL);
-		if ((debug) && (debug_level > 0))
-			printf(" done\n");
-
-		// get SOURCE eid
-		if ((debug) && (debug_level > 0))
-			printf("[debug]\tgetting source eid...");
-		error = al_bp_bundle_get_source(bundle_object, &bundle_source_addr);
-		if (error != BP_SUCCESS)
+		else
 		{
-			fflush(stdout);
-			fprintf(stderr, "error getting bundle source eid: %s\n",
-					al_bp_strerror(error));
-			monitor_clean_exit(1);
-		}
-		if ((debug) && (debug_level > 0))
-		{
-			printf(" done:\n");
-			printf("\tbundle_source_addr = %s\n", bundle_source_addr.uri);
-			printf("\n");
-		}
-
-		// get bundle CREATION TIMESTAMP
-		if ((debug) && (debug_level > 0))
-			printf("[debug]\tgetting bundle creation timestamp...");
-		error = al_bp_bundle_get_creation_timestamp(bundle_object, &bundle_creation_timestamp);
-		if (error != BP_SUCCESS)
-		{
-			fflush(stdout);
-			fprintf(stderr, "error getting bundle creation timestamp: %s\n",
-					al_bp_strerror(error));
-			monitor_clean_exit(1);
-		}
-		if ((debug) && (debug_level > 0))
-		{
-			printf(" done:\n");
-			printf("\tbundle creation timestamp:\n"
-					"\tsecs = %d\n\tseqno= %d\n",
-					(int)bundle_creation_timestamp.secs, (int)bundle_creation_timestamp.seqno);
-			printf("\n");
-		}
-
-		// get bundle EXPIRATION TIME only in DTN2
-		if(perf_opt->bp_implementation == BP_DTN)
-		{
-			if ((debug) && (debug_level > 0))
-			printf("[debug]\tgetting bundle expiration time...");
-
-			error = al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "error getting bundle expiration time: %s\n",
+				fprintf(stderr, "error getting recv reply: %d (%s)\n",
+						error, al_bp_strerror(al_bp_errno(handle)));
+				monitor_clean_exit(1);
+			}
+			if ((debug) && (debug_level > 0))
+				printf(" bundle received\n");
+
+			// mark current time
+			if ((debug) && (debug_level > 0))
+				printf("[debug] marking time...");
+			gettimeofday(&current, NULL);
+			if ((debug) && (debug_level > 0))
+				printf(" done\n");
+
+			// get SOURCE eid
+			if ((debug) && (debug_level > 0))
+				printf("[debug]\tgetting source eid...");
+			error = al_bp_bundle_get_source(bundle_object, &bundle_source_addr);
+			if (error != BP_SUCCESS)
+			{
+				fflush(stdout);
+				fprintf(stderr, "error getting bundle source eid: %s\n",
 						al_bp_strerror(error));
 				monitor_clean_exit(1);
 			}
 			if ((debug) && (debug_level > 0))
 			{
 				printf(" done:\n");
-				printf("\tbundle expiration: %lu\n", bundle_expiration);
+				printf("\tbundle_source_addr = %s\n", bundle_source_addr.uri);
 				printf("\n");
 			}
-		}
 
-		// check if bundle is a status report
-		if ((debug) && (debug_level > 0))
-			printf("[debug] check if bundle is a status report...\n");
-		error = al_bp_bundle_get_status_report(bundle_object, &status_report);
-		if (error != BP_SUCCESS)
-		{
-			fflush(stdout);
-			fprintf(stderr, "error checking if bundle is a status report: %d (%s)\n",
-					error, al_bp_strerror(al_bp_errno(handle)));
-			continue;
-		}
-		if ((debug) && (debug_level > 0))
-			printf(" %s\n", status_report == NULL ? "no" : "yes");
-
-		// check for other bundle types
-		if (status_report != NULL)
-			bundle_type = STATUS_REPORT;
-		else
-		{
-			get_bundle_header_and_options(&bundle_object, & bundle_header, NULL);
-			if (bundle_header == FORCE_STOP_HEADER)
-				bundle_type = CLIENT_FORCE_STOP;
-			else if (bundle_header == STOP_HEADER)
-				bundle_type = CLIENT_STOP;
-			else if (bundle_header == DSA_HEADER)
-				bundle_type = SERVER_ACK;
-			else // unknown bundle type
+			// get bundle CREATION TIMESTAMP
+			if ((debug) && (debug_level > 0))
+				printf("[debug]\tgetting bundle creation timestamp...");
+			error = al_bp_bundle_get_creation_timestamp(bundle_object, &bundle_creation_timestamp);
+			if (error != BP_SUCCESS)
 			{
-				fprintf(stderr, "error: unknown bundle type\n");
+				fflush(stdout);
+				fprintf(stderr, "error getting bundle creation timestamp: %s\n",
+						al_bp_strerror(error));
+				monitor_clean_exit(1);
+			}
+			if ((debug) && (debug_level > 0))
+			{
+				printf(" done:\n");
+				printf("\tbundle creation timestamp:\n"
+						"\tsecs = %d\n\tseqno= %d\n",
+						(int)bundle_creation_timestamp.secs, (int)bundle_creation_timestamp.seqno);
+				printf("\n");
+			}
+
+			// get bundle EXPIRATION TIME only in DTN2
+			if(perf_opt->bp_implementation == BP_DTN)
+			{
+				if ((debug) && (debug_level > 0))
+				printf("[debug]\tgetting bundle expiration time...");
+
+				error = al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
+				if (error != BP_SUCCESS)
+				{
+					fflush(stdout);
+					fprintf(stderr, "error getting bundle expiration time: %s\n",
+							al_bp_strerror(error));
+					monitor_clean_exit(1);
+				}
+				if ((debug) && (debug_level > 0))
+				{
+					printf(" done:\n");
+					printf("\tbundle expiration: %lu\n", bundle_expiration);
+					printf("\n");
+				}
+			}
+
+			// check if bundle is a status report
+			if ((debug) && (debug_level > 0))
+				printf("[debug] check if bundle is a status report...\n");
+			error = al_bp_bundle_get_status_report(bundle_object, &status_report);
+			if (error != BP_SUCCESS)
+			{
+				fflush(stdout);
+				fprintf(stderr, "error checking if bundle is a status report: %d (%s)\n",
+						error, al_bp_strerror(al_bp_errno(handle)));
 				continue;
 			}
-		}
+			if ((debug) && (debug_level > 0))
+				printf(" %s\n", status_report == NULL ? "no" : "yes");
 
-		// retrieve or open log file
-		pthread_mutex_lock(&mutexdata);
-
-		session = NULL;
-		switch (bundle_type)
-		{
-		case STATUS_REPORT:
-			al_bp_copy_eid(&relative_source_addr, &(status_report->bundle_id.source));
-			relative_creation_timestamp = status_report->bundle_id.creation_ts;
-			break;
-
-		case SERVER_ACK:
-			get_info_from_ack(&bundle_object, &relative_source_addr, &relative_creation_timestamp);
-			break;
-
-		case CLIENT_STOP:
-		case CLIENT_FORCE_STOP:
-			al_bp_copy_eid(&relative_source_addr, &bundle_source_addr);
-			relative_creation_timestamp = bundle_creation_timestamp;
-			break;
-
-		default:
-			break;
-		}
-
-		session = session_get(session_list, relative_source_addr);
-
-		if (session == NULL) // start a new session
-		{
-			// mark start time
-			start = current;
-			//if source eid of Status Report is CBHE Format
-			if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
-			{
-				filename_len = strlen(relative_source_addr.uri) - strlen("ipn:") + 15;
-			}
+			// check for other bundle types
+			if (status_report != NULL)
+				bundle_type = STATUS_REPORT;
 			else
 			{
-				filename_len = strlen(relative_source_addr.uri) - strlen("dtn://") + 15;
+				get_bundle_header_and_options(&bundle_object, & bundle_header, NULL);
+				if (bundle_header == FORCE_STOP_HEADER)
+					bundle_type = CLIENT_FORCE_STOP;
+				else if (bundle_header == STOP_HEADER)
+					bundle_type = CLIENT_STOP;
+				else if (bundle_header == DSA_HEADER)
+					bundle_type = SERVER_ACK;
+				else // unknown bundle type
+				{
+					fprintf(stderr, "error: unknown bundle type\n");
+					continue;
+				}
 			}
-			filename = (char *) malloc(filename_len);
-			memset(filename, 0, filename_len);
-			sprintf(filename, "%lu_", relative_creation_timestamp.secs);
-			strncpy(temp, relative_source_addr.uri, strlen(relative_source_addr.uri) + 1);
 
-			if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
-			{
-				strtok(temp, ":");
-				strcat(filename, strtok(NULL, "\0"));
-			}
-			else
-			{
-				char * ptr;
-				strtok(temp, "/");
-				strcat(filename, strtok(NULL, "/"));
-				// remove .dtn suffix from the filename
-				ptr = strstr(filename, ".dtn");
-				if (ptr != NULL)
-					ptr[0] = '\0';
-			}
-			strcat(filename, ".csv");
-			full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(filename) + 2);
-			sprintf(full_filename, "%s/%s", perf_opt->logs_dir, filename);
-			file = fopen(full_filename, "w");
-			session = session_create(relative_source_addr, full_filename, file, start,
-					relative_creation_timestamp.secs, bundle_expiration);
-			session_put(session_list, session);
-			// write header in csv log file
-			fprintf(file,"RX_TIME;Report_SRC;Report_TST;Report_SQN;"
-								"Report_Type;Bndl_SRC;Bndl_TST;Bndl_SQN;"
-								"Bndl_FO;Bndl_FL;");
-			csv_print_status_report_timestamps_header(file);
-			csv_end_line(file);
-		}
-
-		// update session infos
-		session->last_bundle_time = bundle_creation_timestamp.secs;
-		if(perf_opt->bp_implementation == BP_ION)
-		{
-			session->expiration = perf_opt->expiration_session;
-		}
-		else
-		{
-			if(perf_opt->expiration_session > bundle_expiration)
-				session->expiration = bundle_expiration;
-		}
-
-		file = session->file;
-		memcpy(&start, session->start, sizeof(struct timeval));
-
-		if (bundle_type == STATUS_REPORT && (status_report->flags & BP_STATUS_DELIVERED))
-		{
-			session->delivered_count++;
-		}
-
-		pthread_mutex_unlock(&mutexdata);
-
-		// print rx time in csv log
-		csv_print_rx_time(file, current, start);
-
-		// print bundle source in csv log
-		csv_print_eid(file, bundle_source_addr);
-
-		//print bundle creation timestamp in csv log
-		csv_print_timestamp(file, bundle_creation_timestamp);
-
-		// print bundle type in csv log
-		switch (bundle_type)
-		{
-		case CLIENT_STOP:
-			csv_print(file, "CLIENT_STOP");
-			break;
-		case CLIENT_FORCE_STOP:
-			csv_print(file, "CLIENT_FORCE_STOP");
-			break;
-		case SERVER_ACK:
-			csv_print(file, "SERVER_ACK");
-			break;
-		case STATUS_REPORT:
-			csv_print(file, "STATUS_REPORT");
-			break;
-		default:
-			csv_print(file, "UNKNOWN");
-			break;
-		}
-
-		// print relative source and timestamp
-		if (bundle_type == SERVER_ACK || bundle_type == STATUS_REPORT)
-		{
-			csv_print_eid(file, relative_source_addr);
-			csv_print_timestamp(file, relative_creation_timestamp);
-		}
-
-		// print status report infos in csv log
-		if (bundle_type == STATUS_REPORT)
-		{
-			csv_print_ulong(file, status_report->bundle_id.frag_offset);
-			csv_print_ulong(file, status_report->bundle_id.orig_length);
-			csv_print_status_report_timestamps(file, * status_report);
-		}
-
-		// end line in csv log
-		csv_end_line(file);
-
-		// close file
-		if (bundle_type == CLIENT_STOP)
-		{
-			int total_to_receive;
-			get_info_from_stop(&bundle_object, &total_to_receive);
+			// retrieve or open log file
 			pthread_mutex_lock(&mutexdata);
-			session->total_to_receive = total_to_receive;
-			if(perf_opt->bp_implementation == BP_ION)
-				session->wait_after_stop = 60;
-			else
-				session->wait_after_stop = bundle_expiration;
-			gettimeofday(session->stop_arrival_time, NULL);
-			pthread_mutex_unlock(&mutexdata);
-		}
-		else if (bundle_type == CLIENT_FORCE_STOP)
-		{
-			printf("DTNperf monitor: received forced end session bundle\n");
-			session_close(session_list, session);
-		}
 
+			session = NULL;
+			switch (bundle_type)
+			{
+			case STATUS_REPORT:
+				al_bp_copy_eid(&relative_source_addr, &(status_report->bundle_id.source));
+				relative_creation_timestamp = status_report->bundle_id.creation_ts;
+				break;
+
+			case SERVER_ACK:
+				get_info_from_ack(&bundle_object, &relative_source_addr, &relative_creation_timestamp);
+				break;
+
+			case CLIENT_STOP:
+			case CLIENT_FORCE_STOP:
+				al_bp_copy_eid(&relative_source_addr, &bundle_source_addr);
+				relative_creation_timestamp = bundle_creation_timestamp;
+				break;
+
+			default:
+				break;
+			}
+
+			session = session_get(session_list, relative_source_addr);
+
+			if (session == NULL) // start a new session
+			{
+				// mark start time
+				start = current;
+				//if source eid of Status Report is CBHE Format
+				if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
+				{
+					filename_len = strlen(relative_source_addr.uri) - strlen("ipn:") + 15;
+				}
+				else
+				{
+					filename_len = strlen(relative_source_addr.uri) - strlen("dtn://") + 15;
+				}
+				filename = (char *) malloc(filename_len);
+				memset(filename, 0, filename_len);
+				sprintf(filename, "%lu_", relative_creation_timestamp.secs);
+				strncpy(temp, relative_source_addr.uri, strlen(relative_source_addr.uri) + 1);
+
+				if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
+				{
+					strtok(temp, ":");
+					strcat(filename, strtok(NULL, "\0"));
+				}
+				else
+				{
+					char * ptr;
+					strtok(temp, "/");
+					strcat(filename, strtok(NULL, "/"));
+					// remove .dtn suffix from the filename
+					ptr = strstr(filename, ".dtn");
+					if (ptr != NULL)
+						ptr[0] = '\0';
+				}
+				strcat(filename, ".csv");
+				full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(filename) + 2);
+				sprintf(full_filename, "%s/%s", perf_opt->logs_dir, filename);
+				file = fopen(full_filename, "w");
+				session = session_create(relative_source_addr, full_filename, file, start,
+						relative_creation_timestamp.secs, bundle_expiration);
+				session_put(session_list, session);
+				// write header in csv log file
+				fprintf(file,"RX_TIME;Report_SRC;Report_TST;Report_SQN;"
+									"Report_Type;Bndl_SRC;Bndl_TST;Bndl_SQN;"
+									"Bndl_FO;Bndl_FL;");
+				csv_print_status_report_timestamps_header(file);
+				csv_end_line(file);
+			}
+
+			// update session infos
+			session->last_bundle_time = bundle_creation_timestamp.secs;
+			if(perf_opt->bp_implementation == BP_ION)
+			{
+				session->expiration = perf_opt->expiration_session;
+			}
+			else
+			{
+				if(perf_opt->expiration_session > bundle_expiration)
+					session->expiration = bundle_expiration;
+			}
+
+			file = session->file;
+			memcpy(&start, session->start, sizeof(struct timeval));
+
+			if (bundle_type == STATUS_REPORT && (status_report->flags & BP_STATUS_DELIVERED))
+			{
+				session->delivered_count++;
+			}
+
+			pthread_mutex_unlock(&mutexdata);
+
+			// print rx time in csv log
+			csv_print_rx_time(file, current, start);
+
+			// print bundle source in csv log
+			csv_print_eid(file, bundle_source_addr);
+
+			//print bundle creation timestamp in csv log
+			csv_print_timestamp(file, bundle_creation_timestamp);
+
+			// print bundle type in csv log
+			switch (bundle_type)
+			{
+			case CLIENT_STOP:
+				csv_print(file, "CLIENT_STOP");
+				break;
+			case CLIENT_FORCE_STOP:
+				csv_print(file, "CLIENT_FORCE_STOP");
+				break;
+			case SERVER_ACK:
+				csv_print(file, "SERVER_ACK");
+				break;
+			case STATUS_REPORT:
+				csv_print(file, "STATUS_REPORT");
+				break;
+			default:
+				csv_print(file, "UNKNOWN");
+				break;
+			}
+
+			// print relative source and timestamp
+			if (bundle_type == SERVER_ACK || bundle_type == STATUS_REPORT)
+			{
+				csv_print_eid(file, relative_source_addr);
+				csv_print_timestamp(file, relative_creation_timestamp);
+			}
+
+			// print status report infos in csv log
+			if (bundle_type == STATUS_REPORT)
+			{
+				csv_print_ulong(file, status_report->bundle_id.frag_offset);
+				csv_print_ulong(file, status_report->bundle_id.orig_length);
+				csv_print_status_report_timestamps(file, * status_report);
+			}
+
+			// end line in csv log
+			csv_end_line(file);
+
+			// close file
+			if (bundle_type == CLIENT_STOP)
+			{
+				int total_to_receive;
+				get_info_from_stop(&bundle_object, &total_to_receive);
+				pthread_mutex_lock(&mutexdata);
+				session->total_to_receive = total_to_receive;
+				if(perf_opt->bp_implementation == BP_ION)
+					session->wait_after_stop = 60;
+				else
+					session->wait_after_stop = bundle_expiration;
+				gettimeofday(session->stop_arrival_time, NULL);
+				pthread_mutex_unlock(&mutexdata);
+			}
+			else if (bundle_type == CLIENT_FORCE_STOP)
+			{
+				printf("DTNperf monitor: received forced end session bundle\n");
+				session_close(session_list, session);
+			}
+		}
 
 	} // end loop
 
