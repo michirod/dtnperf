@@ -1073,9 +1073,6 @@ void * send_bundles(void * opt)
 	else
 	{
 		pthread_cond_signal(&cond_ackreceiver);
-/*		printf("ATTESSA TUTTI ACK\n");
-		pthread_cond_wait(&cond_receivedallacks, &mutexdata);
-		printf("RICEVUTI TUTTI\n");*/
 	}
 	pthread_mutex_unlock(&mutexdata);
 	// close thread
@@ -1126,65 +1123,71 @@ void * congestion_control(void * opt)
 			if ((debug) && (debug_level > 0))
 				printf("\t[debug cong ctrl] waiting for the reply...\n");
 
-			if(perf_opt->bp_implementation == BP_ION)
-				pthread_sleep(0.5);
-			if ((error = al_bp_bundle_receive(handle, ack, BP_PAYLOAD_MEM,
-					/*count_info(send_info, perf_opt->window) == 0 ? perf_opt->wait_before_exit : */-1))
-					!= BP_SUCCESS)
-			{
-				if(count_info(send_info, perf_opt->window) == 0 && close_ack_receiver == 1) // send_bundles is terminated
-					break;
-				fprintf(stderr, "error getting server ack: %d (%s)\n", error, al_bp_strerror(al_bp_errno(handle)));
-				if (create_log)
-					fprintf(log_file, "error getting server ack: %d (%s)\n", error, al_bp_strerror(al_bp_errno(handle)));
-				client_clean_exit(1);
-			}
-			// Check if is actually a server ack bundle
-			get_bundle_header_and_options(&ack, &ack_header, NULL);
-			if (ack_header != DSA_HEADER)
-			{
-				fprintf(stderr, "error getting server ack: wrong bundle header\n");
-				if (create_log)
-					fprintf(log_file, "error getting server ack: wrong bundle header\n");
+			error = al_bp_bundle_receive(handle, ack, BP_PAYLOAD_MEM, -1);
+				if(error == BP_ERECVINT)
+				{
+					fprintf(stderr, "error receive interroted\n");
+					if (create_log)
+						fprintf(log_file, "error receive interroted\n");
+				}
+				else
+				{
+				if ( error != BP_SUCCESS)
+				{
+					if(count_info(send_info, perf_opt->window) == 0 && close_ack_receiver == 1) // send_bundles is terminated
+						break;
+					fprintf(stderr, "error getting server ack: %d (%s)\n", error, al_bp_strerror(al_bp_errno(handle)));
+					if (create_log)
+						fprintf(log_file, "error getting server ack: %d (%s)\n", error, al_bp_strerror(al_bp_errno(handle)));
+					client_clean_exit(1);
+				}
+				// Check if is actually a server ack bundle
+				get_bundle_header_and_options(&ack, &ack_header, NULL);
+				if (ack_header != DSA_HEADER)
+				{
+					fprintf(stderr, "error getting server ack: wrong bundle header\n");
+					if (create_log)
+						fprintf(log_file, "error getting server ack: wrong bundle header\n");
 
-				pthread_mutex_unlock(&mutexdata);
-				//pthread_yield();
-				sched_yield();
-				continue;
-			}
+					pthread_mutex_unlock(&mutexdata);
+					//pthread_yield();
+					sched_yield();
+					continue;
+				}
 
-			gettimeofday(&ack_recvd, NULL);
-			if ((debug) && (debug_level > 0))
-				printf("\t[debug cong ctrl] ack received\n");
+				gettimeofday(&ack_recvd, NULL);
+				if ((debug) && (debug_level > 0))
+					printf("\t[debug cong ctrl] ack received\n");
 
-			// Get ack infos
-			error = get_info_from_ack(&ack, NULL, &reported_timestamp);
-			if (error != BP_SUCCESS)
-			{
-				fprintf(stderr, "error getting info from ack: %s\n", al_bp_strerror(error));
-				if (create_log)
-					fprintf(log_file, "error getting info from ack: %s\n", al_bp_strerror(error));
-				client_clean_exit(1);
-			}
-			if ((debug) && (debug_level > 0))
-				printf("\t[debug cong ctrl] ack received timestamp: %lu %lu\n", reported_timestamp.secs, reported_timestamp.seqno);
-			position = is_in_info(send_info, reported_timestamp, perf_opt->window);
-			if (position < 0)
-			{
-				fprintf(stderr, "error removing bundle info\n");
-				if (create_log)
-					fprintf(log_file, "error removing bundle info\n");
-				//client_clean_exit(1);
-			}
-			remove_from_info(send_info, position);
-			if ((debug) && (debug_level > 0))
-				printf("\t[debug cong ctrl] ack validated\n");
-			sem_post(&window);
-			if ((debug) && (debug_level > 1))
-			{
-				int cur;
-				sem_getvalue(&window, &cur);
-				printf("\t[debug cong ctrl] window is %d\n", cur);
+				// Get ack infos
+				error = get_info_from_ack(&ack, NULL, &reported_timestamp);
+				if (error != BP_SUCCESS)
+				{
+					fprintf(stderr, "error getting info from ack: %s\n", al_bp_strerror(error));
+					if (create_log)
+						fprintf(log_file, "error getting info from ack: %s\n", al_bp_strerror(error));
+					client_clean_exit(1);
+				}
+				if ((debug) && (debug_level > 0))
+					printf("\t[debug cong ctrl] ack received timestamp: %lu %lu\n", reported_timestamp.secs, reported_timestamp.seqno);
+				position = is_in_info(send_info, reported_timestamp, perf_opt->window);
+				if (position < 0)
+				{
+					fprintf(stderr, "error removing bundle info\n");
+					if (create_log)
+						fprintf(log_file, "error removing bundle info\n");
+					//client_clean_exit(1);
+				}
+				remove_from_info(send_info, position);
+				if ((debug) && (debug_level > 0))
+					printf("\t[debug cong ctrl] ack validated\n");
+				sem_post(&window);
+				if ((debug) && (debug_level > 1))
+				{
+					int cur;
+					sem_getvalue(&window, &cur);
+					printf("\t[debug cong ctrl] window is %d\n", cur);
+				}
 			}
 			al_bp_bundle_free(&ack);
 
