@@ -1076,9 +1076,9 @@ void * send_bundles(void * opt)
 	else
 	{
 		pthread_cond_signal(&cond_ackreceiver);
-		printf("ATTESSA TUTTI ACK\n");
+/*		printf("ATTESSA TUTTI ACK\n");
 		pthread_cond_wait(&cond_receivedallacks, &mutexdata);
-		printf("RICEVUTI TUTTI\n");
+		printf("RICEVUTI TUTTI\n");*/
 	}
 	pthread_mutex_unlock(&mutexdata);
 	// close thread
@@ -1196,7 +1196,7 @@ void * congestion_control(void * opt)
 			sched_yield();
 		} // end while
 
-		pthread_cond_signal(&cond_receivedallacks);
+	//	pthread_cond_signal(&cond_receivedallacks);
 	}
 	else if (perf_opt->congestion_ctrl == 'r') // Rate based congestion control
 	{
@@ -1261,7 +1261,7 @@ void * congestion_window_expiration_timer(void * opt)
 		{
 			expir_timer_cong_window = TRUE;
 			printf("\nExpiration timer congestion window\n");
-			kill(getpid(), SIGINT);
+			client_clean_exit(1);
 			pthread_exit(NULL);
 			return NULL;
 		}
