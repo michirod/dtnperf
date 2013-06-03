@@ -41,7 +41,6 @@ pthread_t cong_expir_timer;
 pthread_t wait_for_signal;
 pthread_mutex_t mutexdata;
 pthread_cond_t cond_ackreceiver;
-pthread_cond_t cond_receivedallacks;
 sem_t window;			// semaphore for congestion control
 int monitor_status;
 int monitor_pid;
@@ -601,7 +600,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 
 	pthread_cond_init(&cond_ackreceiver, NULL);
-	pthread_cond_init(&cond_receivedallacks, NULL);
 	pthread_mutex_init (&mutexdata, NULL);
 
 	pthread_create(&sender, NULL, send_bundles, (void*)perf_g_opt);
@@ -614,7 +612,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	pthread_mutex_destroy(&mutexdata);
 	sem_destroy(&window);
 	pthread_cond_destroy(&cond_ackreceiver);
-	pthread_cond_destroy(&cond_receivedallacks);
 
 	// if user sent Ctrl+C to the client,
 	// let the wait_for_signal thread to terminate the execution
@@ -1195,8 +1192,6 @@ void * congestion_control(void * opt)
 			//pthread_yield();
 			sched_yield();
 		} // end while
-
-	//	pthread_cond_signal(&cond_receivedallacks);
 	}
 	else if (perf_opt->congestion_ctrl == 'r') // Rate based congestion control
 	{
