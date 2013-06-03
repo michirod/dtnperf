@@ -1000,16 +1000,16 @@ void * send_bundles(void * opt)
 
 		// Send the bundle
 		if (debug)
-			printf("sending the bundle...");
+			printf("passing the bundle to BP...");
 
 		if (perf_opt->congestion_ctrl == 'w')
 			pthread_mutex_lock(&mutexdata);
 
 		if ((error = al_bp_bundle_send(handle, regid, &bundle)) != 0)
 		{
-			fprintf(stderr, "error sending bundle: %d (%s)\n", error, al_bp_strerror(error));
+			fprintf(stderr, "error passing the bundle to BP: %d (%s)\n", error, al_bp_strerror(error));
 			if (create_log)
-				fprintf(log_file, "error sending bundle: %d (%s)\n", error, al_bp_strerror(error));
+				fprintf(log_file, "error passing the bundle to BP: %d (%s)\n", error, al_bp_strerror(error));
 			client_clean_exit(1);
 		}
 
@@ -1021,20 +1021,20 @@ void * send_bundles(void * opt)
 			client_clean_exit(1);
 		}
 		if (debug)
-			printf(" bundle sent\n");
+			printf("bundle passed to BP\n");
 		if ((debug) && (debug_level > 0))
 			printf("\t[debug send thread] ");
 
-		printf("bundle sent timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
+		printf("bundle timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
 		if (create_log)
-			fprintf(log_file, "\t bundle sent timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
+			fprintf(log_file, "\t bundle timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
 
 		// put bundle id in send_info (only windowed congestion control)
 		if (perf_opt->congestion_ctrl == 'w') {
 			gettimeofday(&bundle_sent, NULL);
 			add_info(send_info, *bundle_id, bundle_sent, perf_opt->window);
 			if ((debug) && (debug_level > 0))
-				printf("\t[debug send thread] added info for sent bundle\n");
+				printf("\t[debug send thread] added info for bundle\n");
 			pthread_cond_signal(&cond_ackreceiver);
 			pthread_mutex_unlock(&mutexdata);
 		}
@@ -1042,9 +1042,9 @@ void * send_bundles(void * opt)
 		// Increment sent_bundles
 		++sent_bundles;
 		if ((debug) && (debug_level > 0))
-			printf("\t[debug send thread] now bundles_sent is %d\n", sent_bundles);
+			printf("\t[debug send thread] now bundle passed is %d\n", sent_bundles);
 		if (create_log)
-			fprintf(log_file, "\t now bundles_sent is %d\n", sent_bundles);
+			fprintf(log_file, "\t now bundle passed is %d\n", sent_bundles);
 		// Increment data_qty
 		al_bp_bundle_get_payload_size(bundle, &actual_payload);
 		sent_data += actual_payload;
@@ -1104,7 +1104,7 @@ void * congestion_control(void * opt)
 	{
 	//	gettimeofday(&temp, NULL);
 		pthread_create(&cong_expir_timer, NULL, congestion_window_expiration_timer, NULL);
-		while ((close_ack_receiver == 0) || (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit))
+		while ((close_ack_receiver == 0) /*|| (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit)*/)
 		{
 			// if there are no bundles without ack, wait
 			pthread_mutex_lock(&mutexdata);
@@ -1125,7 +1125,7 @@ void * congestion_control(void * opt)
 			if(perf_opt->bp_implementation == BP_ION)
 				pthread_sleep(0.5);
 			if ((error = al_bp_bundle_receive(handle, ack, BP_PAYLOAD_MEM,
-					count_info(send_info, perf_opt->window) == 0 ? perf_opt->wait_before_exit : -1))
+					/*count_info(send_info, perf_opt->window) == 0 ? perf_opt->wait_before_exit : */-1))
 					!= BP_SUCCESS)
 			{
 				if(count_info(send_info, perf_opt->window) == 0 && close_ack_receiver == 1) // send_bundles is terminated
@@ -1491,7 +1491,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"window", required_argument, 0, 'W'},
 				{"destination", required_argument, 0, 'd'},
 				{"monitor", required_argument, 0, 'm'},
-				{"exitinterval", required_argument, 0, 'i'},			// interval before exit
+		//		{"exitinterval", required_argument, 0, 'i'},			// interval before exit
 				{"time", required_argument, 0, 'T'},			// time mode
 				{"data", required_argument, 0, 'D'},			// data mode
 				{"file", required_argument, 0, 'F'},			// file mode
@@ -1560,11 +1560,11 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 'm':
 			strncpy(perf_opt->mon_eid, optarg, AL_BP_MAX_ENDPOINT_ID);
 			break;
-
+/*
 		case 'i':
 			perf_opt->wait_before_exit = atoi(optarg)*1000;
 			break;
-
+*/
 		case 'T':
 			perf_opt->op_mode = 'T';
 			perf_opt->transmission_time = atoi(optarg);

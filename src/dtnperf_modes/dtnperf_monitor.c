@@ -237,6 +237,10 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// wait until receive a bundle
 		if ((debug) && (debug_level > 0))
 			printf("[debug] waiting for bundles...\n");
+		printf("BEFORE SLEEP\n");
+		if(perf_opt->bp_implementation == BP_ION)
+						pthread_sleep(0.5);
+		printf("AFTER SLEEEP\n");
 		error = al_bp_bundle_receive(handle, bundle_object, BP_PAYLOAD_MEM, -1);
 		if (error != BP_SUCCESS)
 		{
