@@ -309,468 +309,471 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		if ((debug) && (debug_level > 0))
 			printf("[debug] waiting for bundles...\n");
 
-		printf("BEFORE SLEEP\n");
-		if(perf_opt->bp_implementation == BP_ION)
-						pthread_sleep(0.5);
-		printf("AFTER SLEEEP\n");
 		error = al_bp_bundle_receive(handle, bundle_object, pl_location, -1);
-		if (error != BP_SUCCESS)
+		if(error == BP_ERECVINT)
 		{
 			fflush(stdout);
-			fprintf(stderr, "error getting recv reply: %d (%s)\n",
-					error, al_bp_strerror(al_bp_errno(handle)));
-			exit(1);
+			fprintf(stderr, "receive intrettupted\n");
 		}
-		if ((debug) && (debug_level > 0))
-			printf(" bundle received\n");
-
-		// find payload size
-		if ((debug) && (debug_level > 0))
-			printf("[debug] calculating bundle payload size...");
-		error = al_bp_bundle_get_payload_size(bundle_object, (u32_t *) &bundle_payload_len);
-		if (error != BP_SUCCESS)
+		else
 		{
-			fflush(stdout);
-			fprintf(stderr, "error getting bundle payload size: %s\n",
-					al_bp_strerror(error));
-			exit(1);
-		}
-		if(debug && debug_level > 0)
-			printf("done\n");
-
-		// mark current time
-		if ((debug) && (debug_level > 0))
-			printf("[debug] marking time...");
-		current = time(NULL);
-		if ((debug) && (debug_level > 0))
-			printf(" done\n");
-
-		// print bundle arrival
-		printf("%s : %zu bytes from %s\n",
-				ctime(&current),
-				bundle_payload_len,
-				bundle_object.spec->source.uri);
-
-		// get bundle header and options
-		if ((debug) && (debug_level > 0))
-			printf("[debug]\tgetting bundle header and options...");
-		if (get_bundle_header_and_options(&bundle_object, &bundle_header, &bundle_ack_options) < 0)
-		{
-			printf("Error in getting bundle header and options\n");
-			continue;
-		}
-		if ((debug) && (debug_level > 0))
-		{
-			printf(" done.\n");
-		}
-
-		// get SOURCE eid
-		if ((debug) && (debug_level > 0))
-			printf("[debug]\tgetting source eid...");
-		error = al_bp_bundle_get_source(bundle_object, &bundle_source_addr);
-		if (error != BP_SUCCESS)
-		{
-			fflush(stdout);
-			fprintf(stderr, "error getting bundle source eid: %s\n",
-					al_bp_strerror(error));
-			exit(1);
-		}
-		if ((debug) && (debug_level > 0))
-		{
-			printf(" done:\n");
-			printf("\tbundle_source_addr = %s\n", bundle_source_addr.uri);
-			printf("\n");
-		}
-
-		// get DEST eid
-		if ((debug) && (debug_level > 0))
-			printf("[debug]\tgetting destination eid...");
-		error = al_bp_bundle_get_dest(bundle_object, &bundle_dest_addr);
-		if (error != BP_SUCCESS)
-		{
-			fflush(stdout);
-			fprintf(stderr, "error getting bundle destination eid: %s\n",
-					al_bp_strerror(error));
-			exit(1);
-		}
-		if ((debug) && (debug_level > 0))
-		{
-			printf(" done:\n");
-			printf("\tbundle_dest_eid = %s\n", bundle_dest_addr.uri);
-			printf("\n");
-		}
-
-		// get REPLY TO eid
-		if ((debug) && (debug_level > 0))
-			printf("[debug]\tgetting reply to eid...");
-		error = al_bp_bundle_get_replyto(bundle_object, &bundle_replyto_addr);
-		if (error != BP_SUCCESS)
-		{
-			fflush(stdout);
-			fprintf(stderr, "error getting bundle reply to eid: %s\n",
-					al_bp_strerror(error));
-			exit(1);
-		}
-		if ((debug) && (debug_level > 0))
-		{
-			printf(" done:\n");
-			printf("\tbundle_replyto_eid = %s\n", bundle_replyto_addr.uri);
-			printf("\n");
-		}
-
-		// get bundle CREATION TIMESTAMP
-		if ((debug) && (debug_level > 0))
-			printf("[debug]\tgetting bundle creation timestamp...");
-		error = al_bp_bundle_get_creation_timestamp(bundle_object, &bundle_creation_timestamp);
-		if (error != BP_SUCCESS)
-		{
-			fflush(stdout);
-			fprintf(stderr, "error getting bundle creation timestamp: %s\n",
-					al_bp_strerror(error));
-			exit(1);
-		}
-		if ((debug) && (debug_level > 0))
-		{
-			printf(" done:\n");
-			printf("\tbundle creation timestamp:\n"
-					"\tsecs = %d\n\tseqno= %d\n",
-					(int)bundle_creation_timestamp.secs, (int)bundle_creation_timestamp.seqno);
-			printf("\n");
-		}
-
-
-		// get bundle payload filename
-		if(perf_opt->use_file)
-		{
-			if ((debug) && (debug_level > 0))
-				printf("[debug]\tgetting bundle payload filename...");
-			error = al_bp_bundle_get_payload_file(bundle_object, &pl_filename, (u32_t *) &pl_filename_len);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "error getting bundle payload filename: %s\n",
+				fprintf(stderr, "error getting recv reply: %d (%s)\n",
+						error, al_bp_strerror(al_bp_errno(handle)));
+				exit(1);
+			}
+			if ((debug) && (debug_level > 0))
+				printf(" bundle received\n");
+
+			// find payload size
+			if ((debug) && (debug_level > 0))
+				printf("[debug] calculating bundle payload size...");
+			error = al_bp_bundle_get_payload_size(bundle_object, (u32_t *) &bundle_payload_len);
+			if (error != BP_SUCCESS)
+			{
+				fflush(stdout);
+				fprintf(stderr, "error getting bundle payload size: %s\n",
+						al_bp_strerror(error));
+				exit(1);
+			}
+			if(debug && debug_level > 0)
+				printf("done\n");
+
+			// mark current time
+			if ((debug) && (debug_level > 0))
+				printf("[debug] marking time...");
+			current = time(NULL);
+			if ((debug) && (debug_level > 0))
+				printf(" done\n");
+
+			// print bundle arrival
+			printf("%s : %zu bytes from %s\n",
+					ctime(&current),
+					bundle_payload_len,
+					bundle_object.spec->source.uri);
+
+			// get bundle header and options
+			if ((debug) && (debug_level > 0))
+				printf("[debug]\tgetting bundle header and options...");
+			if (get_bundle_header_and_options(&bundle_object, &bundle_header, &bundle_ack_options) < 0)
+			{
+				printf("Error in getting bundle header and options\n");
+				continue;
+			}
+			if ((debug) && (debug_level > 0))
+			{
+				printf(" done.\n");
+			}
+
+			// get SOURCE eid
+			if ((debug) && (debug_level > 0))
+				printf("[debug]\tgetting source eid...");
+			error = al_bp_bundle_get_source(bundle_object, &bundle_source_addr);
+			if (error != BP_SUCCESS)
+			{
+				fflush(stdout);
+				fprintf(stderr, "error getting bundle source eid: %s\n",
 						al_bp_strerror(error));
 				exit(1);
 			}
 			if ((debug) && (debug_level > 0))
 			{
 				printf(" done:\n");
-			}
-		}
-
-		if ((debug))
-		{
-			printf ("======================================\n");
-			printf (" Bundle received at %s\n", ctime(&current));
-			printf ("  source: %s\n", bundle_source_addr.uri);
-			if (perf_opt->use_file)
-			{
-				printf ("  saved into    : %s\n", pl_filename);
+				printf("\tbundle_source_addr = %s\n", bundle_source_addr.uri);
+				printf("\n");
 			}
 
-			printf ("--------------------------------------\n");
-		};
-
-		// check if is file transfer bundle
-		if ((debug) && (debug_level > 0))
-			printf("[debug]\tchecking if this is a file transfer bundle...");
-		if (bundle_header == FILE_HEADER)
-		{
-			is_file_transfer_bundle = TRUE;
-		}
-		if ((debug) && (debug_level > 0))
-		{
-			printf(" done.\n");
-			printf("\tbundle is%sa file transfer bundle\n",
-					is_file_transfer_bundle ? " " : " not ");
-			printf("\n");
-		}
-
-		// process file transfer bundle
-		if(is_file_transfer_bundle)
-		{
+			// get DEST eid
 			if ((debug) && (debug_level > 0))
-				printf("[debug]\tprocessing file transfer bundle...");
-
-			pthread_mutex_lock(&mutexdata);
-			indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
-					&bundle_object,perf_opt->file_dir);
-
-			pthread_mutex_unlock(&mutexdata);
-			sched_yield();
-
-			if (indicator < 0) // error in processing bundle
-			{
-				fprintf(stderr, "Error in processing file transfer bundle: %s\n", strerror(errno));
-			}
-			if ((debug) && (debug_level > 0))
-			{
-				printf("done.\n");
-				if (indicator == 1)
-					printf("Transfer Completed\n");
-			}
-		}
-
-		// get bundle expiration time
-		if (bundle_ack_options.set_ack_expiration)
-		{
-		// 	al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
-		// is setted the smaller
-			if( conn_opt->expiration < bundle_ack_options.ack_expiration)
-				bundle_expiration = conn_opt->expiration;
-			else
-				bundle_expiration = bundle_ack_options.ack_expiration;
-		}
-		else
-			bundle_expiration = conn_opt->expiration;
-
-		// get bundle priority
-		bundle_priority.ordinal = 0;
-		if( bundle_ack_options.set_ack_priority)
-		{
-			// is setted the smaller
-			if( conn_opt->priority.priority < bundle_ack_options.ack_priority.priority)
-				bundle_priority.priority = conn_opt->priority.priority;
-			else
-				bundle_priority.priority = bundle_ack_options.ack_priority.priority;
-		}
-		else
-			bundle_priority.priority = conn_opt->priority.priority;
-
-		// send acks to the client only if requested by client
-		// send acks to the monitor if:
-		// ack requested by client AND ack-to-monitor option set AND bundle_ack_options.ack_to_mon == ATM_NORMAL
-		// OR client forced server to send ack to monitor
-
-		boolean_t send_ack_to_client = bundle_ack_options.ack_to_client;
-		boolean_t send_ack_to_monitor = FALSE;
-		send_ack_to_monitor = (bundle_ack_options.ack_to_client && (bundle_ack_options.ack_to_mon == ATM_NORMAL) && bundle_ack_options.ack_to_client && perf_opt->acks_to_mon)
-				|| (bundle_ack_options.ack_to_mon == ATM_FORCE_YES);
-		if (send_ack_to_client || send_ack_to_monitor)
-		{
-
-			// create bundle ack to send
-			if ((debug) && (debug_level > 0))
-				printf("[debug] initiating memory for bundle ack...");
-			error = al_bp_bundle_create(&bundle_ack_object);
+				printf("[debug]\tgetting destination eid...");
+			error = al_bp_bundle_get_dest(bundle_object, &bundle_dest_addr);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "fatal error initiating memory for bundle ack: %s\n", al_bp_strerror(error));
+				fprintf(stderr, "error getting bundle destination eid: %s\n",
+						al_bp_strerror(error));
 				exit(1);
 			}
-			if(debug && debug_level > 0)
-				printf("done\n");
-
-
-			// initiate server ack payload
-			// set server ack payload source
-			server_ack_payload.bundle_source = bundle_source_addr;
-			// set server ack payload timestamp
-			server_ack_payload.bundle_creation_ts = bundle_creation_timestamp;
-			// preparing the bundle ack payload
 			if ((debug) && (debug_level > 0))
-				printf("[debug] preparing the payload of the bundle ack...");
-			error = prepare_server_ack_payload(server_ack_payload, &pl_buffer, &pl_buffer_size);
+			{
+				printf(" done:\n");
+				printf("\tbundle_dest_eid = %s\n", bundle_dest_addr.uri);
+				printf("\n");
+			}
 
+			// get REPLY TO eid
+			if ((debug) && (debug_level > 0))
+				printf("[debug]\tgetting reply to eid...");
+			error = al_bp_bundle_get_replyto(bundle_object, &bundle_replyto_addr);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "fatal error preparing the payload of the bundle ack: %s\n", al_bp_strerror(error));
+				fprintf(stderr, "error getting bundle reply to eid: %s\n",
+						al_bp_strerror(error));
 				exit(1);
 			}
-			if(debug && debug_level > 0)
-				printf("done\n");
-
-			// setting the bundle ack payload
 			if ((debug) && (debug_level > 0))
-				printf("[debug] setting the payload of the bundle ack...");
-			// For DTN2 implementation ack payload in in memory
-			if(perf_opt->bp_implementation == BP_DTN)
 			{
-				error = al_bp_bundle_set_payload_mem(&bundle_ack_object, pl_buffer, pl_buffer_size);
+				printf(" done:\n");
+				printf("\tbundle_replyto_eid = %s\n", bundle_replyto_addr.uri);
+				printf("\n");
 			}
-			else if(perf_opt->bp_implementation == BP_ION)
+
+			// get bundle creation timestamp
+			if ((debug) && (debug_level > 0))
+				printf("[debug]\tgetting bundle creation timestamp...");
+			error = al_bp_bundle_get_creation_timestamp(bundle_object, &bundle_creation_timestamp);
+			if (error != BP_SUCCESS)
 			{
-				char filename_ack[256];
-				int fd_ack;
-				char * tmp,* tmp_eid;
-				u32_t filename_ack_len;
-				tmp_eid = (char *) malloc(sizeof(char) * strlen(bundle_source_addr.uri)+1);
-				strcpy(tmp_eid,bundle_source_addr.uri);
+				fflush(stdout);
+				fprintf(stderr, "error getting bundle creation timestamp: %s\n",
+						al_bp_strerror(error));
+				exit(1);
+			}
+			if ((debug) && (debug_level > 0))
+			{
+				printf(" done:\n");
+				printf("\tbundle creation timestamp:\n"
+						"\tsecs = %d\n\tseqno= %d\n",
+						(int)bundle_creation_timestamp.secs, (int)bundle_creation_timestamp.seqno);
+				printf("\n");
+			}
 
-				if( strncmp(bundle_source_addr.uri,"ipn",3) == 0)
-				{
-					strtok(tmp_eid,":");
-					tmp = strtok(NULL,":");
-				}
-				else
-				{
-					strtok(tmp_eid, "/");
-					tmp = strtok(NULL, "/");
-				}
 
-				sprintf(filename_ack,"%s_%s_%d",SOURCE_FILE_ACK,tmp,num_ack);
-				filename_ack_len = strlen(filename_ack)+1;
-				fd_ack = open(filename_ack,O_WRONLY|O_CREAT,0777);
-				if(fd_ack < 0)
+			// get bundle payload filename
+			if(perf_opt->use_file)
+			{
+				if ((debug) && (debug_level > 0))
+					printf("[debug]\tgetting bundle payload filename...");
+				error = al_bp_bundle_get_payload_file(bundle_object, &pl_filename, (u32_t *) &pl_filename_len);
+				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
-					fprintf(stderr, "fatal error create the payload of the bundle ack: %s\n", al_bp_strerror(error));
+					fprintf(stderr, "error getting bundle payload filename: %s\n",
+							al_bp_strerror(error));
 					exit(1);
 				}
-				write(fd_ack, pl_buffer, pl_buffer_size);
-				close(fd_ack);
+				if ((debug) && (debug_level > 0))
+				{
+					printf(" done:\n");
+				}
+			}
+
+			if ((debug))
+			{
+				printf ("======================================\n");
+				printf (" Bundle received at %s\n", ctime(&current));
+				printf ("  source: %s\n", bundle_source_addr.uri);
+				if (perf_opt->use_file)
+				{
+					printf ("  saved into    : %s\n", pl_filename);
+				}
+
+				printf ("--------------------------------------\n");
+			};
+
+			// check if is file transfer bundle
+			if ((debug) && (debug_level > 0))
+				printf("[debug]\tchecking if this is a file transfer bundle...");
+			if (bundle_header == FILE_HEADER)
+			{
+				is_file_transfer_bundle = TRUE;
+			}
+			if ((debug) && (debug_level > 0))
+			{
+				printf(" done.\n");
+				printf("\tbundle is%sa file transfer bundle\n",
+						is_file_transfer_bundle ? " " : " not ");
+				printf("\n");
+			}
+
+			// process file transfer bundle
+			if(is_file_transfer_bundle)
+			{
+				if ((debug) && (debug_level > 0))
+					printf("[debug]\tprocessing file transfer bundle...");
+
+				pthread_mutex_lock(&mutexdata);
+				indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
+						&bundle_object,perf_opt->file_dir);
+
+				pthread_mutex_unlock(&mutexdata);
+				sched_yield();
+
+				if (indicator < 0) // error in processing bundle
+				{
+					fprintf(stderr, "Error in processing file transfer bundle: %s\n", strerror(errno));
+				}
+				if ((debug) && (debug_level > 0))
+				{
+					printf("done.\n");
+					if (indicator == 1)
+						printf("Transfer Completed\n");
+				}
+			}
+
+			// get bundle expiration time
+			if (bundle_ack_options.set_ack_expiration)
+			{
+			// 	al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
+			// is setted the smaller
+				if( conn_opt->expiration < bundle_ack_options.ack_expiration)
+					bundle_expiration = conn_opt->expiration;
+				else
+					bundle_expiration = bundle_ack_options.ack_expiration;
+			}
+			else
+				bundle_expiration = conn_opt->expiration;
+
+			// get bundle priority
+			bundle_priority.ordinal = 0;
+			if( bundle_ack_options.set_ack_priority)
+			{
+				// is setted the smaller
+				if( conn_opt->priority.priority < bundle_ack_options.ack_priority.priority)
+					bundle_priority.priority = conn_opt->priority.priority;
+				else
+					bundle_priority.priority = bundle_ack_options.ack_priority.priority;
+			}
+			else
+				bundle_priority.priority = conn_opt->priority.priority;
+
+			// send acks to the client only if requested by client
+			// send acks to the monitor if:
+			// ack requested by client AND ack-to-monitor option set AND bundle_ack_options.ack_to_mon == ATM_NORMAL
+			// OR client forced server to send ack to monitor
+
+			boolean_t send_ack_to_client = bundle_ack_options.ack_to_client;
+			boolean_t send_ack_to_monitor = FALSE;
+			send_ack_to_monitor = (bundle_ack_options.ack_to_client && (bundle_ack_options.ack_to_mon == ATM_NORMAL) && bundle_ack_options.ack_to_client && perf_opt->acks_to_mon)
+					|| (bundle_ack_options.ack_to_mon == ATM_FORCE_YES);
+			if (send_ack_to_client || send_ack_to_monitor)
+			{
+
+				// create bundle ack to send
+				if ((debug) && (debug_level > 0))
+					printf("[debug] initiating memory for bundle ack...");
+				error = al_bp_bundle_create(&bundle_ack_object);
+				if (error != BP_SUCCESS)
+				{
+					fflush(stdout);
+					fprintf(stderr, "fatal error initiating memory for bundle ack: %s\n", al_bp_strerror(error));
+					exit(1);
+				}
+				if(debug && debug_level > 0)
+					printf("done\n");
+
+
+				// initiate server ack payload
+				// set server ack payload source
+				server_ack_payload.bundle_source = bundle_source_addr;
+				// set server ack payload timestamp
+				server_ack_payload.bundle_creation_ts = bundle_creation_timestamp;
+				// preparing the bundle ack payload
+				if ((debug) && (debug_level > 0))
+					printf("[debug] preparing the payload of the bundle ack...");
+				error = prepare_server_ack_payload(server_ack_payload, &pl_buffer, &pl_buffer_size);
+
+				if (error != BP_SUCCESS)
+				{
+					fflush(stdout);
+					fprintf(stderr, "fatal error preparing the payload of the bundle ack: %s\n", al_bp_strerror(error));
+					exit(1);
+				}
+				if(debug && debug_level > 0)
+					printf("done\n");
+
+				// setting the bundle ack payload
+				if ((debug) && (debug_level > 0))
+					printf("[debug] setting the payload of the bundle ack...");
+				// For DTN2 implementation ack payload in in memory
+				if(perf_opt->bp_implementation == BP_DTN)
+				{
+					error = al_bp_bundle_set_payload_mem(&bundle_ack_object, pl_buffer, pl_buffer_size);
+				}
+				else if(perf_opt->bp_implementation == BP_ION)
+				{
+					char filename_ack[256];
+					int fd_ack;
+					char * tmp,* tmp_eid;
+					u32_t filename_ack_len;
+					tmp_eid = (char *) malloc(sizeof(char) * strlen(bundle_source_addr.uri)+1);
+					strcpy(tmp_eid,bundle_source_addr.uri);
+
+					if( strncmp(bundle_source_addr.uri,"ipn",3) == 0)
+					{
+						strtok(tmp_eid,":");
+						tmp = strtok(NULL,":");
+					}
+					else
+					{
+						strtok(tmp_eid, "/");
+						tmp = strtok(NULL, "/");
+					}
+
+					sprintf(filename_ack,"%s_%s_%d",SOURCE_FILE_ACK,tmp,num_ack);
+					filename_ack_len = strlen(filename_ack)+1;
+					fd_ack = open(filename_ack,O_WRONLY|O_CREAT,0777);
+					if(fd_ack < 0)
+					{
+						fflush(stdout);
+						fprintf(stderr, "fatal error create the payload of the bundle ack: %s\n", al_bp_strerror(error));
+						exit(1);
+					}
+					write(fd_ack, pl_buffer, pl_buffer_size);
+					close(fd_ack);
+					if (debug && debug_level > 0)
+					{
+						printf("\n[debug] bundle payload ack saved in: %s ... ", filename_ack);
+					}
+					num_ack++;
+					error = al_bp_bundle_set_payload_file(&bundle_ack_object,filename_ack,filename_ack_len);
+					free(tmp_eid);
+				}
+				if (error != BP_SUCCESS)
+				{
+					fflush(stdout);
+					fprintf(stderr, "\nfatal error setting the payload of the bundle ack: %s\n", al_bp_strerror(error));
+					exit(1);
+				}
+				if(debug && debug_level > 0)
+					printf("done\n");
+
+				// setting the bundle ack options
 				if (debug && debug_level > 0)
 				{
-					printf("\n[debug] bundle payload ack saved in: %s ... ", filename_ack);
+					printf("[debug] setting source of the bundle ack: %s ...", local_eid.uri);
 				}
-				num_ack++;
-				error = al_bp_bundle_set_payload_file(&bundle_ack_object,filename_ack,filename_ack_len);
-				free(tmp_eid);
-			}
-			if (error != BP_SUCCESS)
-			{
-				fflush(stdout);
-				fprintf(stderr, "\nfatal error setting the payload of the bundle ack: %s\n", al_bp_strerror(error));
-				exit(1);
-			}
-			if(debug && debug_level > 0)
-				printf("done\n");
-
-			// setting the bundle ack options
-			if (debug && debug_level > 0)
-			{
-				printf("[debug] setting source of the bundle ack: %s ...", local_eid.uri);
-			}
-			error = al_bp_bundle_set_source(& bundle_ack_object, local_eid);
-			if (error != BP_SUCCESS)
-			{
-				fflush(stdout);
-				fprintf(stderr, "fatal error setting the source of the bundle ack: %s\n", al_bp_strerror(error));
-				exit(1);
-			}
-			if(debug && debug_level > 0)
-				printf("done\n");
-
-			if (debug && debug_level > 0)
-			{
-				printf("[debug] setting destination of the bundle ack: %s ...", bundle_source_addr.uri);
-			}
-			error = al_bp_bundle_set_dest(& bundle_ack_object, bundle_source_addr);
-			if (error != BP_SUCCESS)
-			{
-				fflush(stdout);
-				fprintf(stderr, "fatal error setting the destination of the bundle ack: %s\n", al_bp_strerror(error));
-				exit(1);
-			}
-			if(debug && debug_level > 0)
-				printf("done\n");
-
-			if (debug && debug_level > 0)
-			{
-				printf("[debug] setting replyto eid of the bundle ack: %s ...", bundle_replyto_addr.uri);
-			}
-			error = al_bp_bundle_set_replyto(& bundle_ack_object, bundle_replyto_addr);
-			if (error != BP_SUCCESS)
-			{
-				fflush(stdout);
-				fprintf(stderr, "fatal error setting the reply to eid of the bundle ack: %s\n", al_bp_strerror(error));
-				exit(1);
-			}
-			if(debug && debug_level > 0)
-				printf("done\n");
-
-			if (debug && debug_level > 0)
-			{
-				printf("[debug] setting priority of the bundle ack...");
-			}
-			error = al_bp_bundle_set_priority(& bundle_ack_object, bundle_priority);
-			if (error != BP_SUCCESS)
-			{
-				fflush(stdout);
-				fprintf(stderr, "fatal error setting priority of the bundle ack: %s\n", al_bp_strerror(error));
-				exit(1);
-			}
-			if(debug && debug_level > 0)
-				printf("done\n");
-/**************************************************************/
-			bundle_ack_object.spec->priority.ordinal = 0;
-			bundle_ack_object.spec->critical = FALSE;
-			bundle_ack_object.spec->flow_label = 0;
-			bundle_ack_object.spec->unreliable = FALSE;
-/**************************************************************/
-			if (debug && debug_level > 0)
-			{
-				printf("[debug] setting expiration time of the bundle ack...");
-			}
-			error = al_bp_bundle_set_expiration(& bundle_ack_object, bundle_expiration);
-			if (error != BP_SUCCESS)
-			{
-				fflush(stdout);
-				fprintf(stderr, "fatal error setting expiration time of the bundle ack: %s\n", al_bp_strerror(error));
-				exit(1);
-			}
-			if(debug && debug_level > 0)
-				printf("done\n");
-
-			if (debug && debug_level > 0)
-			{
-				printf("[debug] setting delivery options of the bundle ack...");
-			}
-			//bundle_ack_dopts = BP_DOPTS_CUSTODY;
-			bundle_ack_dopts = 0;
-			al_bp_bundle_set_delivery_opts(& bundle_ack_object, bundle_ack_dopts);
-			if (error != BP_SUCCESS)
-			{
-				fflush(stdout);
-				fprintf(stderr, "fatal error setting delivery options of the bundle ack: %s\n", al_bp_strerror(error));
-				exit(1);
-			}
-			if(debug && debug_level > 0)
-				printf("done\n");
-
-			// send the bundle ack to the client
-			if (send_ack_to_client)
-			{
-				if ((debug) && (debug_level > 0))
-					printf("[debug] sending bundle ack to client...");
-				error = al_bp_bundle_send(handle, regid, & bundle_ack_object);
+				error = al_bp_bundle_set_source(& bundle_ack_object, local_eid);
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
-					fprintf(stderr, "error sending bundle ack to client: %d (%s)\n",
-							error, al_bp_strerror(al_bp_errno(handle)));
+					fprintf(stderr, "fatal error setting the source of the bundle ack: %s\n", al_bp_strerror(error));
 					exit(1);
 				}
-				if ((debug) && (debug_level > 0))
-					printf(" bundle ack sent to client\n");
-			}
-			printf("Send bundle to client ok\n");
+				if(debug && debug_level > 0)
+					printf("done\n");
 
-			// send the bundle ack to the monitor
-			if (send_ack_to_monitor)
-			{
-				al_bp_bundle_set_dest(& bundle_ack_object, bundle_replyto_addr);
-				if ((debug) && (debug_level > 0))
-					printf("[debug] sending bundle ack to monitor...");
-				error = al_bp_bundle_send(handle, regid, & bundle_ack_object);
+				if (debug && debug_level > 0)
+				{
+					printf("[debug] setting destination of the bundle ack: %s ...", bundle_source_addr.uri);
+				}
+				error = al_bp_bundle_set_dest(& bundle_ack_object, bundle_source_addr);
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
-					fprintf(stderr, "error sending bundle ack to monitor: %d (%s)\n",
-							error, al_bp_strerror(al_bp_errno(handle)));
+					fprintf(stderr, "fatal error setting the destination of the bundle ack: %s\n", al_bp_strerror(error));
 					exit(1);
 				}
-				if ((debug) && (debug_level > 0))
-					printf(" bundle ack sent to monitor\n");
+				if(debug && debug_level > 0)
+					printf("done\n");
+
+				if (debug && debug_level > 0)
+				{
+					printf("[debug] setting replyto eid of the bundle ack: %s ...", bundle_replyto_addr.uri);
+				}
+				error = al_bp_bundle_set_replyto(& bundle_ack_object, bundle_replyto_addr);
+				if (error != BP_SUCCESS)
+				{
+					fflush(stdout);
+					fprintf(stderr, "fatal error setting the reply to eid of the bundle ack: %s\n", al_bp_strerror(error));
+					exit(1);
+				}
+				if(debug && debug_level > 0)
+					printf("done\n");
+
+				if (debug && debug_level > 0)
+				{
+					printf("[debug] setting priority of the bundle ack...");
+				}
+				error = al_bp_bundle_set_priority(& bundle_ack_object, bundle_priority);
+				if (error != BP_SUCCESS)
+				{
+					fflush(stdout);
+					fprintf(stderr, "fatal error setting priority of the bundle ack: %s\n", al_bp_strerror(error));
+					exit(1);
+				}
+				if(debug && debug_level > 0)
+					printf("done\n");
+	/**************************************************************/
+				bundle_ack_object.spec->priority.ordinal = 0;
+				bundle_ack_object.spec->critical = FALSE;
+				bundle_ack_object.spec->flow_label = 0;
+				bundle_ack_object.spec->unreliable = FALSE;
+	/**************************************************************/
+				if (debug && debug_level > 0)
+				{
+					printf("[debug] setting expiration time of the bundle ack...");
+				}
+				error = al_bp_bundle_set_expiration(& bundle_ack_object, bundle_expiration);
+				if (error != BP_SUCCESS)
+				{
+					fflush(stdout);
+					fprintf(stderr, "fatal error setting expiration time of the bundle ack: %s\n", al_bp_strerror(error));
+					exit(1);
+				}
+				if(debug && debug_level > 0)
+					printf("done\n");
+
+				if (debug && debug_level > 0)
+				{
+					printf("[debug] setting delivery options of the bundle ack...");
+				}
+				//bundle_ack_dopts = BP_DOPTS_CUSTODY;
+				bundle_ack_dopts = 0;
+				al_bp_bundle_set_delivery_opts(& bundle_ack_object, bundle_ack_dopts);
+				if (error != BP_SUCCESS)
+				{
+					fflush(stdout);
+					fprintf(stderr, "fatal error setting delivery options of the bundle ack: %s\n", al_bp_strerror(error));
+					exit(1);
+				}
+				if(debug && debug_level > 0)
+					printf("done\n");
+
+				// send the bundle ack to the client
+				if (send_ack_to_client)
+				{
+					if ((debug) && (debug_level > 0))
+						printf("[debug] sending bundle ack to client...");
+					error = al_bp_bundle_send(handle, regid, & bundle_ack_object);
+					if (error != BP_SUCCESS)
+					{
+						fflush(stdout);
+						fprintf(stderr, "error sending bundle ack to client: %d (%s)\n",
+								error, al_bp_strerror(al_bp_errno(handle)));
+						exit(1);
+					}
+					if ((debug) && (debug_level > 0))
+						printf(" bundle ack sent to client\n");
+				}
+				printf("Send bundle to client ok\n");
+
+				// send the bundle ack to the monitor
+				if (send_ack_to_monitor)
+				{
+					al_bp_bundle_set_dest(& bundle_ack_object, bundle_replyto_addr);
+					if ((debug) && (debug_level > 0))
+						printf("[debug] sending bundle ack to monitor...");
+					error = al_bp_bundle_send(handle, regid, & bundle_ack_object);
+					if (error != BP_SUCCESS)
+					{
+						fflush(stdout);
+						fprintf(stderr, "error sending bundle ack to monitor: %d (%s)\n",
+								error, al_bp_strerror(al_bp_errno(handle)));
+						exit(1);
+					}
+					if ((debug) && (debug_level > 0))
+						printf(" bundle ack sent to monitor\n");
+				}
+
+				//free memory for bundle ack
+				al_bp_bundle_free(&bundle_ack_object);
+				free(pl_buffer);
+				pl_buffer_size = 0;
 			}
-
-			//free memory for bundle ack
-			al_bp_bundle_free(&bundle_ack_object);
-			free(pl_buffer);
-			pl_buffer_size = 0;
-
 		}
 
 		// free memory for bundle
