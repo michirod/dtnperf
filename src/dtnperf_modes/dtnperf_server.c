@@ -314,6 +314,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		{
 			fflush(stdout);
 			fprintf(stderr, "receive intrettupted\n");
+
+			// free memory for bundle
+			al_bp_bundle_free(&bundle_object);
 		}
 		else
 		{
@@ -774,13 +777,14 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				free(pl_buffer);
 				pl_buffer_size = 0;
 			}
+
+
+			// free memory for bundle
+			al_bp_bundle_free(&bundle_object);
+
+			free(pl_filename);
+			pl_filename_len = 0;
 		}
-
-		// free memory for bundle
-		al_bp_bundle_free(&bundle_object);
-
-		free(pl_filename);
-		pl_filename_len = 0;
 
 	}// while(1)
 
