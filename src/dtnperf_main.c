@@ -269,7 +269,7 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->data_qty = 0;
 	opt->D_arg = NULL;
 	opt->F_arg = NULL;
-	opt->p_arg = NULL;
+	opt->P_arg = NULL;
 	opt->use_file = 1;
 	opt->data_unit = 'M';
 	opt->transmission_time = 0;

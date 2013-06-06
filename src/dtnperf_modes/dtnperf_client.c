@@ -318,10 +318,10 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	{
 		fflush(stdout);
 		fprintf(stderr, "[DTNperf fatal error] in registering eid: %s (%s)\n",
-				reginfo.endpoint, al_bp_strerror(al_bp_errno(handle)));
+				reginfo.endpoint.uri, al_bp_strerror(al_bp_errno(handle)));
 		if (create_log)
 			fprintf(log_file, "[DTNperf fatal error] in registering eid: %s (%s)\n",
-					reginfo.endpoint, al_bp_strerror(al_bp_errno(handle)));
+					reginfo.endpoint.uri, al_bp_strerror(al_bp_errno(handle)));
 		client_clean_exit(1);
 	}
 	if ((debug) && (debug_level > 0))
@@ -363,12 +363,12 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if ((debug) && (debug_level > 0))
 	{
 		printf("[debug] dtnperf header length: %lu\n", header_size);
-		printf("[debug] dtnperf payload length: %lu\n", dtnperf_payload);
+		printf("[debug] dtnperf payload length: %f\n", dtnperf_payload);
 	}
 	if (create_log)
 	{
 		printf("[debug] dtnperf header length: %lu\n", header_size);
-		printf("[debug] dtnperf payload length: %lu\n", dtnperf_payload);
+		printf("[debug] dtnperf payload length: %f\n", dtnperf_payload);
 	}
 	/* ------------------------------------------------------------------------------
 	 * select the operative-mode (between Time_mode, Data_mode and File_mode)

@@ -325,7 +325,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			{
 				fflush(stdout);
 				fprintf(stderr, "error getting recv reply: %d (%s)\n",
-						error, al_bp_str(al_bp_errno(handle)));
+						error, al_bp_strerror(al_bp_errno(handle)));
 				server_clean_exit(1);
 			}
 			if ((debug) && (debug_level > 0))
