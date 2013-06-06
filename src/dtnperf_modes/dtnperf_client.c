@@ -1120,7 +1120,6 @@ void * congestion_control(void * opt)
 	al_bp_endpoint_id_t ack_sender;
 	HEADER_TYPE ack_header;
 	al_bp_copy_eid(&ack_sender, &dest_eid);
-	struct timeval temp;
 
 	int position = -1;
 
