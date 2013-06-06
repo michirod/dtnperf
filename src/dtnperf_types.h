@@ -72,7 +72,7 @@ typedef struct dtnperf_options
 	double data_qty;	// data to be transmitted (bytes) [0]
 	char * D_arg;			// arguments of -D option
 	char * F_arg;			// argument of -F option (filename)
-	char * p_arg;			// arguments of -p option
+	char * P_arg;			// arguments of -P option
 	char data_unit;			// B = bytes, K = kilobytes, M = megabytes [M]
 	int transmission_time;	// seconds of transmission [0]
 	char congestion_ctrl;	// w = window based, r = rate based [w]

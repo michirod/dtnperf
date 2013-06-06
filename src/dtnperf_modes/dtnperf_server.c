@@ -153,7 +153,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		printf("[debug] executing shell command...");
 	if (system(command) < 0)
 	{
-		perror("Error opening bundle destination dir");
+		perror("[DTNperf error] in opening bundle destination dir");
 		exit(-1);
 	}
 	free(command);
@@ -174,7 +174,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		printf("[debug] executing shell command...");
 	if (system(command) < 0)
 	{
-		perror("Error opening transfered files destination dir");
+		perror("[DTNperf error] in opening transfered files destination dir");
 		exit(-1);
 	}
 	free(command);
@@ -191,7 +191,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	if (error != BP_SUCCESS)
 	{
 		fflush(stdout);
-		fprintf(stderr, "fatal error opening bp handle: %s\n", al_bp_strerror(error));
+		fprintf(stderr, "[DTNperf fatal error] in opening bp handle: %s\n", al_bp_strerror(error));
 		exit(1);
 	}
 	else
@@ -237,10 +237,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			|| (perf_opt->bp_implementation == BP_ION && (error == BP_EBUSY || error == BP_EPARSEEID)))
 	{
 		fflush(stdout);
-		fprintf(stderr, "error: there is a registration with the same eid.\n");
+		fprintf(stderr, "[DTNperf error] existing a registration with the same eid.\n");
 		fprintf(stderr, "regid 0x%x\n", (unsigned int) regid);
-		al_bp_close(handle);
-		exit(1);
+		server_clean_exit(1);
 	}
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
@@ -256,9 +255,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	if ((error = al_bp_register(&handle, &reginfo, &regid)) != 0)
 	{
 		fflush(stdout);
-		fprintf(stderr, "error creating registration: %d (%s)\n",
+		fprintf(stderr, "[DTNperf error] in creating registration: %d (%s)\n",
 				error, al_bp_strerror(al_bp_errno(handle)));
-		exit(1);
+		server_clean_exit(1);
 	}
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
@@ -296,8 +295,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
-			fprintf(stderr, "fatal error initiating memory for bundles: %s\n", al_bp_strerror(error));
-			exit(1);
+			fprintf(stderr, "[DTNperf fatal error] in initiating memory for bundles: %s\n", al_bp_strerror(error));
+			server_clean_exit(1);
 		}
 		if(debug && debug_level > 0)
 			printf("done\n");
@@ -310,10 +309,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			printf("[debug] waiting for bundles...\n");
 
 		error = al_bp_bundle_receive(handle, bundle_object, pl_location, -1);
-		if(error == BP_ERECVINT)
+		if(error == BP_ERECVINT || error == BP_ETIMEOUT)
 		{
-			fflush(stdout);
-			fprintf(stderr, "receive intrettupted\n");
+			if(error == BP_ERECVINT )
+				fprintf(stderr, "[DTNperf warning] bundle reception interrupted\n");
+			if(error == BP_ETIMEOUT )
+				fprintf(stderr, "[DTNperf warning] bundle reception timeout expired\n");
 
 			// free memory for bundle
 			al_bp_bundle_free(&bundle_object);
@@ -324,8 +325,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			{
 				fflush(stdout);
 				fprintf(stderr, "error getting recv reply: %d (%s)\n",
-						error, al_bp_strerror(al_bp_errno(handle)));
-				exit(1);
+						error, al_bp_str(al_bp_errno(handle)));
+				server_clean_exit(1);
 			}
 			if ((debug) && (debug_level > 0))
 				printf(" bundle received\n");
@@ -337,9 +338,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "error getting bundle payload size: %s\n",
+				fprintf(stderr, "[DTNperf fatal error] in getting bundle payload size: %s\n",
 						al_bp_strerror(error));
-				exit(1);
+				server_clean_exit(1);
 			}
 			if(debug && debug_level > 0)
 				printf("done\n");
@@ -362,7 +363,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("[debug]\tgetting bundle header and options...");
 			if (get_bundle_header_and_options(&bundle_object, &bundle_header, &bundle_ack_options) < 0)
 			{
-				printf("Error in getting bundle header and options\n");
+				printf("[DTNperf warning] in getting bundle header and options\n");
 				continue;
 			}
 			if ((debug) && (debug_level > 0))
@@ -377,9 +378,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "error getting bundle source eid: %s\n",
+				fprintf(stderr, "[DTNperf fatal error] in getting bundle source eid: %s\n",
 						al_bp_strerror(error));
-				exit(1);
+				server_clean_exit(1);
 			}
 			if ((debug) && (debug_level > 0))
 			{
@@ -395,9 +396,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "error getting bundle destination eid: %s\n",
+				fprintf(stderr, "[DTNperf fatal error] in getting bundle destination eid: %s\n",
 						al_bp_strerror(error));
-				exit(1);
+				server_clean_exit(1);
 			}
 			if ((debug) && (debug_level > 0))
 			{
@@ -431,9 +432,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "error getting bundle creation timestamp: %s\n",
+				fprintf(stderr, "[DTNperf fatal error] in getting bundle creation timestamp: %s\n",
 						al_bp_strerror(error));
-				exit(1);
+				server_clean_exit(1);
 			}
 			if ((debug) && (debug_level > 0))
 			{
@@ -454,9 +455,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
-					fprintf(stderr, "error getting bundle payload filename: %s\n",
+					fprintf(stderr, "[DTNperf fatal error] in getting bundle payload filename: %s\n",
 							al_bp_strerror(error));
-					exit(1);
+					server_clean_exit(1);
 				}
 				if ((debug) && (debug_level > 0))
 				{
@@ -507,7 +508,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 				if (indicator < 0) // error in processing bundle
 				{
-					fprintf(stderr, "Error in processing file transfer bundle: %s\n", strerror(errno));
+					fprintf(stderr, "[DTNperf warning] in processing file transfer bundle: %s\n", strerror(errno));
 				}
 				if ((debug) && (debug_level > 0))
 				{
@@ -562,8 +563,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
-					fprintf(stderr, "fatal error initiating memory for bundle ack: %s\n", al_bp_strerror(error));
-					exit(1);
+					fprintf(stderr, "[DTNperf fatal error] in initiating memory for bundle ack: %s\n", al_bp_strerror(error));
+					server_clean_exit(1);
 				}
 				if(debug && debug_level > 0)
 					printf("done\n");
@@ -582,8 +583,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
-					fprintf(stderr, "fatal error preparing the payload of the bundle ack: %s\n", al_bp_strerror(error));
-					exit(1);
+					fprintf(stderr, "[DTNperf fatal error] in preparing the payload of the bundle ack: %s\n", al_bp_strerror(error));
+					server_clean_exit(1);
 				}
 				if(debug && debug_level > 0)
 					printf("done\n");
@@ -622,8 +623,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 					if(fd_ack < 0)
 					{
 						fflush(stdout);
-						fprintf(stderr, "fatal error create the payload of the bundle ack: %s\n", al_bp_strerror(error));
-						exit(1);
+						fprintf(stderr, "[DTNperf fatal error] in creating the payload of the bundle ack: %s\n", al_bp_strerror(error));
+						server_clean_exit(1);
 					}
 					write(fd_ack, pl_buffer, pl_buffer_size);
 					close(fd_ack);
@@ -638,8 +639,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
-					fprintf(stderr, "\nfatal error setting the payload of the bundle ack: %s\n", al_bp_strerror(error));
-					exit(1);
+					fprintf(stderr, "\n[DTNperf fatal error] in setting the payload of the bundle ack: %s\n", al_bp_strerror(error));
+					server_clean_exit(1);
 				}
 				if(debug && debug_level > 0)
 					printf("done\n");
@@ -653,8 +654,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
-					fprintf(stderr, "fatal error setting the source of the bundle ack: %s\n", al_bp_strerror(error));
-					exit(1);
+					fprintf(stderr, "[DTNperf fatal error] in setting the source of the bundle ack: %s\n", al_bp_strerror(error));
+					server_clean_exit(1);
 				}
 				if(debug && debug_level > 0)
 					printf("done\n");
@@ -667,8 +668,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
-					fprintf(stderr, "fatal error setting the destination of the bundle ack: %s\n", al_bp_strerror(error));
-					exit(1);
+					fprintf(stderr, "[DTNperf fatal error] in setting the destination of the bundle ack: %s\n", al_bp_strerror(error));
+					server_clean_exit(1);
 				}
 				if(debug && debug_level > 0)
 					printf("done\n");
@@ -681,8 +682,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
-					fprintf(stderr, "fatal error setting the reply to eid of the bundle ack: %s\n", al_bp_strerror(error));
-					exit(1);
+					fprintf(stderr, "[DTNperf fatal error] in setting the reply to eid of the bundle ack: %s\n", al_bp_strerror(error));
+					server_clean_exit(1);
 				}
 				if(debug && debug_level > 0)
 					printf("done\n");
@@ -695,8 +696,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
-					fprintf(stderr, "fatal error setting priority of the bundle ack: %s\n", al_bp_strerror(error));
-					exit(1);
+					fprintf(stderr, "[DTNperf fatal error] in setting priority of the bundle ack: %s\n", al_bp_strerror(error));
+					server_clean_exit(1);
 				}
 				if(debug && debug_level > 0)
 					printf("done\n");
@@ -714,8 +715,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
-					fprintf(stderr, "fatal error setting expiration time of the bundle ack: %s\n", al_bp_strerror(error));
-					exit(1);
+					fprintf(stderr, "[DTNperf fatal error] in setting expiration time of the bundle ack: %s\n", al_bp_strerror(error));
+					server_clean_exit(1);
 				}
 				if(debug && debug_level > 0)
 					printf("done\n");
@@ -730,8 +731,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
-					fprintf(stderr, "fatal error setting delivery options of the bundle ack: %s\n", al_bp_strerror(error));
-					exit(1);
+					fprintf(stderr, "[DTNperf fatal error] in setting delivery options of the bundle ack: %s\n", al_bp_strerror(error));
+					server_clean_exit(1);
 				}
 				if(debug && debug_level > 0)
 					printf("done\n");
@@ -745,9 +746,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 					if (error != BP_SUCCESS)
 					{
 						fflush(stdout);
-						fprintf(stderr, "error sending bundle ack to client: %d (%s)\n",
+						fprintf(stderr, "[DTNperf fatal error] in sending bundle ack to client: %d (%s)\n",
 								error, al_bp_strerror(al_bp_errno(handle)));
-						exit(1);
+						server_clean_exit(1);
 					}
 					if ((debug) && (debug_level > 0))
 						printf(" bundle ack sent to client\n");
@@ -764,9 +765,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 					if (error != BP_SUCCESS)
 					{
 						fflush(stdout);
-						fprintf(stderr, "error sending bundle ack to monitor: %d (%s)\n",
+						fprintf(stderr, "[DTNperf fatal error] in sending bundle ack to monitor: %d (%s)\n",
 								error, al_bp_strerror(al_bp_errno(handle)));
-						exit(1);
+						server_clean_exit(1);
 					}
 					if ((debug) && (debug_level > 0))
 						printf(" bundle ack sent to monitor\n");
@@ -817,7 +818,7 @@ void * file_expiration_timer(void * opt)
 				strcpy(filename, item->info->full_dir);
 				strcat(filename, item->info->filename);
 				if (remove(filename) < 0)
-					perror("Error eliminating expired file:");
+					perror("[DTNperf error] in eliminating expired file:");
 				printf("Eliminated file %s because timer has expired\n", filename);
 				file_transfer_info_list_item_delete(&file_transfer_info_list, item);
 				free(filename);
@@ -841,15 +842,15 @@ void print_server_usage(char * progname)
 			" -s, --stop                   Stop the server daemon.\n"
 			"     --ip-addr <addr>         IP address of the BP daemon api. Default: 127.0.0.1\n"
 			"     --ip-port <port>         IP port of the BP daemon api. Default: 5010\n"
-			"     --force-eid <[DTN|IPN]   the scheme of the registration EID (ION only).\n"
-			"     --fdir <dir>             Destination directory of files transfered. Default is %s .\n"
+			"     --force-eid <[DTN|IPN]>  Force scheme of registration EID (ION only).\n"
+			"     --fdir <dir>             Destination directory of files transferred. Default is %s .\n"
 			"     --debug[=level]          Debug messages [1-2], if level is not indicated level = 2.\n"
-			" -M, --memory         	       Save bundles into memory.\n"
-			" -l, --lifetime <sec>         Bundle acks lifetime (s). Max idle time for ongoing file transfers (in ION). Default is 60.\n"
-			" -p, --priority <val>         Bundle acks priority [bulk|normal|expedited|reserved]. Default: normal\n"
-			//"     --acks-to-mon          Send bundle acks to the monitor too\n"
+			" -M, --memory         	       Save received bundles into memory.\n"
+			" -l, --lifetime <sec>         Bundle ACKs lifetime (s). Default is 60.\n"
+			" -p, --priority <val>         Bundle ACKs priority [bulk|normal|expedited|reserved]. Default: normal\n"
+			"     --acks-to-mon            Send bundle ACKs in cc to the monitor.\n"
 			" -v, --verbose                Print some information message during the execution.\n"
-			" -h, --help             This help.\n",
+			" -h, --help                   This help.\n",
 			SERVER_OUTPUT_FILE, FILE_DIR_DEFAULT);
 	fprintf(stderr, "\n");
 	exit(1);
@@ -920,7 +921,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			} else if (!strcasecmp(optarg, "reserved")) {
 				conn_opt->priority.priority = BP_PRIORITY_RESERVED;
 			} else {
-				fprintf(stderr, "Invalid priority value %s\n", optarg);
+				fprintf(stderr, "[DTNperf syntax error] Invalid priority value %s\n", optarg);
 				exit(1);
 			}
 			break;
@@ -932,7 +933,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 				if (debug_level >= 1 && debug_level <= 2)
 					perf_opt->debug_level = atoi(optarg) - 1;
 				else {
-					fprintf(stderr, "wrong --debug argument\n");
+					fprintf(stderr, "[DTNperf syntax error] wrong --debug argument\n");
 					exit(1);
 					return;
 				}
@@ -956,7 +957,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 37:
 			if(perf_opt->bp_implementation != BP_DTN)
 			{
-				fprintf(stderr, "--ip-addr supported only in DTN2\n");
+				fprintf(stderr, "[DTNperf error] --ip-addr supported only in DTN2\n");
 				exit(1);
 				return;
 			}
@@ -967,7 +968,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 38:
 			if(perf_opt->bp_implementation != BP_DTN)
 			{
-				fprintf(stderr, "--ip-port supported only in DTN2\n");
+				fprintf(stderr, "[DTNperf error] --ip-port supported only in DTN2\n");
 				exit(1);
 				return;
 			}
@@ -982,7 +983,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 50:
 			if(perf_opt->bp_implementation != BP_ION)
 			{
-				fprintf(stderr, "--force-eid supported only in ION\n");
+				fprintf(stderr, "[DTNperf error] --force-eid supported only in ION\n");
 				exit(1);
 				return;
 			}
@@ -995,7 +996,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 					perf_opt->eid_format_forced = 'I';
 					break;
 				case '?':
-					fprintf(stderr, "wrong --force-eid argument\n");
+					fprintf(stderr, "[DTNperf syntax error] wrong --force-eid argument\n");
 					exit(1);
 			}
 			break;
@@ -1020,13 +1021,13 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			}
 			else
 			{
-				fprintf(stderr, "ERROR: cannot find a running instance of dtnperf server\n");
+				fprintf(stderr, "[DTNperf error] cannot find a running instance of dtnperf server\n");
 			}
 			exit(0);
 			break;
 
 		case '?':
-			fprintf(stderr, "Unknown option: %c\n", optopt);
+			fprintf(stderr, "[DTNperf error] unknown option: %c\n", optopt);
 			exit(1);
 			break;
 
@@ -1042,7 +1043,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 	}
 	if (output_set && !perf_opt->daemon)
 	{
-		fprintf(stderr, "\nSYNTAX ERROR: -o option can be used only with -a option\n");   \
+		fprintf(stderr, "\n[DTNperf syntax error] -o option can be used only with -a option\n");   \
 		print_server_usage(argv[0]);                                               \
 		exit(1);
 	}
@@ -1071,7 +1072,7 @@ void server_clean_exit(int status)
 		strcpy(filename, item->info->full_dir);
 		strcat(filename, item->info->filename);
 		if (remove(filename) < 0)
-			perror("Error eliminating incomplete file:");
+			perror("[DTNperf error] in eliminating incomplete file:");
 		printf("Eliminated file %s because incomplete\n", filename);
 		file_transfer_info_list_item_delete(&file_transfer_info_list, item);
 		free(filename);
