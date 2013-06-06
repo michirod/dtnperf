@@ -292,7 +292,7 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->bundle_ack_options.ack_to_mon = ATM_NORMAL;
 	opt->bundle_ack_options.set_ack_expiration = FALSE;
 	opt->bundle_ack_options.set_ack_priority = FALSE;
-	opt->expiration_session = 60;
+	opt->expiration_session = 120;
 	opt->num_blocks = 0;
 }
 
