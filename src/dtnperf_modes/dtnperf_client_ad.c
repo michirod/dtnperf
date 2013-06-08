@@ -784,17 +784,14 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	al_bp_bundle_free(&bundle_stop);
 	if (perf_opt->num_blocks > 0)
 	{
-		/*free(ext_buf);
-		free(meta_buf);*/
-		meta_buf = NULL;
-		ext_buf = NULL;
+		free(ext_buf);
+		free(meta_buf);
 		int i;
 		for ( i=0; i<perf_opt->num_blocks; i++ )
 		{
-			/*printf("Freeing extension block info [%d].data at 0x%08X\n",
+	/*		printf("Freeing extension block info [%d].data at 0x%08X\n",
 					i, ext_blocks[i].block.data.data_val);*/
-			//free(ext_blocks[i].block.data.data_val);
-			ext_blocks[i].block.data.data_val = NULL;
+			free(ext_blocks[i].block.data.data_val);
 		}
 		ext_blocks = NULL;
 	}
@@ -1500,9 +1497,9 @@ void print_client_usage(char* progname)
 			"     --unreliable            Set ECOS \"unreliable flag\" to True. Default: False (ION Only).\n"
 			"     --critical              Set ECOS \"critical flag\" to True. Default: False (ION Only).\n"
 			"     --flow <num>            ECOS \"flow\" number. Default: 0 (ION Only).\n"
-//			" -n  --num-ext-blocks <val>  Number of extension/metadata blocks\n"
-			"     --mb-type <type>        Include metadata block and specify type (DTN2 Only).\n"
-			"     --mb-string <string>    Extension/metadata block content (DTN2 Only).\n"
+	//		" -n  --num-ext-blocks <val>  Number of extension/metadata blocks\n"
+	//		"     --mb-type <type>        Include metadata block and specify type (DTN2 Only).\n"
+	//		"     --mb-string <string>    Extension/metadata block content (DTN2 Only).\n"
 			" -v, --verbose               Print some information messages during execution.\n"
 			" -h, --help                  This help.\n",
 			LOG_FILENAME, LOGS_DIR_DEFAULT);
@@ -1858,7 +1855,6 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 					return;
 				}
 				perf_opt->num_blocks = 1;
-				ext_blocks = malloc(perf_opt->num_blocks * sizeof(extension_block_info_t));
 				perf_opt->metadata_type = atoi(optarg);
 		        if((num_meta_blocks + 1) > perf_opt->num_blocks)
 		        {
