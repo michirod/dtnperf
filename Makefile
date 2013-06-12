@@ -3,8 +3,8 @@
 # NAME OF BIN USED FOR INSTALL/UNINSTALL (NEVER LEAVE IT BLANK!!!)
 BIN_NAME_BASE=dtnperf
 CC=gcc
-LIBs=-L/usr/local/lib -L$(AL_BP_DIR)
-CFLAG=-O0 -Wall -fmessage-length=0
+LIB_PATHS=-L/usr/local/lib -L$(AL_BP_DIR)
+CFLAGS=-O0 -Wall -fmessage-length=0
 
 INSTALLED=$(wildcard /usr/bin/$(BIN_NAME_BASE)*)
 
@@ -20,22 +20,25 @@ endif
 ifeq ($(strip $(DTN2_DIR)),)
 # ION
 INC=-I$(AL_BP_DIR)/src/bp_implementations -I$(AL_BP_DIR)/src -I$(ION_DIR)/include -I$(ION_DIR)/library
-OPT=$(CFLAG) -lal_bp_vION -lbp -lici -lpthread
+LIBS=$(AL_BP_DIR)/libal_bp_vION.a -lbp -lici -lpthread
+#LIBS=-lal_bp_vION -lbp -lici -lpthread
 BIN_NAME=$(BIN_NAME_BASE)_vION
 else ifeq ($(strip $(ION_DIR)),)
 # DTN
 INC=-I$(AL_BP_DIR)/src/bp_implementations -I$(AL_BP_DIR)/src -I$(DTN2_DIR) -I$(DTN2_DIR)/applib 
-OPT=$(CFLAG) -lal_bp_vDTN2 -ldtnapi -lpthread
+LIBS=$(AL_BP_DIR)/libal_bp_vDTN2.a -ldtnapi -lpthread
+#LIBS=-lal_bp_vDTN2 -ldtnapi -lpthread
 BIN_NAME=$(BIN_NAME_BASE)_vDTN2
 else ifneq ($(and $(ION_DIR),$(DTN2_DIR)),)
 # BOTH
 INC=-I$(AL_BP_DIR)/src/bp_implementations -I$(AL_BP_DIR)/src -I$(DTN2_DIR) -I$(DTN2_DIR)/applib -I$(ION_DIR)/include -I$(ION_DIR)/library
-OPT=$(CFLAG) -lal_bp -ldtnapi -lbp -lici -lpthread
+LIBS=$(AL_BP_DIR)/libal_bp.a -ldtnapi -lbp -lici -lpthread
+#LIBS=-lal_bp -ldtnapi -lbp -lici -lpthread
 BIN_NAME=$(BIN_NAME_BASE)
 endif
 
 bin: 
-	$(CC) -o $(BIN_NAME) $(LIBs) $(INC) src/*.c src/dtnperf_modes/*.c $(OPT)
+	$(CC) $(INC) $(LIB_PATHS) $(CFLAGS) -o $(BIN_NAME) src/*.c src/dtnperf_modes/*.c $(LIBS)
 
 install: 
 	cp $(BIN_NAME_BASE)* /usr/bin/
