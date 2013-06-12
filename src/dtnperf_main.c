@@ -18,6 +18,7 @@
 #include "dtnperf_modes/dtnperf_client.h"
 #include "dtnperf_modes/dtnperf_server.h"
 #include "dtnperf_modes/dtnperf_monitor.h"
+#include <al_bp_api.h>
 
 /* ---------------------------
  * Global variables and options
