@@ -53,50 +53,51 @@ typedef struct dtnperf_bundle_ack_options
 typedef struct dtnperf_options
 {
 	//general options
-	al_bp_implementation_t bp_implementation; // Bundle Protocol implementation
-	boolean_t verbose;		// if true, execution becomes verbose [FALSE]
-	boolean_t debug;		// if true, debug messages are shown [FALSE]
-	int debug_level;		// set the debug level 0|1|2 [0]
-	int use_file;			// if set to 1, a file is used instead of memory [1]
-	boolean_t use_ip;		// set different values of ip address and port [FALSE]
-	char * ip_addr;			// daemon ip address [127.0.0.1]
-	short ip_port;			// daemon port [5010]
-	char eid_format_forced;	// is the format of the eid (U = URI, C = CBHE, N = None) [N]
-	boolean_t daemon;		// run as daemon (server and monitor) [FALSE]
-	char * server_output_file;	// stdout and stderr redirect here if daemon is TRUE [SERVER_OUTPUT_FILE]
-	char * monitor_output_file;	// stdout and stderr redirect here if daemon is TRUE [MONITOR_OUTPUT_FILE]
+	al_bp_implementation_t		 	bp_implementation; 					// Bundle Protocol implementation
+	boolean_t 						verbose;							// if true, execution becomes verbose [FALSE]
+	boolean_t 						debug;								// if true, debug messages are shown [FALSE]
+	int 							debug_level;						// set the debug level 0|1|2 [0]
+	int 							use_file;							// if set to 1, a file is used instead of memory [1]
+	boolean_t		 				use_ip;								// set different values of ip address and port [FALSE]
+	char*							ip_addr;							// daemon ip address [127.0.0.1]
+	short 							ip_port;							// daemon port [5010]
+	char 							eid_format_forced;					// is the format of the eid (U = URI, C = CBHE, N = None) [N]
+	boolean_t 						daemon;								// run as daemon (server and monitor) [FALSE]
+	char*							server_output_file;					// stdout and stderr redirect here if daemon is TRUE [SERVER_OUTPUT_FILE]
+	char*							monitor_output_file;				// stdout and stderr redirect here if daemon is TRUE [MONITOR_OUTPUT_FILE]
 	//client options
-	char dest_eid[AL_BP_MAX_ENDPOINT_ID];	// destination eid
-	char mon_eid[AL_BP_MAX_ENDPOINT_ID];	// monitor eid
-	char op_mode;    		// operative mode (T = time_mode, D = data_mode, F = file_mode) [D]
-	double data_qty;	// data to be transmitted (bytes) [0]
-	char * D_arg;			// arguments of -D option
-	char * F_arg;			// argument of -F option (filename)
-	char * P_arg;			// arguments of -P option
-	char data_unit;			// B = bytes, K = kilobytes, M = megabytes [M]
-	int transmission_time;	// seconds of transmission [0]
-	char congestion_ctrl;	// w = window based, r = rate based [w]
-	int window;				// transmission window (bundles) [1]
-	char * rate_arg;		// argument of -r option
-	double rate;				// transmission rate [0]
-	char rate_unit;			// b = bit/sec; B = bundle/sec [b]
-	int wait_before_exit;	// additional interval before exit [0]
-	double bundle_payload;  	// quantity of data (in bytes) to send (-p option) [DEFAULT_PAYLOAD]
-	dtnperf_bundle_ack_options_t bundle_ack_options; // options to send to the server
-	al_bp_bundle_payload_location_t payload_type;	// the type of data source for the bundle [DTN_PAYLOAD_FILE]
-	boolean_t create_log;	// create log file [FALSE]
-	char * log_filename;	// log filename [LOG_FILENAME]
+	char 							dest_eid[AL_BP_MAX_ENDPOINT_ID];	// destination eid
+	char 							mon_eid[AL_BP_MAX_ENDPOINT_ID];		// monitor eid
+	char 							op_mode;    						// operative mode (T = time_mode, D = data_mode, F = file_mode) [D]
+	double 							data_qty;							// data to be transmitted (bytes) [0]
+	char*							D_arg;								// arguments of -D option
+	char*							F_arg;								// argument of -F option (filename)
+	char*							P_arg;								// arguments of -P option
+	char 							data_unit;							// B = bytes, K = kilobytes, M = megabytes [M]
+	int 							transmission_time;					// seconds of transmission [0]
+	char 							congestion_ctrl;					// w = window based, r = rate based [w]
+	int 							window;								// transmission window (bundles) [1]
+	char* 							rate_arg;							// argument of -r option
+	double 							rate;								// transmission rate [0]
+	char 							rate_unit;							// b = bit/sec; B = bundle/sec [b]
+	int 							wait_before_exit;					// additional interval before exit [0]
+	double 							bundle_payload;  					// quantity of data (in bytes) to send (-p option) [DEFAULT_PAYLOAD]
+	dtnperf_bundle_ack_options_t 	bundle_ack_options;					// options to send to the server
+	al_bp_bundle_payload_location_t payload_type;						// the type of data source for the bundle [DTN_PAYLOAD_FILE]
+	boolean_t 						create_log;							// create log file [FALSE]
+	char*						 	log_filename;						// log filename [LOG_FILENAME]
 	//server options
-	char * dest_dir;		// destination dir of bundles [~/dtnperf/bundles]
-	char * file_dir;		// destination dir of transfered files [~/dtnperf/files]
-	boolean_t acks_to_mon;	// send ACKs to both source and monitor (if monitor is not the source) [FALSE]
-	boolean_t no_acks;		// do not send ACKs (for retro-compatibility purpose)
+	char* 							dest_dir;							// destination dir of bundles [~/dtnperf/bundles]
+	char* 							file_dir;							// destination dir of transfered files [~/dtnperf/files]
+	boolean_t 						acks_to_mon;						// send ACKs to both source and monitor (if monitor is not the source) [FALSE]
+	boolean_t 						no_acks;							// do not send ACKs (for retro-compatibility purpose)
 	//monitor options
-	char * logs_dir;		// dir where are saved monitor logs [LOGS_DIR_DEFAULT]
-	int expiration_session; // expiration time of session log file [60]
+	char* 							logs_dir;							// dir where are saved monitor logs [LOGS_DIR_DEFAULT]
+	int 							expiration_session; 				// expiration time of session log file [60]
 	// block options
-	u16_t num_blocks;     // number of extension and metadata blocks
-	u64_t metadata_type;     // metadata type code
+	u16_t 							num_blocks;  	  				 	// number of extension and metadata blocks
+	u64_t 							metadata_type;   					// metadata type code
+	boolean_t						crc;								// crc enabled [FALSE]
 } dtnperf_options_t;
 
 /**
