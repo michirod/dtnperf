@@ -12,12 +12,13 @@
 
 #include "includes.h"
 
+// Automatically generated CRC function
+// polynomial: 0x104C11DB7
+extern uint32_t crc_table[];
 
-
-
+uint32_t calc_crc32_d8(uint32_t crc, uint8_t *data, int len);
 char* get_filename(char* s);
 void pattern(char *outBuf, int inBytes);
-
 
 long mega2byte(double n);
 long kilo2byte(double n);
