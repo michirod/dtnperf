@@ -1561,6 +1561,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				//{"num-ext-blocks", required_argument, 0, 'n'},
 				{"mb-type", required_argument, 0, 56},   // set metadata extension block type
 				{"mb-string", required_argument, 0, 57},          // set metadata/extension block content
+				{"crc", no_argument, 0, 'c'},
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
 		};
@@ -1905,13 +1906,17 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			}
 			break;
 
+		case 'c':
+			perf_opt->crc=TRUE;
+			break;
+
 		case '?':
 			fprintf(stderr, "[DTNperf error] Unknown option: %c\n", optopt);
 			exit(1);
 			break;
 
 		case (char)(-1):
-			done = 1;																					done = 1;
+			done = 1;
 			break;
 
 		default:
