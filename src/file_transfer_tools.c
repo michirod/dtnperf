@@ -153,13 +153,13 @@ void file_transfer_info_list_item_delete(file_transfer_info_list_t * list, file_
 
 
 int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
-		u32_t pl_size, u32_t timestamp_secs, u32_t expiration, uint16_t monitor_eid_len)
+		u32_t pl_size, u32_t timestamp_secs, u32_t expiration, uint16_t monitor_eid_len, uint32_t crc)
 {
 	char * transfer;
 	u32_t transfer_len;
 	int fd;
 	uint32_t offset;
-
+	uint32_t local_crc=0;
 
 	// transfer length is total payload length without header,
 	// congestion control char and file fragment offset
@@ -171,6 +171,15 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	memset(transfer, 0, transfer_len);
 	if (fread(transfer, transfer_len, 1, pl_stream) != 1)
 		return -1;
+
+	// calculate CRC
+	if (crc==0)
+	{
+		local_crc = calc_crc32_d8(local_crc, (uint8_t*) transfer, transfer_len);
+		if (local_crc!=crc)
+			return -2;
+	}
+
 	// open or create destination file
 	char* filename = (char*) malloc(info->filename_len + strlen(info->full_dir) +1);
 	strcpy(filename, info->full_dir);
@@ -185,7 +194,6 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	if (write(fd, transfer, transfer_len) < 0)
 		return -1;
 	close(fd);
-
 
 	// deallocate resources
 	free(filename);
@@ -205,7 +213,7 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 
 int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		al_bp_bundle_object_t * bundle,
-		char * dir)
+		char * dir, uint32_t crc)
 {
 	al_bp_endpoint_id_t client_eid;
 	al_bp_timestamp_t timestamp;
@@ -292,8 +300,9 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		fseek(pl_stream, sizeof(file_dim), SEEK_CUR);
 
 	}
+
 	// assemble file
-	result = assemble_file(info, pl_stream, pl_size, timestamp.secs, expiration, monitor_eid_len);
+	result = assemble_file(info, pl_stream, pl_size, timestamp.secs, expiration, monitor_eid_len, crc);
 	close_payload_stream_read(pl_stream);
 	if (result < 0)// error
 		return result;
@@ -360,9 +369,9 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	if (opt->crc==TRUE)
 	{
 			*crc = calc_crc32_d8(*crc, (uint8_t*) fragment, bytes_read);
-			fwrite(crc, BUNDLE_CRC_SIZE, 1, f);
 	}
 
+	fwrite(crc, BUNDLE_CRC_SIZE, 1, f);
 	// prepare header and congestion control
 	result = prepare_payload_header_and_ack_options(opt, f);
 

@@ -367,9 +367,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				continue;
 			}
 
-			if (bundle_object.payload->buf.buf_crc!=0 && debug)
-				printf("Read CRC: %"PRIu32"\n", bundle_object.payload->buf.buf_crc);
-
 			if ((debug) && (debug_level > 0))
 			{
 				printf(" done.\n");
@@ -449,7 +446,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("\n");
 			}
 
-
 			// get bundle payload filename
 			if(perf_opt->use_file)
 			{
@@ -497,6 +493,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("\n");
 			}
 
+			if (bundle_object.payload->buf.buf_crc!=0 && debug)
+						printf("CRC received: %"PRIu32"\n", bundle_object.payload->buf.buf_crc);
+
 			// process file transfer bundle
 			if(is_file_transfer_bundle)
 			{
@@ -505,10 +504,18 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 				pthread_mutex_lock(&mutexdata);
 				indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
-						&bundle_object,perf_opt->file_dir);
+						&bundle_object,perf_opt->file_dir, bundle_object.payload->buf.buf_crc);
 
 				pthread_mutex_unlock(&mutexdata);
 				sched_yield();
+
+				// WRONG CRC
+				if (indicator == -2)
+				{
+					if (debug)
+						printf("CRC differs from the received one.\n");
+					continue;
+				}
 
 				if (indicator < 0) // error in processing bundle
 				{
@@ -520,6 +527,85 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 					if (indicator == 1)
 						printf("Transfer Completed\n");
 				}
+			}
+			else
+			{
+//				FILE * pl_stream;
+//
+//				uint16_t monitor_eid_len;
+//				char monitor_eid[256];
+//				char * filename;
+//				uint16_t filename_len;
+//				al_bp_timeval_t expiration;
+//				uint32_t file_dim;
+//				u32_t pl_size;
+//				char * eid, temp[256];
+//				char * full_dir;
+//
+//				// create stream from incoming bundle payload
+//				if (open_payload_stream_read(bundle_object, &pl_stream) < 0)
+//				{
+//					fflush(stdout);
+//					fprintf(stderr, "[DTNperf fatal error] i can't open the bundle file\n");
+//					server_clean_exit(1);
+//				}
+//
+//				fseek(pl_stream, HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t), SEEK_SET);
+//				fread(&monitor_eid_len, sizeof(monitor_eid_len), 1, pl_stream);
+//				fread(monitor_eid, monitor_eid_len, 1, pl_stream);
+//				fread(&expiration, sizeof(expiration), 1, pl_stream);
+//				fread(&filename_len, sizeof(filename_len), 1, pl_stream);
+//				// get filename
+//				filename = (char *) malloc(filename_len + 1);
+//				memset(filename, 0, filename_len + 1);
+//				if (fread(filename, filename_len, 1, pl_stream)<1)
+//				{
+//					perror("fread filename");
+//				}
+//				filename[filename_len] = '\0';
+//				//get file size
+//				fread(&file_dim, sizeof(file_dim), 1, pl_stream);
+//				// create destination dir for file
+//				strncpy(temp, client_eid.uri, strlen(client_eid.uri) + 1);
+//						// if is a URI endpoint remove service tag
+//						if(strncmp(temp,"ipn",3) !=0 )
+//						{
+//							strtok(temp, "/");
+//							eid = strtok(NULL, "/");
+//						}
+//						else
+//						{
+//							strtok(temp, ":");
+//							eid = strtok(NULL, "");
+//						}
+//						full_dir = (char*) malloc(strlen(dir) + strlen(eid) + 20);
+//						sprintf(full_dir, "%s%s/", dir, eid);
+//						sprintf(temp, "mkdir -p %s", full_dir);
+//						system(temp);
+//						sprintf(temp, "%lu_", timestamp.secs);
+//						strcat(full_dir, temp);
+//
+//						// create file transfer info object
+//						info = file_transfer_info_create(client_eid, filename_len, filename, full_dir, file_dim, timestamp.secs, expiration);
+//						// insert info into info list
+//						file_transfer_info_put(info_list, info);
+//						free(full_dir);
+//					}
+//					else  // first bundle of transfer already received
+//					{
+//						// skip filename_len and filename
+//						fseek(pl_stream, sizeof(filename_len) + strlen(info->filename), SEEK_CUR);
+//
+//						// skip file_size
+//						fseek(pl_stream, sizeof(file_dim), SEEK_CUR);
+//
+//					}
+//					// assemble file
+//					result = assemble_file(info, pl_stream, pl_size, timestamp.secs, expiration, monitor_eid_len);
+//					close_payload_stream_read(pl_stream);
+//
+//				close_payload_stream_read(pl_stream);
+
 			}
 
 			// get bundle expiration time
