@@ -1576,7 +1576,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		};
 
 		int option_index = 0;
-		c = getopt_long(argc, argv, "hvMCW:d:m:i:T:D:F:P:l:R:p:NrfL::", long_options, &option_index);
+		c = getopt_long(argc, argv, "hvMCW:d:m:i:T:D:F:P:l:R:p:NrfLc::", long_options, &option_index);
 
 		switch (c)
 		{
