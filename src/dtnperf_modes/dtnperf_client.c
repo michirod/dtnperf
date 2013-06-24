@@ -815,6 +815,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 						int num_bundle){
 	FILE * stream;
 	boolean_t eof_reached;
+	uint32_t crc;
 
 	if(perf_opt->op_mode == 'F')// File mode
 		sprintf(source_file, "%s_%d_%d", SOURCE_FILE, getpid(),num_bundle);
@@ -856,6 +857,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		error = al_bp_bundle_set_payload_file(&bundle, source_file, strlen(source_file));
 	else
 		error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
+
 	if (error != BP_SUCCESS)
 	{
 		fprintf(stderr, "[DTNperf fatal error] in setting bundle payload\n");
@@ -883,7 +885,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	{
 		open_payload_stream_write(bundle, &stream);
 		error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd,
-				transfer_filename, transfer_filedim, conn_opt->expiration , &eof_reached);
+				transfer_filename, transfer_filedim, conn_opt->expiration , &eof_reached, &crc);
 		if(error != BP_SUCCESS)
 		{
 			fprintf(stderr, "[DTNperf fatal error] in preparing file transfer payload\n");
@@ -894,7 +896,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	}
 	else // Time and Data mode
 	{
-		error = prepare_generic_payload(perf_opt, stream);
+		error = prepare_generic_payload(perf_opt, stream, &crc);
 		if (error != BP_SUCCESS)
 		{
 			fprintf(stderr, "[DTNperf fatal error] in preparing payload: %s\n", al_bp_strerror(error));
@@ -906,6 +908,13 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 
 	// close the stream
 	close_payload_stream_write(&bundle, stream);
+
+	if (perf_opt->crc==TRUE)
+	{
+		if(debug)
+				printf("[debug] CRC = %d\n", crc);
+
+	}
 
 	if(debug)
 		printf("[debug] payload prepared\n");

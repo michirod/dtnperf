@@ -297,6 +297,7 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 		options |= BO_ACK_CLIENT_YES;
 	else
 		options |= BO_ACK_CLIENT_NO;
+
 	//ack to monitor
 	if (opt->bundle_ack_options.ack_to_mon == ATM_NORMAL)
 		options |= BO_ACK_MON_NORMAL;
@@ -439,7 +440,7 @@ u32_t get_header_size(char mode, uint16_t filename_len, uint16_t monitor_eid_len
 }
 
 
-al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
+al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f, uint32_t *crc)
 {
 	if (f == NULL)
 		return BP_ENULLPNTR;
@@ -455,12 +456,17 @@ al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 	monitor_eid_len = strlen(opt->mon_eid);
 	remaining = opt->bundle_payload - get_header_size(opt->op_mode, 0, monitor_eid_len);
 
+	// RESET CRC
+	*crc= 0;
+
 	// fill remainig payload with a pattern
 	for (i = remaining; i > strlen(pattern); i -= strlen(pattern))
 	{
 		fwrite(pattern, strlen(pattern), 1, f);
+		*crc = calc_crc32_d8(*crc, (uint8_t*) pattern, strlen(pattern));
 	}
 	fwrite(pattern, remaining % strlen(pattern), 1, f);
+	*crc = calc_crc32_d8(*crc, (uint8_t*) pattern, remaining % strlen(pattern));
 
 	return result;
 }

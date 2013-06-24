@@ -322,7 +322,7 @@ u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len, uint16_t
 }
 
 al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, int fd,
-		char * filename, uint32_t file_dim, al_bp_timeval_t expiration_time,boolean_t * eof)
+		char * filename, uint32_t file_dim, al_bp_timeval_t expiration_time, boolean_t * eof, uint32_t *crc)
 {
 	if (f == NULL)
 		return BP_ENULLPNTR;
@@ -334,6 +334,9 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	long bytes_read;
 	uint16_t filename_len = strlen(filename);
 	uint16_t monitor_eid_len = strlen(opt->mon_eid);
+
+	// RESET CRC
+	*crc= 0;
 
 	// prepare header and congestion control
 	result = prepare_payload_header_and_ack_options(opt, f);
@@ -366,6 +369,7 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 
 	// write fragment in the bundle
 	fwrite(fragment, bytes_read, 1, f);
+	*crc = calc_crc32_d8(*crc, (uint8_t*) fragment, bytes_read);
 	//printf("\n\tFRAGMENT:\n\t%s\n", fragment);
 	return result;
 }

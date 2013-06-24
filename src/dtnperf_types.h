@@ -97,7 +97,7 @@ typedef struct dtnperf_options
 	// block options
 	u16_t 							num_blocks;  	  				 	// number of extension and metadata blocks
 	u64_t 							metadata_type;   					// metadata type code
-	boolean_t						crc;								// crc enabled [FALSE]
+	uint32_t						crc;								// crc enabled [FALSE]
 } dtnperf_options_t;
 
 /**
