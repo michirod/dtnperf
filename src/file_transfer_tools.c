@@ -336,20 +336,6 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	uint16_t filename_len = strlen(filename);
 	uint16_t monitor_eid_len = strlen(opt->mon_eid);
 
-	// RESET CRC
-	*crc= 0;
-
-	// prepare header and congestion control
-	result = prepare_payload_header_and_ack_options(opt, f);
-
-	// write expiration time
-	fwrite(&expiration_time, sizeof(expiration_time), 1, f);
-	// write filename length
-	fwrite(&filename_len, sizeof(filename_len), 1, f);
-	// write filename
-	fwrite(filename, filename_len, 1, f);
-	//write file size
-	fwrite(&file_dim, sizeof(file_dim), 1, f);
 	// get size of fragment and allocate fragment
 	fragment_len = get_file_fragment_size(opt->bundle_payload, filename_len, monitor_eid_len);
 	fragment = (char *) malloc(fragment_len);
@@ -368,10 +354,30 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	else
 		*eof = FALSE;
 
+	// RESET CRC
+		*crc= 0;
+
+	if (opt->crc==TRUE)
+	{
+			*crc = calc_crc32_d8(*crc, (uint8_t*) fragment, bytes_read);
+			fwrite(crc, BUNDLE_CRC_SIZE, 1, f);
+	}
+
+	// prepare header and congestion control
+	result = prepare_payload_header_and_ack_options(opt, f);
+
+	// write expiration time
+	fwrite(&expiration_time, sizeof(expiration_time), 1, f);
+	// write filename length
+	fwrite(&filename_len, sizeof(filename_len), 1, f);
+	// write filename
+	fwrite(filename, filename_len, 1, f);
+	//write file size
+	fwrite(&file_dim, sizeof(file_dim), 1, f);
+
 	// write fragment in the bundle
 	fwrite(fragment, bytes_read, 1, f);
-	if (opt->crc==TRUE)
-		*crc = calc_crc32_d8(*crc, (uint8_t*) fragment, bytes_read);
+
 	//printf("\n\tFRAGMENT:\n\t%s\n", fragment);
 	return result;
 }
