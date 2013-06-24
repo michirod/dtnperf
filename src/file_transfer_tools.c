@@ -351,8 +351,7 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	memset(fragment, 0, fragment_len);
 	// get offset of fragment
 	offset = lseek(fd, 0, SEEK_CUR);
-	// write offset in the bundle
-	fwrite(&offset, sizeof(offset), 1, f);
+
 	// read fragment from file
 	bytes_read = read(fd, fragment, fragment_len);
 	if (bytes_read < fragment_len)// reached EOF
@@ -364,16 +363,17 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 		*eof = FALSE;
 
 	// RESET CRC
-		*crc= 0;
+	*crc= 0;
 
 	if (opt->crc==TRUE)
 	{
 			*crc = calc_crc32_d8(*crc, (uint8_t*) fragment, bytes_read);
 	}
 
-	fwrite(crc, BUNDLE_CRC_SIZE, 1, f);
 	// prepare header and congestion control
 	result = prepare_payload_header_and_ack_options(opt, f);
+
+	fwrite(crc, BUNDLE_CRC_SIZE, 1, f);
 
 	// write expiration time
 	fwrite(&expiration_time, sizeof(expiration_time), 1, f);
@@ -383,7 +383,8 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 	fwrite(filename, filename_len, 1, f);
 	//write file size
 	fwrite(&file_dim, sizeof(file_dim), 1, f);
-
+	// write offset in the bundle
+	fwrite(&offset, sizeof(offset), 1, f);
 	// write fragment in the bundle
 	fwrite(fragment, bytes_read, 1, f);
 
