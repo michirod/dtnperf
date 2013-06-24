@@ -910,16 +910,11 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		// SET THE POSITION OF THE CRC
 		fseek(stream, HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) + sizeof(perf_opt->mon_eid) + strlen(perf_opt->mon_eid), SEEK_SET);
 		fwrite(&bundle.payload->buf.buf_crc, BUNDLE_CRC_SIZE, 1, stream);
+		if(debug)
+				printf("[debug] CRC = %"PRIu32"\n", bundle.payload->buf.buf_crc);
 	}
 	// close the stream
 	close_payload_stream_write(&bundle, stream);
-
-	if (perf_opt->crc==TRUE)
-	{
-		if(debug)
-				printf("[debug] CRC = %"PRIu32"\n", bundle.payload->buf.buf_crc);
-
-	}
 
 	if(debug)
 		printf("[debug] payload prepared\n");
