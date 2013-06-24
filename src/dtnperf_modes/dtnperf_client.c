@@ -1032,14 +1032,7 @@ void * send_bundles(void * opt)
 
 		// Send the bundle
 		if (debug)
-			printf("passing the bundle to BP...");
-
-		if (perf_opt->crc==TRUE)
-		{
-			bundle.payload->buf.buf_crc = calc_crc32_d8(0, (uint8_t*) bundle.payload->buf.buf_val, bundle.payload->buf.buf_len);
-			if (debug)
-				printf("CRC of Bundle: %d\n", bundle.payload->buf.buf_crc);
-		}	
+			printf("passing the bundle to BP...\n");
 
 		if (perf_opt->congestion_ctrl == 'w')
 			pthread_mutex_lock(&mutexdata);
