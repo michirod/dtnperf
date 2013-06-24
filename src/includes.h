@@ -25,5 +25,6 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include <types.h>
+#include <inttypes.h>
 
 #endif /*INCLUDES_H_*/
