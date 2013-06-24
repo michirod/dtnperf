@@ -366,6 +366,10 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("[DTNperf warning] in getting bundle header and options\n");
 				continue;
 			}
+
+			if (bundle_object.payload->buf.buf_crc!=0 && debug)
+				printf("Read CRC: %"PRIu32"\n", bundle_object.payload->buf.buf_crc);
+
 			if ((debug) && (debug_level > 0))
 			{
 				printf(" done.\n");
