@@ -275,7 +275,6 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	HEADER_TYPE header;
 	BUNDLE_OPT_TYPE options;
 	uint16_t eid_len;
-//	uint32_t crc = 0;
 
 	// header
 	switch(opt->op_mode)
@@ -341,8 +340,6 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	eid_len = strlen(opt->mon_eid);
 	fwrite(&eid_len, sizeof(eid_len), 1, f);
 	fwrite(opt->mon_eid, eid_len, 1, f);
-//	// write 0s into the CRC field
-//	fwrite(&crc, BUNDLE_CRC_SIZE, 1, f);
 
 	return BP_SUCCESS;
 }
@@ -422,6 +419,7 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 		bundle->spec->replyto.uri[eid_len] = '\0';
 		bundle->payload->buf.buf_crc=0;
 		fread(&bundle->payload->buf.buf_crc, BUNDLE_CRC_SIZE, 1, pl_stream);
+
 	}
 	else
 	{
