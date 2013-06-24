@@ -12,7 +12,7 @@
 #include "definitions.h"
 #include <al_bp_api.h>
 #include <arpa/inet.h>
-
+#include "utils.h"
 
 // static variables for stream operations
 static char * buffer = NULL;
@@ -274,6 +274,7 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	HEADER_TYPE header;
 	BUNDLE_OPT_TYPE options;
 	uint16_t eid_len;
+	uint32_t crc =0;
 
 	// header
 	switch(opt->op_mode)
@@ -339,6 +340,8 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	eid_len = strlen(opt->mon_eid);
 	fwrite(&eid_len, sizeof(eid_len), 1, f);
 	fwrite(opt->mon_eid, eid_len, 1, f);
+	// write 0s into the CRC field
+	fwrite(&crc, BUNDLE_CRC_SIZE, 1, f);
 
 	return BP_SUCCESS;
 }
@@ -416,6 +419,8 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 		fread(&eid_len, sizeof(eid_len), 1, pl_stream);
 		fread(bundle->spec->replyto.uri, eid_len, 1, pl_stream);
 		bundle->spec->replyto.uri[eid_len] = '\0';
+		bundle->payload->buf.buf_crc=0;
+		fread(&bundle->payload->buf.buf_crc, BUNDLE_CRC_SIZE, 1, pl_stream);
 	}
 	else
 	{
@@ -429,8 +434,8 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 u32_t get_header_size(char mode, uint16_t filename_len, uint16_t monitor_eid_len)
 {
 	u32_t result = 0;
-	// Header Type,  congenstion char,  ack lifetime,  monitor eid,  monitor eid length
-	result = HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) + sizeof(monitor_eid_len) + monitor_eid_len;
+	// Header Type,  congenstion char,  ack lifetime,  monitor eid,  monitor eid length, crc
+	result = HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) + sizeof(monitor_eid_len) + monitor_eid_len + BUNDLE_CRC_SIZE;
 	if(mode == 'F')
 	{
 		// bundle lifetime, filename, filename len, dim file, offset
@@ -463,10 +468,12 @@ al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f, uint32_t
 	for (i = remaining; i > strlen(pattern); i -= strlen(pattern))
 	{
 		fwrite(pattern, strlen(pattern), 1, f);
-		*crc = calc_crc32_d8(*crc, (uint8_t*) pattern, strlen(pattern));
+		if (opt->crc==TRUE)
+			*crc = calc_crc32_d8(*crc, (uint8_t*) pattern, strlen(pattern));
 	}
 	fwrite(pattern, remaining % strlen(pattern), 1, f);
-	*crc = calc_crc32_d8(*crc, (uint8_t*) pattern, remaining % strlen(pattern));
+	if (opt->crc==TRUE)
+		*crc = calc_crc32_d8(*crc, (uint8_t*) pattern, remaining % strlen(pattern));
 
 	return result;
 }

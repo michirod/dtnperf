@@ -83,6 +83,9 @@
 // bundle options size
 #define BUNDLE_OPT_SIZE sizeof(uint16_t)
 
+// bundle crc size
+#define BUNDLE_CRC_SIZE sizeof(uint32_t)
+
 // congestion control options
 // window based
 #define BO_ACK_CLIENT_YES 0x8000
