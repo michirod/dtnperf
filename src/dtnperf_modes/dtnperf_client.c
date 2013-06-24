@@ -815,7 +815,6 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 						int num_bundle){
 	FILE * stream;
 	boolean_t eof_reached;
-	uint32_t crc;
 
 	if(perf_opt->op_mode == 'F')// File mode
 		sprintf(source_file, "%s_%d_%d", SOURCE_FILE, getpid(),num_bundle);
@@ -885,7 +884,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	{
 		open_payload_stream_write(bundle, &stream);
 		error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd,
-				transfer_filename, transfer_filedim, conn_opt->expiration , &eof_reached, &crc);
+				transfer_filename, transfer_filedim, conn_opt->expiration , &eof_reached, &bundle.payload->buf.buf_crc);
 		if(error != BP_SUCCESS)
 		{
 			fprintf(stderr, "[DTNperf fatal error] in preparing file transfer payload\n");
@@ -896,7 +895,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	}
 	else // Time and Data mode
 	{
-		error = prepare_generic_payload(perf_opt, stream, &crc);
+		error = prepare_generic_payload(perf_opt, stream, &bundle.payload->buf.buf_crc);
 		if (error != BP_SUCCESS)
 		{
 			fprintf(stderr, "[DTNperf fatal error] in preparing payload: %s\n", al_bp_strerror(error));
@@ -906,13 +905,19 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		}
 	}
 
+	if (perf_opt->crc==TRUE)
+	{
+		// SET THE POSITION OF THE CRC
+		fseek(stream, HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) + sizeof(perf_opt->mon_eid) + strlen(perf_opt->mon_eid), SEEK_SET);
+		fwrite(&bundle.payload->buf.buf_crc, BUNDLE_CRC_SIZE, 1, stream);
+	}
 	// close the stream
 	close_payload_stream_write(&bundle, stream);
 
 	if (perf_opt->crc==TRUE)
 	{
 		if(debug)
-				printf("[debug] CRC = %d\n", crc);
+				printf("[debug] CRC = %"PRIu32"\n", bundle.payload->buf.buf_crc);
 
 	}
 

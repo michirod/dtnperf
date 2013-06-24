@@ -22,6 +22,7 @@
 #include <al_bp_api.h>
 #include "file_transfer_tools.h"
 #include "bundle_tools.h"
+#include "utils.h"
 
 file_transfer_info_list_t file_transfer_info_list_create()
 {
@@ -369,7 +370,8 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 
 	// write fragment in the bundle
 	fwrite(fragment, bytes_read, 1, f);
-	*crc = calc_crc32_d8(*crc, (uint8_t*) fragment, bytes_read);
+	if (opt->crc==TRUE)
+		*crc = calc_crc32_d8(*crc, (uint8_t*) fragment, bytes_read);
 	//printf("\n\tFRAGMENT:\n\t%s\n", fragment);
 	return result;
 }
