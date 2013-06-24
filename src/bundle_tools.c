@@ -212,6 +212,7 @@ int open_payload_stream_read(al_bp_bundle_object_t bundle, FILE ** f)
 	{
 		al_bp_bundle_get_payload_file(bundle, &buffer, &buffer_len);
 		*f = fopen(buffer, "rb");
+
 		if (*f == NULL)
 		{
 			perror("open");
@@ -274,7 +275,7 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	HEADER_TYPE header;
 	BUNDLE_OPT_TYPE options;
 	uint16_t eid_len;
-	uint32_t crc =0;
+//	uint32_t crc = 0;
 
 	// header
 	switch(opt->op_mode)
@@ -340,8 +341,8 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	eid_len = strlen(opt->mon_eid);
 	fwrite(&eid_len, sizeof(eid_len), 1, f);
 	fwrite(opt->mon_eid, eid_len, 1, f);
-	// write 0s into the CRC field
-	fwrite(&crc, BUNDLE_CRC_SIZE, 1, f);
+//	// write 0s into the CRC field
+//	fwrite(&crc, BUNDLE_CRC_SIZE, 1, f);
 
 	return BP_SUCCESS;
 }
@@ -464,16 +465,23 @@ al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f, uint32_t
 	// RESET CRC
 	*crc= 0;
 
+	if (opt->crc==TRUE)
+	{
+		for (i = remaining; i > strlen(pattern); i -= strlen(pattern))
+		{
+			*crc = calc_crc32_d8(*crc, (uint8_t*) pattern, strlen(pattern));
+		}
+		*crc = calc_crc32_d8(*crc, (uint8_t*) pattern, remaining % strlen(pattern));
+	}
+
+	fwrite(crc, BUNDLE_CRC_SIZE, 1, f);
+
 	// fill remainig payload with a pattern
 	for (i = remaining; i > strlen(pattern); i -= strlen(pattern))
 	{
 		fwrite(pattern, strlen(pattern), 1, f);
-		if (opt->crc==TRUE)
-			*crc = calc_crc32_d8(*crc, (uint8_t*) pattern, strlen(pattern));
 	}
 	fwrite(pattern, remaining % strlen(pattern), 1, f);
-	if (opt->crc==TRUE)
-		*crc = calc_crc32_d8(*crc, (uint8_t*) pattern, remaining % strlen(pattern));
 
 	return result;
 }
