@@ -240,7 +240,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		return -1;
 
 	// skip header - congestion control char - lifetime ack
-	fseek(pl_stream, HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t), SEEK_SET);
+	fseek(pl_stream, HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) + BUNDLE_CRC_SIZE, SEEK_SET);
 	// skip monitor eid
 	uint16_t monitor_eid_len;
 	char monitor_eid[256];
