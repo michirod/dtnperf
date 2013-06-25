@@ -530,6 +530,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 			else
 			{
+
+				// TODO
 //				FILE * pl_stream;
 //
 //				uint16_t monitor_eid_len;

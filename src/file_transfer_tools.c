@@ -367,13 +367,11 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 
 	if (opt->crc==TRUE)
 	{
-			*crc = calc_crc32_d8(*crc, (uint8_t*) fragment, bytes_read);
+		*crc = calc_crc32_d8(*crc, (uint8_t*) fragment, bytes_read);
 	}
 
 	// prepare header and congestion control
-	result = prepare_payload_header_and_ack_options(opt, f);
-
-	fwrite(crc, BUNDLE_CRC_SIZE, 1, f);
+	result = prepare_payload_header_and_ack_options(opt, f, *crc);
 
 	// write expiration time
 	fwrite(&expiration_time, sizeof(expiration_time), 1, f);
