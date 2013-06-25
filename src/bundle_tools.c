@@ -267,7 +267,7 @@ int close_payload_stream_write(al_bp_bundle_object_t * bundle, FILE *f)
 	return 0;
 }
 
-al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FILE * f)
+al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FILE * f, uint32_t crc)
 {
 	if (f == NULL)
 		return BP_ENULLPNTR;
@@ -336,6 +336,9 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	fwrite(&options, BUNDLE_OPT_SIZE, 1, f);
 	// write lifetime of ack
 	fwrite(&(opt->bundle_ack_options.ack_expiration),sizeof(al_bp_timeval_t), 1, f);
+	// write CRC
+	fwrite(&crc, BUNDLE_CRC_SIZE, 1, f);
+
 	// write reply-to eid
 	eid_len = strlen(opt->mon_eid);
 	fwrite(&eid_len, sizeof(eid_len), 1, f);
@@ -413,12 +416,15 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 		fread(&ack_lifetime,sizeof(al_bp_timeval_t), 1, pl_stream);
 		options->ack_expiration = ack_lifetime;
 
+		// crc
+		bundle->payload->buf.buf_crc=0;
+		fread(&bundle->payload->buf.buf_crc, BUNDLE_CRC_SIZE, 1, pl_stream);
+
 		// monitor
 		fread(&eid_len, sizeof(eid_len), 1, pl_stream);
 		fread(bundle->spec->replyto.uri, eid_len, 1, pl_stream);
 		bundle->spec->replyto.uri[eid_len] = '\0';
-		bundle->payload->buf.buf_crc=0;
-		fread(&bundle->payload->buf.buf_crc, BUNDLE_CRC_SIZE, 1, pl_stream);
+
 
 	}
 	else
@@ -433,8 +439,8 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 u32_t get_header_size(char mode, uint16_t filename_len, uint16_t monitor_eid_len)
 {
 	u32_t result = 0;
-	// Header Type,  congenstion char,  ack lifetime,  monitor eid,  monitor eid length, crc
-	result = HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) + sizeof(monitor_eid_len) + monitor_eid_len + BUNDLE_CRC_SIZE;
+	// Header Type,  congenstion char,  ack lifetime, crc, monitor eid, monitor eid length
+	result = HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t) + BUNDLE_CRC_SIZE + sizeof(monitor_eid_len) + monitor_eid_len;
 	if(mode == 'F')
 	{
 		// bundle lifetime, filename, filename len, dim file, offset
@@ -455,13 +461,10 @@ al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f, uint32_t
 	uint16_t monitor_eid_len;
 	al_bp_error_t result;
 
-	// prepare header and congestion control
-	result = prepare_payload_header_and_ack_options(opt, f);
-	monitor_eid_len = strlen(opt->mon_eid);
-	remaining = opt->bundle_payload - get_header_size(opt->op_mode, 0, monitor_eid_len);
-
 	// RESET CRC
 	*crc= 0;
+	monitor_eid_len = strlen(opt->mon_eid);
+	remaining = opt->bundle_payload - get_header_size(opt->op_mode, 0, monitor_eid_len);
 
 	if (opt->crc==TRUE)
 	{
@@ -472,7 +475,8 @@ al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f, uint32_t
 		*crc = calc_crc32_d8(*crc, (uint8_t*) pattern, remaining % strlen(pattern));
 	}
 
-	fwrite(crc, BUNDLE_CRC_SIZE, 1, f);
+	// prepare header and congestion control
+	result = prepare_payload_header_and_ack_options(opt, f, *crc);
 
 	// fill remainig payload with a pattern
 	for (i = remaining; i > strlen(pattern); i -= strlen(pattern))
