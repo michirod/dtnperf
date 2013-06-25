@@ -173,7 +173,7 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 		return -1;
 
 	// calculate CRC
-	if (crc==0)
+	if (crc!=0)
 	{
 		local_crc = calc_crc32_d8(local_crc, (uint8_t*) transfer, transfer_len);
 		if (local_crc!=crc)
