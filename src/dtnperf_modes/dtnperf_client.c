@@ -1522,8 +1522,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	boolean_t w = FALSE, r = FALSE;
 	boolean_t set_ack_priority_as_bundle = TRUE;
 	boolean_t set_ack_expiration_as_bundle = TRUE;
-	boolean_t flags_set;
-	boolean_t data_set;
+	boolean_t data_set=false;
 	char * block_buf;
 
 	while (!done)
@@ -1881,7 +1880,6 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
                 ext_blocks[num_meta_blocks].block.type = METADATA_BLOCK;
                 set_metadata_type(&ext_blocks[num_meta_blocks], perf_opt->metadata_type);
                 num_meta_blocks++;
-		        flags_set = false;
 		        data_set = false;
 		        break;
 
