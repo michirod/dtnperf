@@ -4,7 +4,7 @@
  **           Carlo Caini (DTNperf_3 project supervisor), carlo.caini@unibo.it
  **
  **
- **  Alma Mater Studiorum, University of Bologna
+ **  Copyright (c) 2013 Alma Mater Studiorum, University of Bologna
  ********************************************************/
 
 /*
@@ -68,7 +68,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	int filename_len;
 	char * full_filename;
 	FILE * file;
-
+	int stat_res;
 
 	/* ------------------------
 	 * initialize variables
@@ -424,18 +424,22 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				strcat(filename, ".csv");
 				full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(filename) + 2);
 				sprintf(full_filename, "%s/%s", perf_opt->logs_dir, filename);
+
+				stat_res = stat(full_filename, &file_stat);
+
 				file = fopen(full_filename, "a");
 				session = session_create(relative_source_addr, full_filename, file, start,
 						relative_creation_timestamp.secs, bundle_expiration);
 				session_put(session_list, session);
-				// write header in csv log file
 
-				if (stat(full_filename, &file_stat)==0)
+				if (stat_res==0)
 				{
+					// write header in csv log file
 					fprintf(file,"RX_TIME;Report_SRC;Report_TST;Report_SQN;"
-										"Report_Type;Bndl_SRC;Bndl_TST;Bndl_SQN;"
-										"Bndl_FO;Bndl_FL;");
+									"Report_Type;Bndl_SRC;Bndl_TST;Bndl_SQN;"
+									"Bndl_FO;Bndl_FL;");
 				}
+
 				csv_print_status_report_timestamps_header(file);
 				csv_end_line(file);
 			}
@@ -590,7 +594,7 @@ void * session_expiration_timer(void * opt)
 				}
 			}
 			// stop bundle is not yet arrived and the last bundle has expired
-			else if (session->last_bundle_time + session->expiration < current_dtn_time && (session->last_bundle_time + session->expiration != 0))
+			else if (session->last_bundle_time + session->expiration + 2 < current_dtn_time && (session->last_bundle_time + session->expiration != 0))
 			{
 				fprintf(stdout, "DTNperf monitor: Session Expired: Bundle stop did not arrive\n");
 

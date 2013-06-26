@@ -4,7 +4,7 @@
  **           Carlo Caini (DTNperf_3 project supervisor), carlo.caini@unibo.it
  **
  **
- **  Alma Mater Studiorum, University of Bologna
+ **  Copyright (c) 2013 Alma Mater Studiorum, University of Bologna
  ********************************************************/
 
 /*
