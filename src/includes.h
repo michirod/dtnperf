@@ -26,5 +26,7 @@
 #include <sys/wait.h>
 #include <types.h>
 #include <inttypes.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #endif /*INCLUDES_H_*/
