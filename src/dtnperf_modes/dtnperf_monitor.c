@@ -427,18 +427,18 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 				stat_res = stat(full_filename, &file_stat);
 
-				file = fopen(full_filename, "a");
+				file = fopen(full_filename, "w"); // --->>> change to "a"
 				session = session_create(relative_source_addr, full_filename, file, start,
 						relative_creation_timestamp.secs, bundle_expiration);
 				session_put(session_list, session);
 
-				if (stat_res==0)
-				{
+				/*if (stat_res==0)
+				{*/
 					// write header in csv log file
 					fprintf(file,"RX_TIME;Report_SRC;Report_TST;Report_SQN;"
 									"Report_Type;Bndl_SRC;Bndl_TST;Bndl_SQN;"
 									"Bndl_FO;Bndl_FL;");
-				}
+				/*}*/
 
 				csv_print_status_report_timestamps_header(file);
 				csv_end_line(file);
