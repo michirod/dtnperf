@@ -46,6 +46,7 @@ typedef struct dtnperf_bundle_ack_options
 	al_bp_timeval_t ack_expiration;
 	boolean_t set_ack_priority;
 	al_bp_bundle_priority_t ack_priority;
+	boolean_t crc_enabled;
 } dtnperf_bundle_ack_options_t;
 
 /**

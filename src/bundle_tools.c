@@ -332,6 +332,10 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 			break;
 		}
 	}
+
+	if (opt->crc==TRUE)
+		options |= BO_CRC_ENABLED;
+
 	// write in payload
 	fwrite(&header, HEADER_SIZE, 1, f);
 	fwrite(&options, BUNDLE_OPT_SIZE, 1, f);
@@ -376,6 +380,7 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 		options->ack_to_mon = ATM_NORMAL;
 		options->set_ack_expiration = FALSE;
 		options->set_ack_priority = FALSE;
+		options->crc_enabled = FALSE;
 
 		// read options
 		fread(&opt, BUNDLE_OPT_SIZE, 1, pl_stream);
@@ -412,6 +417,10 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 			else if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_RESERVED)
 				options->ack_priority.priority = BP_PRIORITY_RESERVED;
 		}
+
+		// CRC
+		if (opt & BO_CRC_ENABLED)
+			options->crc_enabled=TRUE;
 
 		// lifetime
 		fread(&ack_lifetime,sizeof(al_bp_timeval_t), 1, pl_stream);
