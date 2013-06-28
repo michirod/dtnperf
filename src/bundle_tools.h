@@ -51,6 +51,8 @@ int open_payload_stream_read(al_bp_bundle_object_t bundle, FILE ** f);
 int close_payload_stream_read(FILE * f);
 int open_payload_stream_write(al_bp_bundle_object_t bundle, FILE ** f);
 int close_payload_stream_write(al_bp_bundle_object_t * bundle, FILE * f);
+int open_payload_stream_append(al_bp_bundle_object_t bundle, FILE ** f);
+int close_payload_stream_append(al_bp_bundle_object_t * bundle, FILE * f);
 
 al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FILE * f);
 int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * header, dtnperf_bundle_ack_options_t * options);
