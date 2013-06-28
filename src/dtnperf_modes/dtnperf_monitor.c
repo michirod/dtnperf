@@ -409,7 +409,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				sprintf(filename, "%lu_", relative_creation_timestamp.secs);
 				strncpy(temp, relative_source_addr.uri, strlen(relative_source_addr.uri) + 1);
 
-				session->wrong_crc=0;
+
 
 				if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
 				{
@@ -430,23 +430,21 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(filename) + 2);
 				sprintf(full_filename, "%s/%s", perf_opt->logs_dir, filename);
 
-//				stat_res = stat(full_filename, &file_stat);
-
 				file = fopen(full_filename, "w");
 				session = session_create(relative_source_addr, full_filename, file, start,
 						relative_creation_timestamp.secs, bundle_expiration);
 				session_put(session_list, session);
 
-				/*if (stat_res==0)
-				{*/
-					// write header in csv log file
-					fprintf(file,"RX_TIME;Report_SRC;Report_TST;Report_SQN;"
-									"Report_Type;Bndl_SRC;Bndl_TST;Bndl_SQN;"
-									"Bndl_FO;Bndl_FL;");
-				/*}*/
+				// write header in csv log file
+				fprintf(file,"RX_TIME;Report_SRC;Report_TST;Report_SQN;"
+								"Report_Type;Bndl_SRC;Bndl_TST;Bndl_SQN;"
+								"Bndl_FO;Bndl_FL;");
 
 				csv_print_status_report_timestamps_header(file);
 				csv_end_line(file);
+
+				session->wrong_crc=0;
+
 			}
 
 			// update session infos
