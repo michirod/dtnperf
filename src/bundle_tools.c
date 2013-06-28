@@ -594,13 +594,14 @@ al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, dtnpe
 	return BP_SUCCESS;
 }
 
-al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t * reported_eid, al_bp_timestamp_t * reported_timestamp)
+al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t * reported_eid, al_bp_timestamp_t * reported_timestamp, uint32_t *extension_ack)
 {
 	al_bp_error_t error;
 	HEADER_TYPE header;
 	FILE * pl_stream;
 	uint16_t eid_len;
-	uint32_t timestamp_secs, timestamp_seqno, extension_ack;
+	uint32_t timestamp_secs, timestamp_seqno;
+
 	open_payload_stream_read(*ack, &pl_stream);
 	fread(&header, HEADER_SIZE, 1, pl_stream);
 	if (header == DSA_HEADER)
@@ -627,10 +628,10 @@ al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t
 	else
 		error = BP_ERRBASE;
 
-	if (fread(&extension_ack, sizeof(uint32_t), 1, pl_stream)>0)
-	{
-		printf("RECEIVED EXTENSION!!! %"PRIu32"\n", extension_ack);
-	}
+	if (feof(pl_stream)==0)
+		fread(&extension_ack, sizeof(uint32_t), 1, pl_stream);
+	else
+		*extension_ack = 0;
 
 	close_payload_stream_read(pl_stream);
 	return error;

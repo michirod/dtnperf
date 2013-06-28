@@ -69,6 +69,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	int filename_len;
 	char * full_filename;
 	FILE * file;
+	uint32_t extension_ack;
 //	int stat_res;
 
 	/* ------------------------
@@ -374,7 +375,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				break;
 
 			case SERVER_ACK:
-				get_info_from_ack(&bundle_object, &relative_source_addr, &relative_creation_timestamp);
+				get_info_from_ack(&bundle_object, &relative_source_addr, &relative_creation_timestamp, &extension_ack);
 				break;
 
 			case CLIENT_STOP:
