@@ -62,14 +62,14 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	session_t * session;
 	bundle_type_t bundle_type;
 	struct timeval current, start;
-	struct stat file_stat;
+//	struct stat file_stat;
 	char * command;
 	char temp[256];
 	char * filename;
 	int filename_len;
 	char * full_filename;
 	FILE * file;
-	int stat_res;
+//	int stat_res;
 
 	/* ------------------------
 	 * initialize variables
@@ -426,9 +426,9 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(filename) + 2);
 				sprintf(full_filename, "%s/%s", perf_opt->logs_dir, filename);
 
-				stat_res = stat(full_filename, &file_stat);
+//				stat_res = stat(full_filename, &file_stat);
 
-				file = fopen(full_filename, "w"); // --->>> change to "a"
+				file = fopen(full_filename, "w");
 				session = session_create(relative_source_addr, full_filename, file, start,
 						relative_creation_timestamp.secs, bundle_expiration);
 				session_put(session_list, session);

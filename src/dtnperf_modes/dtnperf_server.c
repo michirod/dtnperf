@@ -494,7 +494,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("\n");
 			}
 
-			if (bundle_object.payload->buf.buf_crc!=0 && debug)
+			if (bundle_ack_options.crc_enabled==TRUE && debug)
 						printf("CRC received: %"PRIu32"\n", bundle_object.payload->buf.buf_crc);
 
 			// process file transfer bundle
@@ -505,7 +505,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 				pthread_mutex_lock(&mutexdata);
 				indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
-						&bundle_object,perf_opt->file_dir, bundle_object.payload->buf.buf_crc);
+						&bundle_object,perf_opt->file_dir, (bundle_ack_options.crc_enabled == TRUE ? &bundle_object.payload->buf.buf_crc : (uint32_t *) NULL));
 
 				pthread_mutex_unlock(&mutexdata);
 				sched_yield();

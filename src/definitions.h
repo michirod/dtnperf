@@ -119,6 +119,14 @@
 // priority mask
 #define BO_PRIORITY_MASK 0x0030
 
+// crc options (BO HEADER)
+// IF IN BUNDLE FROM CLIENT TO SERVER
+// BIT 4 -> 0 : CRC DISABLED, 1: CRC ENABLED
+// ELSE IF IN BUNDLE FROM SERVER TO CLIENT
+// BIT 4 -> 0 : CRC CHECK OK (OR NOT ENABLED), 1: CRC CHECK FAILED
+#define BO_CRC_DISABLED 0x0000
+#define BO_CRC_ENABLED	0x0800
+
 // max payload (in bytes) if bundles are stored into memory
 #define MAX_MEM_PAYLOAD 50000
 
