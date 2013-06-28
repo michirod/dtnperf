@@ -48,6 +48,7 @@ void csv_print_status_report_timestamps_header(FILE * file)
 	strcat(buf, "Rcv;");
 	strcat(buf, "Fwd;");
 	strcat(buf, "Del;");
+	strcat(buf, "Crc;");
 
 	// not useful for now
 	// strcat(buf, "ACKED_BY_APP_TIMESTAMP");
