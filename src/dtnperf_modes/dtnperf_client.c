@@ -55,6 +55,7 @@ int sent_bundles = 0;					// sent bundles counter
 unsigned int sent_data = 0;				// sent byte counter
 int close_ack_receiver = 0;			// to signal the ack receiver to close
 unsigned int data_written = 0;			// num of bytes written on the source file
+long int wrong_crc;
 
 boolean_t process_interrupted;
 boolean_t expir_timer_cong_window;
@@ -135,6 +136,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	source_file_created = FALSE;
 	tot_bundles = 0;
 	process_interrupted = FALSE;
+
+	wrong_crc = 0;
+
 	perf_opt->log_filename = correct_dirname(perf_opt->log_filename);
 
 	// Create a new log file
@@ -1125,6 +1129,7 @@ void * congestion_control(void * opt)
 	boolean_t create_log = perf_opt->create_log;
 	uint32_t extension_ack;
 
+
 	al_bp_timestamp_t reported_timestamp;
 	al_bp_endpoint_id_t ack_sender;
 	HEADER_TYPE ack_header;
@@ -1211,6 +1216,10 @@ void * congestion_control(void * opt)
 						fprintf(log_file, "[DTNperf fatal error] in getting info from ack: %s\n", al_bp_strerror(error));
 					client_clean_exit(1);
 				}
+
+				if (extension_ack & BO_CRC_ENABLED)
+					wrong_crc++;
+
 				if ((debug) && (debug_level > 0))
 					printf("\t[debug cong ctrl] ack received timestamp: %lu %lu\n", reported_timestamp.secs, reported_timestamp.seqno);
 				position = is_in_info(send_info, reported_timestamp, perf_opt->window);
@@ -1461,7 +1470,7 @@ void print_final_report(FILE * f)
 	else
 		gput_unit = "bit/s";
 
-	fprintf(f, "\nBundles sent = %d , total data sent = %.3f %s\n", sent_bundles, sent, sent_unit);
+	fprintf(f, "\nBundles sent = %d (Wrong CRC = %ld), total data sent = %.3f %s\n", sent_bundles, wrong_crc, sent, sent_unit);
 	fprintf(f, "Total execution time = %.1f\n", total_secs);
 	if(perf_opt->congestion_ctrl == 'w')
 		fprintf(f, "Goodput = %.3f %s\n", goodput, gput_unit);

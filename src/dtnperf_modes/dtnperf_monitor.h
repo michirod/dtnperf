@@ -48,6 +48,7 @@ typedef struct session
 	u32_t wait_after_stop;
 	struct session * next;
 	struct session * prev;
+	long int wrong_crc;
 }session_t;
 
 typedef struct session_list
