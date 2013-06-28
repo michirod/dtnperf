@@ -561,7 +561,7 @@ al_bp_error_t get_info_from_stop(al_bp_bundle_object_t * stop, int * sent_bundle
 /**
  *
  */
-al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** payload, size_t * payload_size)
+al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, dtnperf_bundle_ack_options_t *bundle_ack_options, char **payload, size_t *payload_size)
 {
 	FILE * buf_stream;
 	char * buf;
@@ -570,7 +570,9 @@ al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char 
 	uint16_t eid_len;
 	uint32_t timestamp_secs;
 	uint32_t timestamp_seqno;
-	buf_stream = open_memstream(& buf, &buf_size);
+	uint32_t extension_header = 0;
+
+	buf_stream = open_memstream(&buf, &buf_size);
 	fwrite(&header, 1, HEADER_SIZE, buf_stream);
 	eid_len = strlen(ack.bundle_source.uri);
 	fwrite(&eid_len, sizeof(eid_len), 1, buf_stream);
@@ -579,6 +581,11 @@ al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char 
 	timestamp_seqno = (uint32_t) ack.bundle_creation_ts.seqno;
 	fwrite(&timestamp_secs, 1, sizeof(uint32_t), buf_stream);
 	fwrite(&timestamp_seqno, 1, sizeof(uint32_t), buf_stream);
+	if (bundle_ack_options->crc_enabled == TRUE)
+	{
+		extension_header |= BO_CRC_ENABLED;
+		fwrite(&extension_header, 1, sizeof(uint32_t), buf_stream);
+	}
 	fclose(buf_stream);
 	*payload = (char*)malloc(buf_size);
 	memcpy(*payload, buf, buf_size);
@@ -593,7 +600,7 @@ al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t
 	HEADER_TYPE header;
 	FILE * pl_stream;
 	uint16_t eid_len;
-	uint32_t timestamp_secs, timestamp_seqno;
+	uint32_t timestamp_secs, timestamp_seqno, extension_ack;
 	open_payload_stream_read(*ack, &pl_stream);
 	fread(&header, HEADER_SIZE, 1, pl_stream);
 	if (header == DSA_HEADER)
@@ -619,6 +626,11 @@ al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t
 	}
 	else
 		error = BP_ERRBASE;
+
+	if (fread(&extension_ack, sizeof(uint32_t), 1, pl_stream)>0)
+	{
+		printf("RECEIVED EXTENSION!!! %"PRIu32"\n", extension_ack);
+	}
 
 	close_payload_stream_read(pl_stream);
 	return error;

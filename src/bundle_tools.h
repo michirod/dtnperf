@@ -62,7 +62,7 @@ al_bp_error_t prepare_force_stop_bundle(al_bp_bundle_object_t * start, al_bp_end
 al_bp_error_t prepare_stop_bundle(al_bp_bundle_object_t * stop, al_bp_endpoint_id_t monitor,
 		al_bp_timeval_t expiration, al_bp_bundle_priority_t priority, int sent_bundles);
 al_bp_error_t get_info_from_stop(al_bp_bundle_object_t * stop, int * sent_bundles);
-al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** payload, size_t * payload_size);
+al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, dtnperf_bundle_ack_options_t *bundle_ack_options, char ** payload, size_t * payload_size);
 
 /**
  * Get reported eid and timestamp from bundle ack
