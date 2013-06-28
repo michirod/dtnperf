@@ -525,7 +525,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			if (bundle_ack_options.crc_enabled==TRUE)
 			{
 
-				// TODO
 				FILE *pl_stream;
 				uint8_t transfer;
 				uint32_t local_crc=0;

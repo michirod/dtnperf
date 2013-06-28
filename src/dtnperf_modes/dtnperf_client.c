@@ -924,7 +924,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 			bundle.payload->buf.buf_crc = calc_crc32_d8(bundle.payload->buf.buf_crc, (uint8_t*) &buff, sizeof(uint8_t));
 		}
 		close_payload_stream_read(stream);
-		open_payload_stream_write(bundle, &stream);
+		open_payload_stream_append(bundle, &stream);
 		fseek(stream, HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t), SEEK_SET);
 		fwrite(&bundle.payload->buf.buf_crc, BUNDLE_CRC_SIZE, 1, stream);
 		close_payload_stream_write(&bundle, stream);
