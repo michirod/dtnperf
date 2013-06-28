@@ -1123,6 +1123,7 @@ void * congestion_control(void * opt)
 	boolean_t debug = perf_opt->debug;
 	int debug_level = perf_opt->debug_level;
 	boolean_t create_log = perf_opt->create_log;
+	uint32_t extension_ack;
 
 	al_bp_timestamp_t reported_timestamp;
 	al_bp_endpoint_id_t ack_sender;
@@ -1202,7 +1203,7 @@ void * congestion_control(void * opt)
 				if ((debug) && (debug_level > 0))
 					printf("\t[debug cong ctrl] ack received\n");
 				// Get ack infos
-				error = get_info_from_ack(&ack, NULL, &reported_timestamp);
+				error = get_info_from_ack(&ack, NULL, &reported_timestamp, &extension_ack);
 				if (error != BP_SUCCESS)
 				{
 					fprintf(stderr, "[DTNperf fatal error] in getting info from ack: %s\n", al_bp_strerror(error));
