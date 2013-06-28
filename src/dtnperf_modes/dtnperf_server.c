@@ -515,7 +515,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				{
 					if (debug)
 						printf("CRC differs from the received one.\n");
-					continue;
+					bundle_ack_options.crc_enabled=FALSE;
 				}
 
 				if (indicator < 0) // error in processing bundle
@@ -671,7 +671,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				// preparing the bundle ack payload
 				if ((debug) && (debug_level > 0))
 					printf("[debug] preparing the payload of the bundle ack...");
-				error = prepare_server_ack_payload(server_ack_payload, &pl_buffer, &pl_buffer_size);
+				error = prepare_server_ack_payload(server_ack_payload, &bundle_ack_options, &pl_buffer, &pl_buffer_size);
 
 				if (error != BP_SUCCESS)
 				{

@@ -152,7 +152,6 @@ void file_transfer_info_list_item_delete(file_transfer_info_list_t * list, file_
 	list->count --;
 }
 
-
 int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 		u32_t pl_size, u32_t timestamp_secs, u32_t expiration, uint16_t monitor_eid_len, uint32_t *crc)
 {
