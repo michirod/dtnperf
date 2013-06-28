@@ -154,7 +154,7 @@ void file_transfer_info_list_item_delete(file_transfer_info_list_t * list, file_
 
 
 int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
-		u32_t pl_size, u32_t timestamp_secs, u32_t expiration, uint16_t monitor_eid_len, uint32_t crc)
+		u32_t pl_size, u32_t timestamp_secs, u32_t expiration, uint16_t monitor_eid_len, uint32_t *crc)
 {
 	char * transfer;
 	u32_t transfer_len;
@@ -174,10 +174,10 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 		return -1;
 
 	// calculate CRC
-	if (crc!=0)
+	if (crc!=NULL)
 	{
 		local_crc = calc_crc32_d8(local_crc, (uint8_t*) transfer, transfer_len);
-		if (local_crc!=crc)
+		if (local_crc!=*crc)
 			return -2;
 	}
 
@@ -214,7 +214,7 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 
 int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		al_bp_bundle_object_t * bundle,
-		char * dir, uint32_t crc)
+		char * dir, uint32_t *crc)
 {
 	al_bp_endpoint_id_t client_eid;
 	al_bp_timestamp_t timestamp;
