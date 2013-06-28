@@ -228,6 +228,46 @@ int close_payload_stream_read(FILE * f)
 	return fclose(f);
 }
 
+int open_payload_stream_append(al_bp_bundle_object_t bundle, FILE ** f)
+{
+	al_bp_bundle_payload_location_t pl_location;
+
+	al_bp_bundle_get_payload_location(bundle, &pl_location);
+
+	if (pl_location == BP_PAYLOAD_MEM)
+	{
+		al_bp_bundle_get_payload_mem(bundle, &buffer, &buffer_len);
+		*f= open_memstream(&buffer, (size_t *) &buffer_len);
+		if (*f == NULL)
+			return -1;
+	}
+	else
+	{
+		al_bp_bundle_get_payload_file(bundle, &buffer, &buffer_len);
+		*f = fopen(buffer, "a");
+		if (*f == NULL)
+			return -1;
+	}
+	return 0;
+}
+
+int close_payload_stream_append(al_bp_bundle_object_t * bundle, FILE *f)
+{
+	al_bp_bundle_payload_location_t pl_location;
+	al_bp_bundle_get_payload_location(*bundle, &pl_location);
+
+	fclose(f);
+	if (pl_location == BP_PAYLOAD_MEM)
+	{
+		al_bp_bundle_set_payload_mem(bundle, buffer, buffer_len);
+	}
+	else
+	{
+		al_bp_bundle_set_payload_file(bundle, buffer, buffer_len);
+	}
+	return 0;
+}
+
 int open_payload_stream_write(al_bp_bundle_object_t bundle, FILE ** f)
 {
 	al_bp_bundle_payload_location_t pl_location;
