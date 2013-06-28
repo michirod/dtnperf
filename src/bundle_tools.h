@@ -52,11 +52,11 @@ int close_payload_stream_read(FILE * f);
 int open_payload_stream_write(al_bp_bundle_object_t bundle, FILE ** f);
 int close_payload_stream_write(al_bp_bundle_object_t * bundle, FILE * f);
 
-al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FILE * f, uint32_t crc);
+al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FILE * f);
 int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * header, dtnperf_bundle_ack_options_t * options);
 u32_t get_header_size(char mode, uint16_t filename_len, uint16_t monitor_eid_len);
 
-al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f, uint32_t *crc);
+al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f);
 al_bp_error_t prepare_force_stop_bundle(al_bp_bundle_object_t * start, al_bp_endpoint_id_t monitor,
 				al_bp_timeval_t expiration, al_bp_bundle_priority_t priority);
 al_bp_error_t prepare_stop_bundle(al_bp_bundle_object_t * stop, al_bp_endpoint_id_t monitor,
