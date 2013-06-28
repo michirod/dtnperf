@@ -69,7 +69,7 @@ al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, dtnpe
  * If you don't need either eid or timestamp, just put NULL in eid or timestamp.
  */
 al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t
-		* reported_eid, al_bp_timestamp_t * report_timestamp);
+		* reported_eid, al_bp_timestamp_t * report_timestamp, uint32_t *extension_ack);
 
 /**
  * MetaBlock utility funtions
