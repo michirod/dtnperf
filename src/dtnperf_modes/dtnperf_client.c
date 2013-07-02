@@ -833,7 +833,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		if ((debug) && (debug_level > 0))
 			printf("[debug] creating file %s...", source_file);
 
-		stream = fopen(source_file,	"wb");
+		stream = fopen(source_file, "wb");
 
 		if (stream == NULL)
 		{
@@ -873,21 +873,17 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
 
-	// open payload stream in write mode
-	if (open_payload_stream_write(bundle, &stream) < 0)
-	{
-		fprintf(stderr, "[DTNperf fatal error] in opening payload stream write mode\n");
-
-		if (create_log)
-			fprintf(log_file, "[DTNperf fatal error] in opening payload stream write mode\n");
-
-		client_clean_exit(2);
-	}
+	// ------------------
+	char *buff; 
+	int buff_len = bundle.payload->buf.buf_len;
+	buff = malloc(buff_len);
+	stream = open_memstream(&buff, (size_t *) &buff_len);
+	// ---------
 
 	// prepare the payload
 	if(perf_opt->op_mode == 'F') // File mode
 	{
-		open_payload_stream_write(bundle, &stream);
+		//open_payload_stream_write(bundle, &stream);
 		error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd,
 				transfer_filename, transfer_filedim, conn_opt->expiration , &eof_reached);
 		if(error != BP_SUCCESS)
@@ -910,28 +906,45 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		}
 	}
 
-	// close the stream
-	close_payload_stream_write(&bundle, stream);
+	fclose(stream);
 
 	if (perf_opt->crc==TRUE)
 	{
-		uint8_t buff;
+		uint8_t buff_crc;
 		// CALC CRC
 		bundle.payload->buf.buf_crc=0;
-		open_payload_stream_read(bundle, &stream);
-		while(fread(&buff, sizeof(uint8_t), 1, stream)>0)
+		stream = fmemopen(buff, buff_len, "rb");
+		while(fread(&buff_crc, sizeof(uint8_t), 1, stream)>0)
 		{
-			bundle.payload->buf.buf_crc = calc_crc32_d8(bundle.payload->buf.buf_crc, (uint8_t*) &buff, sizeof(uint8_t));
+			bundle.payload->buf.buf_crc = calc_crc32_d8(bundle.payload->buf.buf_crc, (uint8_t*) &buff_crc, sizeof(uint8_t));
 		}
-		close_payload_stream_read(stream);
-		open_payload_stream_append(bundle, &stream);
+		fclose(stream);
+		stream = fmemopen(buff, buff_len, "a");
 		fseek(stream, HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t), SEEK_SET);
 		fwrite(&bundle.payload->buf.buf_crc, BUNDLE_CRC_SIZE, 1, stream);
-		close_payload_stream_write(&bundle, stream);
+		fclose(stream);
 
 		if (debug)
 			printf("[debug] CRC = %"PRIu32"\n", bundle.payload->buf.buf_crc);
 	}
+
+	// open payload stream in write mode
+	if (open_payload_stream_write(bundle, &stream) < 0)
+	{
+		fprintf(stderr, "[DTNperf fatal error] in opening payload stream write mode\n");
+
+		if (create_log)
+			fprintf(log_file, "[DTNperf fatal error] in opening payload stream write mode\n");
+
+		client_clean_exit(2);
+	}
+
+	fwrite(buff, sizeof(uint8_t), bundle.payload->buf.buf_len, stream);
+
+	// close the stream
+	close_payload_stream_write(&bundle, stream);
+
+    free(buff);
 
 	if(debug)
 		printf("[debug] payload prepared\n");
