@@ -570,7 +570,9 @@ al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, dtnpe
 	uint16_t eid_len;
 	uint32_t timestamp_secs;
 	uint32_t timestamp_seqno;
-	uint32_t extension_header = 0;
+	uint32_t extension_header;
+
+	extension_header = 0;
 
 	buf_stream = open_memstream(&buf, &buf_size);
 	fwrite(&header, 1, HEADER_SIZE, buf_stream);
@@ -584,7 +586,7 @@ al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, dtnpe
 	if (bundle_ack_options->crc_enabled == TRUE)
 	{
 		extension_header |= BO_CRC_ENABLED;
-		fwrite(&extension_header, 1, sizeof(uint32_t), buf_stream);
+		fwrite(&extension_header, sizeof(uint32_t), 1, buf_stream);
 	}
 	fclose(buf_stream);
 	*payload = (char*)malloc(buf_size);
@@ -623,15 +625,17 @@ al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t
 			reported_timestamp->secs = (u32_t) timestamp_secs;
 			reported_timestamp->seqno = (u32_t) timestamp_seqno;
 		}
+
+		if (feof(pl_stream)==0)
+			fread(extension_ack, sizeof(uint32_t), 1, pl_stream);
+		else
+			*extension_ack = 0;
+		printf("ACK EXTENSION=%"PRIu32"\n", *extension_ack);
+
 		error = BP_SUCCESS;
 	}
 	else
 		error = BP_ERRBASE;
-
-	if (feof(pl_stream)==0)
-		fread(&extension_ack, sizeof(uint32_t), 1, pl_stream);
-	else
-		*extension_ack = 0;
 
 	close_payload_stream_read(pl_stream);
 	return error;
