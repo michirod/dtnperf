@@ -550,7 +550,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			meta_bp->type = ext_blocks[i].block.type;
 			meta_bp->flags = ext_blocks[i].block.flags;
 			meta_bp->data.data_len = ext_blocks[i].block.data.data_len;
-			meta_bp->data.data_val = ext_blocks[i].block.data.data_val;
+			meta_bp->data.data_val = ext_blocks[i].block.data.data_val;;
 			meta_bp++;
 		}
 		bundle.spec->metadata.metadata_len = num_meta_blocks;
@@ -889,7 +889,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	{
 		open_payload_stream_write(bundle, &stream);
 		error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd,
-				transfer_filename, transfer_filedim, conn_opt->expiration , &eof_reached);
+				transfer_filename, transfer_filedim, conn_opt->expiration , &eof_reached, &bundle.payload->buf.buf_crc);
 		if(error != BP_SUCCESS)
 		{
 			fprintf(stderr, "[DTNperf fatal error] in preparing file transfer payload\n");
@@ -900,7 +900,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	}
 	else // Time and Data mode
 	{
-		error = prepare_generic_payload(perf_opt, stream);
+		error = prepare_generic_payload(perf_opt, stream, &bundle.payload->buf.buf_crc);
 		if (error != BP_SUCCESS)
 		{
 			fprintf(stderr, "[DTNperf fatal error] in preparing payload: %s\n", al_bp_strerror(error));
@@ -910,32 +910,14 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		}
 	}
 
+	if (perf_opt->crc==TRUE && debug)
+				printf("[debug] CRC = %"PRIu32"\n", bundle.payload->buf.buf_crc);
+
 	// close the stream
 	close_payload_stream_write(&bundle, stream);
 
-	if (perf_opt->crc==TRUE)
-	{
-		uint8_t buff;
-		// CALC CRC
-		bundle.payload->buf.buf_crc=0;
-		open_payload_stream_read(bundle, &stream);
-		while(fread(&buff, sizeof(uint8_t), 1, stream)>0)
-		{
-			bundle.payload->buf.buf_crc = calc_crc32_d8(bundle.payload->buf.buf_crc, (uint8_t*) &buff, sizeof(uint8_t));
-		}
-		close_payload_stream_read(stream);
-		open_payload_stream_append(bundle, &stream);
-		fseek(stream, HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t), SEEK_SET);
-		fwrite(&bundle.payload->buf.buf_crc, BUNDLE_CRC_SIZE, 1, stream);
-		close_payload_stream_write(&bundle, stream);
-
-		if (debug)
-			printf("[debug] CRC = %"PRIu32"\n", bundle.payload->buf.buf_crc);
-	}
-
 	if(debug)
 		printf("[debug] payload prepared\n");
-
 /*	if((debug) && (debug_level > 0))
 	{
 		u32_t h_size;

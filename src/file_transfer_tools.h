@@ -75,16 +75,16 @@ void file_transfer_info_list_item_delete(file_transfer_info_list_t * list, file_
  * succesfully, 1 if the written fragment is the last fragment of the file.
  */
 int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
-		u32_t pl_size, u32_t timestamp_secs, u32_t expiration, uint16_t monitor_eid_len);
+		u32_t pl_size, u32_t timestamp_secs, u32_t expiration, uint16_t monitor_eid_len, uint32_t *crc);
 
 int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		al_bp_bundle_object_t * bundle,
-		char * dir);
+		char * dir, uint32_t *crc);
 
 u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len, uint16_t monitor_eid_len);
 
 al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, int fd,
-		char * filename, uint32_t file_dim, al_bp_timeval_t expiration_time, boolean_t * eof);
+		char * filename, uint32_t file_dim, al_bp_timeval_t expiration_time, boolean_t * eof, uint32_t *crc);
 
 
 
