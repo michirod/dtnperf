@@ -494,9 +494,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("\n");
 			}
 
-			if (bundle_ack_options.crc_enabled==TRUE && debug)
-						printf("CRC received: %"PRIu32"\n", bundle_object.payload->buf.buf_crc);
-
 			// process file transfer bundle
 			if(is_file_transfer_bundle)
 			{
@@ -563,7 +560,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				local_crc = calc_crc32_d8(local_crc, (uint8_t*) transfer, transfer_len);
 
 				if (debug)
-					printf("GENERATED CRC is %"PRIu32"\n", local_crc);
+					printf("CRC received: %"PRIu32" GENERATED: %"PRIu32"\n", bundle_object.payload->buf.buf_crc, local_crc);
 
 				if (local_crc != bundle_object.payload->buf.buf_crc)
 					bundle_ack_options.crc_enabled=TRUE;
