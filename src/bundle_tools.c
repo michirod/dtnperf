@@ -228,46 +228,6 @@ int close_payload_stream_read(FILE * f)
 	return fclose(f);
 }
 
-int open_payload_stream_append(al_bp_bundle_object_t bundle, FILE ** f)
-{
-	al_bp_bundle_payload_location_t pl_location;
-
-	al_bp_bundle_get_payload_location(bundle, &pl_location);
-
-	if (pl_location == BP_PAYLOAD_MEM)
-	{
-		al_bp_bundle_get_payload_mem(bundle, &buffer, &buffer_len);
-		*f= open_memstream(&buffer, (size_t *) &buffer_len);
-		if (*f == NULL)
-			return -1;
-	}
-	else
-	{
-		al_bp_bundle_get_payload_file(bundle, &buffer, &buffer_len);
-		*f = fopen(buffer, "a");
-		if (*f == NULL)
-			return -1;
-	}
-	return 0;
-}
-
-int close_payload_stream_append(al_bp_bundle_object_t * bundle, FILE *f)
-{
-	al_bp_bundle_payload_location_t pl_location;
-	al_bp_bundle_get_payload_location(*bundle, &pl_location);
-
-	fclose(f);
-	if (pl_location == BP_PAYLOAD_MEM)
-	{
-		al_bp_bundle_set_payload_mem(bundle, buffer, buffer_len);
-	}
-	else
-	{
-		al_bp_bundle_set_payload_file(bundle, buffer, buffer_len);
-	}
-	return 0;
-}
-
 int open_payload_stream_write(al_bp_bundle_object_t bundle, FILE ** f)
 {
 	al_bp_bundle_payload_location_t pl_location;
@@ -308,7 +268,7 @@ int close_payload_stream_write(al_bp_bundle_object_t * bundle, FILE *f)
 	return 0;
 }
 
-al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FILE * f)
+al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FILE * f, uint32_t crc)
 {
 	if (f == NULL)
 		return BP_ENULLPNTR;
@@ -316,7 +276,6 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	HEADER_TYPE header;
 	BUNDLE_OPT_TYPE options;
 	uint16_t eid_len;
-	uint32_t crc_fake = 0;
 
 	// header
 	switch(opt->op_mode)
@@ -383,7 +342,7 @@ al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FIL
 	// write lifetime of ack
 	fwrite(&(opt->bundle_ack_options.ack_expiration),sizeof(al_bp_timeval_t), 1, f);
 	// write CRC
-	fwrite(&crc_fake, BUNDLE_CRC_SIZE, 1, f);
+	fwrite(&crc, BUNDLE_CRC_SIZE, 1, f);
 
 	// write reply-to eid
 	eid_len = strlen(opt->mon_eid);
@@ -501,7 +460,7 @@ u32_t get_header_size(char mode, uint16_t filename_len, uint16_t monitor_eid_len
 }
 
 
-al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
+al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f, uint32_t *crc)
 {
 	if (f == NULL)
 		return BP_ENULLPNTR;
@@ -512,11 +471,22 @@ al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 	uint16_t monitor_eid_len;
 	al_bp_error_t result;
 
+	// RESET CRC
+	*crc= 0;
 	monitor_eid_len = strlen(opt->mon_eid);
 	remaining = opt->bundle_payload - get_header_size(opt->op_mode, 0, monitor_eid_len);
 
+	if (opt->crc==TRUE)
+	{
+		for (i = remaining; i > strlen(pattern); i -= strlen(pattern))
+		{
+			*crc = calc_crc32_d8(*crc, (uint8_t*) pattern, strlen(pattern));
+		}
+		*crc = calc_crc32_d8(*crc, (uint8_t*) pattern, remaining % strlen(pattern));
+	}
+
 	// prepare header and congestion control
-	result = prepare_payload_header_and_ack_options(opt, f);
+	result = prepare_payload_header_and_ack_options(opt, f, *crc);
 
 	// fill remainig payload with a pattern
 	for (i = remaining; i > strlen(pattern); i -= strlen(pattern))
