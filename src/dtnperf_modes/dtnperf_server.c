@@ -505,10 +505,20 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 				pthread_mutex_lock(&mutexdata);
 				indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
-						&bundle_object,perf_opt->file_dir);
+						&bundle_object,perf_opt->file_dir, (bundle_ack_options.crc_enabled == TRUE ? &bundle_object.payload->buf.buf_crc : (uint32_t *) NULL));
 
 				pthread_mutex_unlock(&mutexdata);
 				sched_yield();
+
+				// WRONG CRC
+				if (indicator == -2)
+				{
+					if (debug)
+						printf("CRC differs from the received one.\n");
+					bundle_ack_options.crc_enabled=TRUE;
+				}
+				else
+					bundle_ack_options.crc_enabled=FALSE;
 
 				if (indicator < 0) // error in processing bundle
 				{
@@ -521,23 +531,17 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 						printf("Transfer Completed\n");
 				}
 			}
-
-			if (bundle_ack_options.crc_enabled==TRUE)
+			else if (bundle_ack_options.crc_enabled==TRUE)
 			{
 
 				FILE *pl_stream;
-				uint8_t transfer;
-				uint32_t local_crc=0;
+				char *transfer;
+				int transfer_len;
+				u32_t pl_size;
+				uint32_t local_crc;
 
-				if (open_payload_stream_write(bundle_object, &pl_stream) <0)
-				{
-					fflush(stdout);
-					fprintf(stderr, "[DTNperf fatal error] i can't open the bundle file\n");
-					server_clean_exit(1);
-				}
-				fseek(pl_stream, HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(al_bp_timeval_t), SEEK_SET);
-				fwrite(&local_crc, BUNDLE_CRC_SIZE, 1, pl_stream);
-				close_payload_stream_write(&bundle_object, pl_stream);
+				// get info about bundle size
+				al_bp_bundle_get_payload_size(bundle_object, &pl_size);
 
 				if (open_payload_stream_read(bundle_object, &pl_stream) < 0)
 				{
@@ -546,9 +550,17 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 					server_clean_exit(1);
 				}
 
+				fseek(pl_stream, HEADER_SIZE + BUNDLE_OPT_SIZE, SEEK_SET);
+				transfer_len = pl_size-(HEADER_SIZE + BUNDLE_OPT_SIZE);
+				transfer = (char*) malloc(transfer_len);
+				memset(transfer, 0, transfer_len);
+				if (fread(transfer, transfer_len, 1, pl_stream) != 1 && ferror(pl_stream)!=0)
+				{
+					fprintf(stderr, "[DTNperf warning] in processing file transfer bundle: %s\n", strerror(errno));
+				}
 				// calculate CRC
-				while (fread(&transfer, sizeof(uint8_t), 1, pl_stream) > 0)
-					local_crc = calc_crc32_d8(local_crc, (uint8_t*) &transfer, sizeof(uint8_t));
+				local_crc = 0;
+				local_crc = calc_crc32_d8(local_crc, (uint8_t*) transfer, transfer_len);
 
 				if (debug)
 					printf("GENERATED CRC is %"PRIu32"\n", local_crc);
@@ -558,6 +570,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				else
 					bundle_ack_options.crc_enabled=FALSE;
 
+				free(transfer);
 				close_payload_stream_read(pl_stream);
 
 			}
