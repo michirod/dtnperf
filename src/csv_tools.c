@@ -48,7 +48,6 @@ void csv_print_status_report_timestamps_header(FILE * file)
 	strcat(buf, "Rcv;");
 	strcat(buf, "Fwd;");
 	strcat(buf, "Del;");
-	strcat(buf, "Crc;");
 
 	// not useful for now
 	// strcat(buf, "ACKED_BY_APP_TIMESTAMP");
@@ -67,7 +66,7 @@ void csv_print_status_report_timestamps(FILE * file, al_bp_bundle_status_report_
 	if (status_report.flags & BP_STATUS_DELIVERED)
 		sprintf(buf2, "%lu;", status_report.delivery_ts.secs);
 	else
-		sprintf(buf2, "; ");
+		sprintf(buf2, " ; ");
 	strcat(buf1, buf2);
 
 	if (status_report.flags & BP_STATUS_CUSTODY_ACCEPTED)
