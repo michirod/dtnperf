@@ -818,8 +818,10 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
  **/
 void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_log,
 						int num_bundle){
-	FILE * stream;
+	FILE * stream, *buf_stream;
+	char *buf;
 	boolean_t eof_reached;
+	int bytes_written;
 
 	if(perf_opt->op_mode == 'F')// File mode
 		sprintf(source_file, "%s_%d_%d", SOURCE_FILE, getpid(),num_bundle);
@@ -884,12 +886,15 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		client_clean_exit(2);
 	}
 
+	buf = (char *) malloc(perf_opt->bundle_payload);
+	buf_stream = open_memstream(&buf, (size_t *) &perf_opt->bundle_payload);
+
 	// prepare the payload
 	if(perf_opt->op_mode == 'F') // File mode
 	{
-		open_payload_stream_write(bundle, &stream);
-		error = prepare_file_transfer_payload(perf_opt, stream, transfer_fd,
-				transfer_filename, transfer_filedim, conn_opt->expiration , &eof_reached, &bundle.payload->buf.buf_crc);
+		//open_payload_stream_write(bundle, &stream);
+		error = prepare_file_transfer_payload(perf_opt, buf_stream, transfer_fd,
+				transfer_filename, transfer_filedim, conn_opt->expiration , &eof_reached, &bundle.payload->buf.buf_crc, &bytes_written);
 		if(error != BP_SUCCESS)
 		{
 			fprintf(stderr, "[DTNperf fatal error] in preparing file transfer payload\n");
@@ -900,7 +905,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	}
 	else // Time and Data mode
 	{
-		error = prepare_generic_payload(perf_opt, stream, &bundle.payload->buf.buf_crc);
+		error = prepare_generic_payload(perf_opt, buf_stream, &bundle.payload->buf.buf_crc, &bytes_written);
 		if (error != BP_SUCCESS)
 		{
 			fprintf(stderr, "[DTNperf fatal error] in preparing payload: %s\n", al_bp_strerror(error));
@@ -910,8 +915,14 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		}
 	}
 
+	fclose(buf_stream);
+
 	if (perf_opt->crc==TRUE && debug)
-				printf("[debug] CRC = %"PRIu32"\n", bundle.payload->buf.buf_crc);
+		printf("[debug] CRC = %"PRIu32"\n", bundle.payload->buf.buf_crc);
+	
+	memcpy(buf+HEADER_SIZE+BUNDLE_OPT_SIZE+sizeof(al_bp_timeval_t), &bundle.payload->buf.buf_crc, BUNDLE_CRC_SIZE);
+
+	fwrite(buf, bytes_written, 1, stream);
 
 	// close the stream
 	close_payload_stream_write(&bundle, stream);
@@ -1470,7 +1481,10 @@ void print_final_report(FILE * f)
 	else
 		gput_unit = "bit/s";
 
-	fprintf(f, "\nBundles sent = %d (Wrong CRC = %ld), total data sent = %.3f %s\n", sent_bundles, wrong_crc, sent, sent_unit);
+	fprintf(f, "\nBundles sent = %d ", sent_bundles);
+	if (perf_opt->crc==TRUE)
+		fprintf(f, "(Wrong CRC = %ld) ", wrong_crc);
+	fprintf(f, "total data sent = %.3f %s\n", sent, sent_unit);
 	fprintf(f, "Total execution time = %.1f\n", total_secs);
 	if(perf_opt->congestion_ctrl == 'w')
 		fprintf(f, "Goodput = %.3f %s\n", goodput, gput_unit);

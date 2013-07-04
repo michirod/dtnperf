@@ -368,6 +368,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			pthread_mutex_lock(&mutexdata);
 
 			session = NULL;
+			extension_ack=0;
 			switch (bundle_type)
 			{
 			case STATUS_REPORT:
@@ -409,8 +410,6 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				sprintf(filename, "%lu_", relative_creation_timestamp.secs);
 				strncpy(temp, relative_source_addr.uri, strlen(relative_source_addr.uri) + 1);
 
-
-
 				if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
 				{
 					strtok(temp, ":");
@@ -441,6 +440,9 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 								"Bndl_FO;Bndl_FL;");
 
 				csv_print_status_report_timestamps_header(file);
+
+				csv_print(file, "CRC");
+
 				csv_end_line(file);
 
 				session->wrong_crc=0;
@@ -467,8 +469,11 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				session->delivered_count++;
 			}
 
-			if (extension_ack & BO_CRC_ENABLED)
-				session->wrong_crc++;
+			if (bundle_type == SERVER_ACK)
+			{	
+				if (extension_ack & BO_CRC_ENABLED)
+					session->wrong_crc++;
+			}
 
 			pthread_mutex_unlock(&mutexdata);
 
@@ -507,6 +512,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				csv_print_eid(file, relative_source_addr);
 				csv_print_timestamp(file, relative_creation_timestamp);
 			}
+			else
+				csv_print(file, " ; ;");
 
 			// print status report infos in csv log
 			if (bundle_type == STATUS_REPORT)
@@ -515,11 +522,19 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				csv_print_ulong(file, status_report->bundle_id.orig_length);
 				csv_print_status_report_timestamps(file, * status_report);
 			}
-
-			if (extension_ack & BO_CRC_ENABLED)
-				csv_print(file, "WRONG;");
 			else
-				csv_print(file, ";");
+				csv_print(file, " ; ; ; ; ; ; ; ;");
+
+
+			if (bundle_type == SERVER_ACK)
+			{
+				if (extension_ack & BO_CRC_ENABLED)
+					csv_print(file, "WRONG;");
+				else
+					csv_print(file, " ;");
+			} 
+			else
+				csv_print(file, " ;");
 
 			// end line in csv log
 			csv_end_line(file);

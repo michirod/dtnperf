@@ -332,7 +332,7 @@ u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len, uint16_t
 }
 
 al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, int fd,
-		char * filename, uint32_t file_dim, al_bp_timeval_t expiration_time, boolean_t * eof, uint32_t *crc)
+		char * filename, uint32_t file_dim, al_bp_timeval_t expiration_time, boolean_t * eof, uint32_t *crc, int *bytes_written)
 {
 	if (f == NULL)
 		return BP_ENULLPNTR;
@@ -364,27 +364,41 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 
 	// RESET CRC
 	*crc= 0;
-
-	if (opt->crc==TRUE)
-	{
-		*crc = calc_crc32_d8(*crc, (uint8_t*) fragment, bytes_read);
-	}
+	*bytes_written=0;
 
 	// prepare header and congestion control
-	result = prepare_payload_header_and_ack_options(opt, f, *crc);
+	result = prepare_payload_header_and_ack_options(opt, f, crc, bytes_written);
 
 	// write expiration time
 	fwrite(&expiration_time, sizeof(expiration_time), 1, f);
+	*bytes_written+=sizeof(expiration_time);
+	if (opt->crc==TRUE)
+		*crc = calc_crc32_d8(*crc, (uint8_t*) &expiration_time, sizeof(expiration_time));
 	// write filename length
 	fwrite(&filename_len, sizeof(filename_len), 1, f);
+	*bytes_written+=sizeof(filename_len);
+	if (opt->crc==TRUE)
+		*crc = calc_crc32_d8(*crc, (uint8_t*) &filename_len, sizeof(filename_len));
 	// write filename
 	fwrite(filename, filename_len, 1, f);
+	*bytes_written+=filename_len;
+	if (opt->crc==TRUE)
+		*crc = calc_crc32_d8(*crc, (uint8_t*) filename, filename_len);
 	//write file size
 	fwrite(&file_dim, sizeof(file_dim), 1, f);
+	*bytes_written+=sizeof(file_dim);
+	if (opt->crc==TRUE)
+		*crc = calc_crc32_d8(*crc, (uint8_t*) &file_dim, sizeof(file_dim));
 	// write offset in the bundle
 	fwrite(&offset, sizeof(offset), 1, f);
+	*bytes_written+=sizeof(offset);
+	if (opt->crc==TRUE)
+		*crc = calc_crc32_d8(*crc, (uint8_t*) &offset, sizeof(offset));
 	// write fragment in the bundle
 	fwrite(fragment, bytes_read, 1, f);
+	*bytes_written+=bytes_read;
+	if (opt->crc==TRUE)
+		*crc = calc_crc32_d8(*crc, (uint8_t*) fragment, bytes_read);
 
 	//printf("\n\tFRAGMENT:\n\t%s\n", fragment);
 	return result;
