@@ -529,9 +529,9 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			if (bundle_type == SERVER_ACK)
 			{
 				if (extension_ack & BO_CRC_ENABLED)
-					csv_print(file, "WRONG;");
+					csv_print(file, "1;");
 				else
-					csv_print(file, " ;");
+					csv_print(file, "0;");
 			} 
 			else
 				csv_print(file, " ;");
