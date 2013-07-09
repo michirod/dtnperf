@@ -4,7 +4,7 @@
 BIN_NAME_BASE=dtnperf
 CC=gcc
 LIB_PATHS=-L/usr/local/lib -L$(AL_BP_DIR)
-CFLAGS=-O0 -Wall -fmessage-length=0
+CFLAGS=-O0 -Wall -fmessage-length=0 -Werror
 
 INSTALLED=$(wildcard /usr/bin/$(BIN_NAME_BASE)*)
 
