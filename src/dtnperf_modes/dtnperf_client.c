@@ -1482,7 +1482,7 @@ void print_final_report(FILE * f)
 		gput_unit = "bit/s";
 
 	fprintf(f, "\nBundles sent = %d ", sent_bundles);
-	if (perf_opt->crc==TRUE)
+	if (perf_opt->crc==TRUE && perf_opt->congestion_ctrl == 'w')
 		fprintf(f, "(Wrong CRC = %ld) ", wrong_crc);
 	fprintf(f, "total data sent = %.3f %s\n", sent, sent_unit);
 	fprintf(f, "Total execution time = %.1f\n", total_secs);
