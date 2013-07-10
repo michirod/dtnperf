@@ -1532,6 +1532,7 @@ void print_client_usage(char* progname)
 //			" -n  --num-ext-blocks <val>  Number of extension/metadata blocks\n"
 			"     --mb-type <type>        Include metadata block and specify type (DTN2 Only).\n"
 			"     --mb-string <string>    Extension/metadata block content (DTN2 Only).\n"
+			"     --crc		      Calculate (and check on the Server) CRC of bundles.\n"
 			" -v, --verbose               Print some information messages during execution.\n"
 			" -h, --help                  This help.\n",
 			LOG_FILENAME, LOGS_DIR_DEFAULT);
@@ -1589,13 +1590,13 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				//{"num-ext-blocks", required_argument, 0, 'n'},
 				{"mb-type", required_argument, 0, 56},   // set metadata extension block type
 				{"mb-string", required_argument, 0, 57},          // set metadata/extension block content
-				{"crc", no_argument, 0, 'c'},
+				{"crc", no_argument, 0, '58'},
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
 		};
 
 		int option_index = 0;
-		c = getopt_long(argc, argv, "hvMCW:d:m:i:T:D:F:P:l:R:p:NrfLc::", long_options, &option_index);
+		c = getopt_long(argc, argv, "hvMCW:d:m:i:T:D:F:P:l:R:p:NrfL::", long_options, &option_index);
 
 		switch (c)
 		{
@@ -1933,7 +1934,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			}
 			break;
 
-		case 'c':
+		case '58':
 			perf_opt->crc=TRUE;
 			break;
 
