@@ -1590,7 +1590,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				//{"num-ext-blocks", required_argument, 0, 'n'},
 				{"mb-type", required_argument, 0, 56},   // set metadata extension block type
 				{"mb-string", required_argument, 0, 57},          // set metadata/extension block content
-				{"crc", no_argument, 0, '58'},
+				{"crc", no_argument, 0, 58},
 				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
 		};
@@ -1934,7 +1934,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			}
 			break;
 
-		case '58':
+		case 58:
 			perf_opt->crc=TRUE;
 			break;
 
