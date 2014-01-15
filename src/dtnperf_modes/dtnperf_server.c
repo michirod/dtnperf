@@ -175,7 +175,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		printf("[debug] executing shell command...");
 	if (system(command) < 0)
 	{
-		perror("[DTNperf error] in opening transfered files destination dir");
+		perror("[DTNperf error] in opening transferred files destination dir");
 		exit(-1);
 	}
 	free(command);
