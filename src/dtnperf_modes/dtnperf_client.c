@@ -76,7 +76,7 @@ boolean_t dedicated_monitor; // if client must start a dedicated monitor
 
 // buffer settings
 char* buffer = NULL;        	    // buffer containing data to be transmitted
-size_t bufferLen;                   // lenght of buffer
+size_t bufferLen;                   // length of buffer
 
 
 // BP variables
@@ -389,10 +389,10 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			fprintf(log_file, "Working in Time_mode\n");
 
 		if (verbose)
-			printf("requested Tx lenght %d (s) \n", perf_opt->transmission_time);
+			printf("requested Tx length %d (s) \n", perf_opt->transmission_time);
 
 		if (create_log)
-			fprintf(log_file, "requested Tx lenght %d (s)\n", perf_opt->transmission_time);
+			fprintf(log_file, "requested Tx length %d (s)\n", perf_opt->transmission_time);
 	}
 	else if (perf_opt->op_mode == 'D') // Data mode
 	{
@@ -590,7 +590,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			printf(" done\n");
 	}
 
-	// Open File Transfered
+	// Open File Transferred
 	if(perf_opt->op_mode == 'F') // File mode
 	{
 		// open file to transfer in read mode

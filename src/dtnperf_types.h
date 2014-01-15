@@ -90,7 +90,7 @@ typedef struct dtnperf_options
 	char*						 	log_filename;						// log filename [LOG_FILENAME]
 	//server options
 	char* 							dest_dir;							// destination dir of bundles [~/dtnperf/bundles]
-	char* 							file_dir;							// destination dir of transfered files [~/dtnperf/files]
+	char* 							file_dir;							// destination dir of transferred files [~/dtnperf/files]
 	boolean_t 						acks_to_mon;						// send ACKs to both source and monitor (if monitor is not the source) [FALSE]
 	boolean_t 						no_acks;							// do not send ACKs (for retro-compatibility purpose)
 	//monitor options

@@ -308,7 +308,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		return result;
 	if (result == 1) // transfer completed
 	{
-		printf(" Successfully transfered file: %s%s\n", info->full_dir, info->filename);
+		printf(" Successfully transferred file: %s%s\n", info->full_dir, info->filename);
 		// remove info from list
 		file_transfer_info_del(info_list, client_eid);
 		return 1;
