@@ -4,9 +4,10 @@
 BIN_NAME_BASE=dtnperf
 CC=gcc
 LIB_PATHS=-L/usr/local/lib -L$(AL_BP_DIR)
+INSTALL_PATH=/usr/local/bin
 CFLAGS=-O0 -Wall -fmessage-length=0 -Werror
 
-INSTALLED=$(wildcard /usr/bin/$(BIN_NAME_BASE)*)
+INSTALLED=$(wildcard $(INSTALL_PATH)/$(BIN_NAME_BASE)*)
 
 ifeq ($(strip $(AL_BP_DIR)),)
 all: help
@@ -41,7 +42,7 @@ bin:
 	$(CC) $(INC) $(LIB_PATHS) $(CFLAGS) -o $(BIN_NAME) src/*.c src/dtnperf_modes/*.c $(LIBS)
 
 install: 
-	cp $(BIN_NAME_BASE)* /usr/bin/
+	cp $(BIN_NAME_BASE)* $(INSTALL_PATH)/
 
 uninstall:
 	@if test `echo $(INSTALLED) | wc -w` -eq 1 -a -f "$(INSTALLED)"; then rm -rf $(INSTALLED); else echo "MORE THAN 1 FILE, DELETE THEM MANUALLY: $(INSTALLED)"; fi
