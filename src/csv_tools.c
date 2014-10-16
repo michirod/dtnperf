@@ -21,7 +21,7 @@ void csv_print_rx_time(FILE * file, struct timeval time, struct timeval start_ti
 	struct timeval * result = malloc(sizeof(struct timeval));
 	char buf[50];
 	sub_time(time, start_time, result);
-	sprintf(buf, "%ld.%ld;", result->tv_sec, result->tv_usec);
+	sprintf(buf, "%ld.%ld;", (long) result->tv_sec, (long) result->tv_usec);
 	fwrite(buf, strlen(buf), 1, file);
 }
 
