@@ -640,6 +640,7 @@ void * session_expiration_timer(void * opt)
 		}
 		pthread_mutex_unlock(&mutexdata);
 		sched_yield();
+		sleep(1);
 	}
 	pthread_exit(NULL);
 }
