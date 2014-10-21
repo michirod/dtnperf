@@ -51,6 +51,9 @@
 #define SERVER_OUTPUT_FILE "dtnperf_server.log"
 #define MONITOR_OUTPUT_FILE "dtnperf_monitor.log"
 
+// default filename of the unique csv logfile for the monitor with oneCSVonly option
+#define MONITOR_UNIQUE_CSV_FILENAME "monitor_unique_log.csv"
+
 /*
  * FIXED SIZE HEADERS
  */
