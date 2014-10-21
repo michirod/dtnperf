@@ -295,6 +295,8 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->bundle_ack_options.set_ack_expiration = FALSE;
 	opt->bundle_ack_options.set_ack_priority = FALSE;
 	opt->expiration_session = 120;
+	opt->oneCSVonly = FALSE;
+	opt->uniqueCSVfilename = MONITOR_UNIQUE_CSV_FILENAME;
 	opt->num_blocks = 0;
 	opt->crc = FALSE;
 }

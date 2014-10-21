@@ -1503,7 +1503,7 @@ void print_client_usage(char* progname)
 			" -T, --time <seconds>        Time-mode: seconds of transmission.\n"
 			" -D, --data <num[B|k|M]>     Data-mode: amount data to transmit; B = Byte, k = kByte, M = MByte. Default 'M' (MB). According to the SI and the IEEE standards 1 MB=10^6 bytes\n"
 			" -F, --file <filename>       File-mode: file to transfer\n"
-			" -W, --window <size>         Window-based congestion control: size of DTNperf transmission window, i.e. max number "
+			" -W, --window <size>         Window-based congestion control: size of DTNperf transmission window, i.e. max number\n"
 			"								of bundles \"in flight\" (not still confirmed by a server ACK). Default: 1.\n"
 			" -R, --rate <rate[k|M|b]>    Rate-based congestion control: Tx rate. k = kbit/s, M = Mbit/s, b = bundle/s. Default is kb/s\n"
 			" -m, --monitor <eid>         External monitor EID (without this option an internal dedicated monitor is started).\n"
@@ -1532,7 +1532,7 @@ void print_client_usage(char* progname)
 //			" -n  --num-ext-blocks <val>  Number of extension/metadata blocks\n"
 			"     --mb-type <type>        Include metadata block and specify type (DTN2 Only).\n"
 			"     --mb-string <string>    Extension/metadata block content (DTN2 Only).\n"
-			"     --crc		      Calculate (and check on the Server) CRC of bundles.\n"
+			"     --crc                   Calculate (and check on the Server) CRC of bundles.\n"
 			" -v, --verbose               Print some information messages during execution.\n"
 			" -h, --help                  This help.\n",
 			LOG_FILENAME, LOGS_DIR_DEFAULT);
