@@ -72,7 +72,7 @@ boolean_t bp_handle_open;
 boolean_t log_open;
 boolean_t source_file_created;
 
-boolean_t dedicated_monitor; // if client must start a dedicated monitor
+boolean_t dedicated_monitor; 	// if client must start a dedicated monitor
 
 // buffer settings
 char* buffer = NULL;        	    // buffer containing data to be transmitted
@@ -669,6 +669,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if(perf_opt->create_log)
 		print_final_report(log_file);
 
+	if (!perf_opt->no_bundle_stop)
+	{
 		// fill the stop bundle
 		prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority, sent_bundles);
 		al_bp_bundle_set_source(&bundle_stop, local_eid);
@@ -685,6 +687,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		}
 		if (debug)
 			printf("done.\n");
+	}
 
 	// waiting monitor stops
 	if (dedicated_monitor)
@@ -1373,8 +1376,8 @@ void * wait_for_sigint(void * arg)
 		// wait for monitor to terminate
 		wait(&monitor_status);
 	}
-	else
-	{
+	else if (!perf_opt->no_bundle_stop)
+	{ // prepare and send bundle force-stop to the monitor
 
 		al_bp_bundle_object_t bundle_force_stop;
 
@@ -1525,6 +1528,7 @@ void print_client_usage(char* progname)
 			"     --no-ack-to-mon         Force server not to send  ACKs in cc to the monitor (independently of server settings).\n"
 			"     --ack-lifetime <time>   ACK lifetime (value given to the server). Default is the same as bundle lifetime\n"
             "     --ack-priority <val>    ACK priority (value given to the server) [bulk|normal|expedited|reserved]. Default is the same as bundle priority\n"
+			"     --no-bundle-stop        Do not send bundles stop and force-stop to the monitor. Use it only if you know what you are doing\n"
 			"     --ordinal <num>         ECOS \"ordinal priority\" [0-254]. Default: 0 (ION Only).\n"
 			"     --unreliable            Set ECOS \"unreliable flag\" to True. Default: False (ION Only).\n"
 			"     --critical              Set ECOS \"critical flag\" to True. Default: False (ION Only).\n"
@@ -1574,7 +1578,6 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"nofragment", no_argument, 0, 'N'},
 				{"received", no_argument, 0, 'r'},
 				{"forwarded", no_argument, 0, 'f'},
-				{"del", no_argument,0,48},					//request of bundle status deleted report
 				{"log", optional_argument, 0, 'L'},				// create log file
 				{"ldir", required_argument, 0, 40},
 				{"ip-addr", required_argument, 0, 37},
@@ -1583,6 +1586,8 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"no-ack-to-mon", no_argument, 0, 45},		// force server to NOT send acks to monitor
 				{"ack-lifetime", required_argument, 0, 46}	,			// set server ack expiration equal to client bundles
 				{"ack-priority", required_argument, 0, 47},	// set server ack priority as indicated or equal to client bundles
+				{"del", no_argument,0,48},					//request of bundle status deleted report
+				{"no-bundle-stop", no_argument, 0, 49},		// do not send bundle stop and force stop to the monitor
 				{"ordinal", required_argument, 0, 52},
 				{"unreliable", no_argument, 0, 53},
 				{"critical", no_argument, 0, 54},
@@ -1833,6 +1838,10 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 
 		case 48:
 			conn_opt->deleted_receipts = TRUE;
+			break;
+
+		case 49:
+			perf_opt->no_bundle_stop = TRUE;
 			break;
 
 		case 52:

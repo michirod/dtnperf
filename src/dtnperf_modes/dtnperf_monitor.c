@@ -33,6 +33,9 @@ al_bp_handle_t handle;
 al_bp_reg_id_t regid;
 al_bp_endpoint_id_t local_eid;
 
+// oneCSVonly flag
+boolean_t oneCSVonly;
+
 // flags to exit cleanly
 boolean_t dedicated_monitor;
 boolean_t bp_handle_open;
@@ -79,6 +82,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	boolean_t debug = perf_opt->debug;
 	int debug_level = perf_opt->debug_level;
 
+	oneCSVonly = perf_opt->oneCSVonly;
+
 	dedicated_monitor = parameters->dedicated_monitor;
 	bp_handle_open = FALSE;
 
@@ -114,6 +119,9 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	free(command);
 	if(debug && debug_level > 0)
 		printf("done\n");
+
+	if(oneCSVonly)
+		printf("Opening monitor in Unique session mode. CTRL^C to exit\n");
 
 	// signal handlers
 	signal(SIGINT, monitor_handler);
@@ -215,8 +223,11 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		printf("regid 0x%x\n", (unsigned int) regid);
 
 	// start expiration timer thread
-	pthread_mutex_init (&mutexdata, NULL);
-	pthread_create(&session_exp_timer, NULL, session_expiration_timer, (void *) parameters);
+	if (!oneCSVonly) //no need of timer in case of unique session
+	{
+		pthread_mutex_init (&mutexdata, NULL);
+		pthread_create(&session_exp_timer, NULL, session_expiration_timer, (void *) parameters);
+	}
 
 	// start infinite loop
 	while(1)
@@ -396,41 +407,54 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			{
 				// mark start time
 				start = current;
-				//if source eid of Status Report is CBHE Format
-				if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
+				//if oneCSVonly (unique session)
+				if (oneCSVonly)
 				{
-					filename_len = strlen(relative_source_addr.uri) - strlen("ipn:") + 15;
+					sprintf(temp, "%lu_%s", relative_creation_timestamp.secs, perf_opt->uniqueCSVfilename);
+					full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(temp) + 2);
+					sprintf(full_filename, "%s/%s", perf_opt->logs_dir, temp);
 				}
-				else
-				{
-					filename_len = strlen(relative_source_addr.uri) - strlen("dtn://") + 15;
-				}
-				filename = (char *) malloc(filename_len);
-				memset(filename, 0, filename_len);
-				sprintf(filename, "%lu_", relative_creation_timestamp.secs);
-				strncpy(temp, relative_source_addr.uri, strlen(relative_source_addr.uri) + 1);
+				else //normal sessions behavior
+				{	//if source eid of Status Report is CBHE Format
+					if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
+					{
+						filename_len = strlen(relative_source_addr.uri) - strlen("ipn:") + 15;
+					}
+					else
+					{
+						filename_len = strlen(relative_source_addr.uri) - strlen("dtn://") + 15;
+					}
+					filename = (char *) malloc(filename_len);
+					memset(filename, 0, filename_len);
+					sprintf(filename, "%lu_", relative_creation_timestamp.secs);
+					strncpy(temp, relative_source_addr.uri, strlen(relative_source_addr.uri) + 1);
 
-				if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
-				{
-					strtok(temp, ":");
-					strcat(filename, strtok(NULL, "\0"));
+					if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
+					{
+						strtok(temp, ":");
+						strcat(filename, strtok(NULL, "\0"));
+					}
+					else
+					{
+						char * ptr;
+						strtok(temp, "/");
+						strcat(filename, strtok(NULL, "/"));
+						// remove .dtn suffix from the filename
+						ptr = strstr(filename, ".dtn");
+						if (ptr != NULL)
+							ptr[0] = '\0';
+					}
+					strcat(filename, ".csv");
+					full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(filename) + 2);
+					sprintf(full_filename, "%s/%s", perf_opt->logs_dir, filename);
 				}
-				else
-				{
-					char * ptr;
-					strtok(temp, "/");
-					strcat(filename, strtok(NULL, "/"));
-					// remove .dtn suffix from the filename
-					ptr = strstr(filename, ".dtn");
-					if (ptr != NULL)
-						ptr[0] = '\0';
-				}
-				strcat(filename, ".csv");
-				full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(filename) + 2);
-				sprintf(full_filename, "%s/%s", perf_opt->logs_dir, filename);
 
 				file = fopen(full_filename, "w");
-				session = session_create(relative_source_addr, full_filename, file, start,
+				if (oneCSVonly) //unique session, unique file
+					session = unique_session_create(full_filename, file, start,
+							relative_creation_timestamp.secs);
+				else // standard behavior
+					session = session_create(relative_source_addr, full_filename, file, start,
 						relative_creation_timestamp.secs, bundle_expiration);
 				session_put(session_list, session);
 
@@ -539,8 +563,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			// end line in csv log
 			csv_end_line(file);
 
-			// close file
-			if (bundle_type == CLIENT_STOP)
+			// close file (only if monitor is not in unique session mode)
+			if (bundle_type == CLIENT_STOP && !oneCSVonly)
 			{
 				int total_to_receive;
 				get_info_from_stop(&bundle_object, &total_to_receive);
@@ -553,7 +577,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				gettimeofday(session->stop_arrival_time, NULL);
 				pthread_mutex_unlock(&mutexdata);
 			}
-			else if (bundle_type == CLIENT_FORCE_STOP)
+			else if (bundle_type == CLIENT_FORCE_STOP && !oneCSVonly)
 			{
 				printf("DTNperf monitor: received forced end session bundle\n");
 				session_close(session_list, session);
@@ -589,7 +613,9 @@ void * session_expiration_timer(void * opt)
 		{
 			next = session->next;
 			// all status reports has been received: close session
-			if (session->total_to_receive > 0 && session->delivered_count == session->total_to_receive)
+			if (session->total_to_receive > 0 && session->delivered_count == session->total_to_receive &&
+					// wait 3 seconds before closing the session
+					session->stop_arrival_time->tv_sec + 3 < current_time.tv_sec)
 			{
 				// close monitor if dedicated
 				if (dedicated_monitor)
@@ -658,7 +684,8 @@ void monitor_clean_exit(int status)
 	session_t * session;
 
 	// terminate all child thread
-	pthread_cancel(session_exp_timer);
+	if (!oneCSVonly)
+		pthread_cancel(session_exp_timer);
 
 	// close all log files and delete all sessions
 	if (dedicated_monitor)
@@ -710,6 +737,7 @@ void print_monitor_usage(char * progname)
 			"     --ip-port <port>          Ip port of the bp daemon api. Default: 5010 (DTN2 only)\n"
 			"     --force-eid <[DTN|IPN]    Force scheme of registration EID. (ION only)\n"
 			"     --ldir <dir>              Logs directory. Default: %s .\n"
+			"     --oneCSVonly              Generate an unique csv file\n"
 			"     --debug[=level]           Debug messages [0-1], if level is not indicated level = 1.\n"
 			" -v, --verbose                 Print some information message during the execution.\n"
 			" -h, --help                    This help.\n",
@@ -738,6 +766,7 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 					{"ip-addr", required_argument, 0, 37},
 					{"ip-port", required_argument, 0, 38},
 					{"force-eid", required_argument, 0, 51},
+					{"oneCSVonly", no_argument, 0, 52},
 					{"session-expiration", required_argument, 0,'e'},
 					{"daemon", no_argument, 0, 'a'},
 					{"output", required_argument, 0, 'o'},
@@ -826,6 +855,10 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 				}
 				break;
 
+			case 52:
+				perf_opt->oneCSVonly = TRUE;
+				break;
+
 			case 'a':
 				perf_opt->daemon = TRUE;
 				break;
@@ -906,6 +939,26 @@ session_t * session_create(al_bp_endpoint_id_t client_eid, char * full_filename,
 	session->prev = NULL;
 	return session;
 }
+
+session_t * unique_session_create(char * full_filename, FILE * file, struct timeval start, u32_t bundle_timestamp_secs)
+{
+	session_t * session;
+	session = (session_t *) malloc(sizeof(session_t));
+	session->start = (struct timeval *) malloc(sizeof(struct timeval));
+	session->stop_arrival_time = (struct timeval *) malloc(sizeof(struct timeval));
+	session->full_filename = strdup(full_filename);
+	session->file = file;
+	memcpy(session->start, &start, sizeof(struct timeval));
+	session->last_bundle_time = bundle_timestamp_secs;
+	session->expiration = 0; //unique session never expires
+	session->delivered_count = 0;
+	session->total_to_receive = 0; //this is useless
+	session->wait_after_stop = 0; //this is useless
+	session->next = NULL;
+	session->prev = NULL;
+	return session;
+}
+
 void session_destroy(session_t * session)
 {
 	free(session->start);
@@ -934,6 +987,10 @@ void session_put(session_list_t * list, session_t * session)
 session_t *  session_get(session_list_t * list, al_bp_endpoint_id_t client)
 {
 	session_t * item = list->first;
+	// if oneCSVonly return the unique session (NULL if it isn't created yet)
+	if (oneCSVonly)
+		return item;
+
 	while (item != NULL)
 		{
 			if (strcmp(item->client_eid.uri, client.uri) == 0)
