@@ -287,6 +287,7 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->file_dir = FILE_DIR_DEFAULT;
 	opt->create_log = FALSE;
 	opt->log_filename = LOG_FILENAME;
+	opt->no_bundle_stop = FALSE;
 	opt->acks_to_mon = FALSE;
 	opt->no_acks = FALSE;
 	opt->logs_dir = LOGS_DIR_DEFAULT;

@@ -88,6 +88,7 @@ typedef struct dtnperf_options
 	al_bp_bundle_payload_location_t payload_type;						// the type of data source for the bundle [DTN_PAYLOAD_FILE]
 	boolean_t 						create_log;							// create log file [FALSE]
 	char*						 	log_filename;						// log filename [LOG_FILENAME]
+	boolean_t						no_bundle_stop;						// do not send bundle stop and force stop to the monitor [FALSE]
 	//server options
 	char* 							dest_dir;							// destination dir of bundles [~/dtnperf/bundles]
 	char* 							file_dir;							// destination dir of transferred files [~/dtnperf/files]
