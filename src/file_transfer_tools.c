@@ -165,7 +165,8 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 	// congestion control char and file fragment offset
 	transfer_len = get_file_fragment_size(pl_size, info->filename_len, monitor_eid_len);
 	// read file fragment offset
-	fread(&offset, sizeof(offset), 1, pl_stream);
+	if(fread(&offset, sizeof(offset), 1, pl_stream) != 1)
+		return -1;
 	// read remaining file fragment
 	transfer = (char*) malloc(transfer_len);
 	memset(transfer, 0, transfer_len);
@@ -244,8 +245,8 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	// skip monitor eid
 	uint16_t monitor_eid_len;
 	char monitor_eid[256];
-	fread(&monitor_eid_len, sizeof(monitor_eid_len), 1, pl_stream);
-	fread(monitor_eid, monitor_eid_len, 1, pl_stream);
+	if(fread(&monitor_eid_len, sizeof(monitor_eid_len), 1, pl_stream) != 1){return -1;}
+	if(fread(monitor_eid, monitor_eid_len, 1, pl_stream) != 1){return -1;}
 
 	info = file_transfer_info_get(info_list, client_eid);
 	// get expiration time
@@ -264,7 +265,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 			perror("fread filename");
 		filename[filename_len] = '\0';
 		//get file size
-		fread(&file_dim, sizeof(file_dim), 1, pl_stream);
+		if(fread(&file_dim, sizeof(file_dim), 1, pl_stream)!=1){return -1;}
 		// create destination dir for file
 		strncpy(temp, client_eid.uri, strlen(client_eid.uri) + 1);
 		// if is a URI endpoint remove service tag
@@ -281,7 +282,10 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		full_dir = (char*) malloc(strlen(dir) + strlen(eid) + 20);
 		sprintf(full_dir, "%s%s/", dir, eid);
 		sprintf(temp, "mkdir -p %s", full_dir);
-		system(temp);
+		if(system(temp)<0){
+			printf(" Error: Couldn't create temporary file\n");
+			return -1;
+		}
 		sprintf(temp, "%lu_", timestamp.secs);
 		strcat(full_dir, temp);
 
@@ -308,7 +312,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		return result;
 	if (result == 1) // transfer completed
 	{
-		printf(" Successfully transferred file: %s%s\n", info->full_dir, info->filename);
+		printf(" Successfully transfered file: %s%s\n", info->full_dir, info->filename);
 		// remove info from list
 		file_transfer_info_del(info_list, client_eid);
 		return 1;
