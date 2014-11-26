@@ -1329,6 +1329,7 @@ void * congestion_window_expiration_timer(void * opt)
 			return NULL;
 		}
 		sched_yield();
+		sleep(1);
 	}
 
 	pthread_exit(NULL);
