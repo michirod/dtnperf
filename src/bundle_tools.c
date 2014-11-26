@@ -644,7 +644,10 @@ al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t
 
 		if (feof(pl_stream)==0)
 		{
-			if(fread(extension_ack, sizeof(uint32_t), 1, pl_stream) != 1){ return  BP_EINVAL;}
+			if(fread(extension_ack, sizeof(uint32_t), 1, pl_stream) != 1)
+			{
+				//return  BP_EINVAL;
+			}
 		}
 		else
 			*extension_ack = 0;
