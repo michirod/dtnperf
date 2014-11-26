@@ -203,27 +203,29 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		printf("done\n");
 
 	//build a local eid
-	if( perf_opt->eid_format_forced == 'D' || perf_opt->eid_format_forced == 'I')
+	if(debug && debug_level > 0)
 	{
-		if(debug && debug_level > 0)
-		{
-			printf("[debug] building local eid in format ");
-			perf_opt->eid_format_forced == 'D' ? printf("DTN...") : printf("IPN...");
-		}
-		if(perf_opt->eid_format_forced == 'I')
-			al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
+		printf("[debug] building a local eid in format ");
+		if (perf_opt->eid_format_forced == 'D')
+			printf("forced DTN...");
+		else if (perf_opt->eid_format_forced == 'I')
+			printf("forced IPN...");
 		else
-			al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
+			printf("standard...");
 	}
-	else
-	{
-		if(debug && debug_level > 0)
-			printf("[debug] building a local eid...");
-		if(perf_opt->bp_implementation == BP_ION)
-			al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
-		else if(perf_opt->bp_implementation == BP_DTN)
-			al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
-	}
+	if(perf_opt->bp_implementation == BP_ION && perf_opt->eid_format_forced == 'N')
+		// Use ION implementation with standard eid scheme
+		al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
+	else if(perf_opt->bp_implementation == BP_DTN && perf_opt->eid_format_forced == 'N')
+		// Use DTN2 implementation with standard eid scheme
+		al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
+	else if(perf_opt->bp_implementation == BP_ION && perf_opt->eid_format_forced == 'D')
+		// Use ION implementation with forced DTN scheme
+		al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
+	else if(perf_opt->bp_implementation == BP_DTN && perf_opt->eid_format_forced == 'I')
+		// Use DTN2 implementation with forced IPN scheme
+		sprintf(local_eid.uri, "ipn:%d.%s", perf_opt->ipn_local_num, SERV_EP_NUM_SERVICE);
+
 
 	if(debug && debug_level > 0)
 		printf("done\n");
@@ -920,7 +922,8 @@ void print_server_usage(char * progname)
 			" -s, --stop                   Stop the server daemon.\n"
 			"     --ip-addr <addr>         IP address of the BP daemon api. Default: 127.0.0.1\n"
 			"     --ip-port <port>         IP port of the BP daemon api. Default: 5010\n"
-			"     --force-eid <[DTN|IPN]>  Force scheme of registration EID (ION only).\n"
+			"     --force-eid <[DTN|IPN]>  Force scheme of registration EID.\n"
+			"     --ipn-local <num>        Set ipn local number (Use only with --force-eid IPN on DTN2\n"
 			"     --fdir <dir>             Destination directory of files transferred. Default is %s .\n"
 			"     --debug[=level]          Debug messages [1-2], if level is not indicated level = 2.\n"
 			" -M, --memory         	       Save received bundles into memory.\n"
@@ -960,6 +963,7 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"ip-addr", required_argument, 0, 37},
 				{"ip-port", required_argument, 0, 38},
 				{"force-eid", required_argument, 0, 50},
+				{"ipn-local", required_argument, 0, 51},
 				{"daemon", no_argument, 0, 'a'},
 				{"output", required_argument, 0, 'o'},
 				{"stop", no_argument, 0, 's'},
@@ -1059,12 +1063,12 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			break;
 
 		case 50:
-			if(perf_opt->bp_implementation != BP_ION)
-			{
-				fprintf(stderr, "[DTNperf error] --force-eid supported only in ION\n");
-				exit(1);
-				return;
-			}
+//			if(perf_opt->bp_implementation != BP_ION)
+//			{
+//				fprintf(stderr, "[DTNperf error] --force-eid supported only in ION\n");
+//				exit(1);
+//				return;
+//			}
 			switch( find_forced_eid(strdup(optarg)) )
 			{
 				case 'D':
@@ -1076,6 +1080,15 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 				case '?':
 					fprintf(stderr, "[DTNperf syntax error] wrong --force-eid argument\n");
 					exit(1);
+			}
+			break;
+
+		case 51:
+			perf_opt->ipn_local_num = atoi(optarg);
+			if (perf_opt->ipn_local_num <= 0)
+			{
+				fprintf(stderr, "[DTNperf syntax error] wrong --ipn_local argument\n");
+				exit(1);
 			}
 			break;
 
@@ -1121,8 +1134,15 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 	}
 	if (output_set && !perf_opt->daemon)
 	{
-		fprintf(stderr, "\n[DTNperf syntax error] -o option can be used only with -a option\n");   \
-		print_server_usage(argv[0]);                                               \
+		fprintf(stderr, "\n[DTNperf syntax error] -o option can be used only with -a option\n");
+		print_server_usage(argv[0]);
+		exit(1);
+	}
+	if(perf_opt->bp_implementation == BP_DTN && perf_opt->eid_format_forced == 'I' &&
+			perf_opt->ipn_local_num == 0)
+	{
+		fprintf(stderr, "\n[DTNperf syntax error] must indicate ipn local number (--ipn-local option)\n");
+		print_server_usage(argv[0]);
 		exit(1);
 	}
 }
