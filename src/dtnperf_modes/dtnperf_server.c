@@ -1063,12 +1063,6 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 			break;
 
 		case 50:
-//			if(perf_opt->bp_implementation != BP_ION)
-//			{
-//				fprintf(stderr, "[DTNperf error] --force-eid supported only in ION\n");
-//				exit(1);
-//				return;
-//			}
 			switch( find_forced_eid(strdup(optarg)) )
 			{
 				case 'D':
