@@ -262,6 +262,7 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->ip_addr = "127.0.0.1";
 	opt->ip_port = 5010;
 	opt->eid_format_forced = 'N';
+	opt->ipn_local_num = 0;
 	opt->daemon = FALSE;
 	opt->server_output_file = SERVER_OUTPUT_FILE;
 	opt->monitor_output_file = MONITOR_OUTPUT_FILE;

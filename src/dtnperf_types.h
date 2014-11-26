@@ -64,6 +64,7 @@ typedef struct dtnperf_options
 	char*							ip_addr;							// daemon ip address [127.0.0.1]
 	short 							ip_port;							// daemon port [5010]
 	char 							eid_format_forced;					// is the format of the eid (U = URI, C = CBHE, N = None) [N]
+	int								ipn_local_num;						// local ipn eid number (Used only if dtnperf server or monitor must register with ipn scheme on DTN2) [0]
 	boolean_t 						daemon;								// run as daemon (server and monitor) [FALSE]
 	char*							server_output_file;					// stdout and stderr redirect here if daemon is TRUE [SERVER_OUTPUT_FILE]
 	char*							monitor_output_file;				// stdout and stderr redirect here if daemon is TRUE [MONITOR_OUTPUT_FILE]
