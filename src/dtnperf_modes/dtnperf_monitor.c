@@ -765,7 +765,7 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 					{"ldir", required_argument, 0, 40},
 					{"ip-addr", required_argument, 0, 37},
 					{"ip-port", required_argument, 0, 38},
-					{"force-eid", required_argument, 0, 51},
+					{"force-eid", required_argument, 0, 50},
 					{"oneCSVonly", no_argument, 0, 52},
 					{"session-expiration", required_argument, 0,'e'},
 					{"daemon", no_argument, 0, 'a'},
@@ -834,7 +834,7 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 				perf_opt->logs_dir = strdup(optarg);
 				break;
 
-			case 51:
+			case 50:
 				if(perf_opt->bp_implementation != BP_ION)
 				{
 					fprintf(stderr, "[DTNperf error] --force-eid supported only in ION\n");
