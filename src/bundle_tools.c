@@ -587,12 +587,12 @@ al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, dtnpe
 	uint32_t timestamp_secs;
 	uint32_t timestamp_seqno;
 
-	// THIS ARE THE LAST 4 BYTES OF THE HEADER THAT CONTAINS ALL THE INFORMATION ABOUT EXTENSIONS
+	// THESE ARE THE LAST 4 BYTES OF THE HEADER THAT CONTAINS ALL THE INFORMATION ABOUT EXTENSIONS
 	uint32_t extension_header;
 	extension_header = 0;
 
 	// THIS FLAG IS = 1 IF EXTENSION IS USED AND THEN IT HAS TO BE ATTACHED AT THE END 
-	// OF THE HEADER
+	// OF THE PAYLOAD
 	uint8_t  extension=0;
 
 	buf_stream = open_memstream(&buf, &buf_size);
@@ -610,12 +610,12 @@ al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, dtnpe
 		extension_header |= BO_CRC_ENABLED;
 		extension=1;
 	}
-	// IF OTHER EXTENSIONS NEEDS TO BE USED PUT THE 
+	// IF OTHER EXTENSIONS NEED TO BE USED, PUT THE 
 	// CODE TO ENABLE THEM HERE...
 	// [..]
 	
 	// CHECK IF ONE (OR MORE) EXTENSION HAS BEEN SET AND THEN WRITE IT
-	// AT THE END OF THE HEADER
+	// AT THE END OF THE PAYLOAD
 	if (extension==1)
 	{
 		fwrite(&extension_header, sizeof(uint32_t), 1, buf_stream);
