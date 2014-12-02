@@ -84,6 +84,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 	oneCSVonly = perf_opt->oneCSVonly;
 
+	memset(&local_eid, 0, sizeof(local_eid));
 	dedicated_monitor = parameters->dedicated_monitor;
 	bp_handle_open = FALSE;
 
@@ -152,22 +153,34 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	if(debug && debug_level > 0)
 	{
 		printf("[debug] building a local eid in format ");
-		if (perf_opt->eid_format_forced == 'D')
+		if (perf_opt->eid_format_forced == 'D' && !perf_opt->bp_implementation == BP_DTN)
 			printf("forced DTN...");
-		else if (perf_opt->eid_format_forced == 'I')
+		else if (perf_opt->eid_format_forced == 'I' && !perf_opt->bp_implementation == BP_ION)
 			printf("forced IPN...");
 		else
 			printf("standard...");
 	}
-	if(perf_opt->bp_implementation == BP_ION && perf_opt->eid_format_forced == 'N')
+	if(perf_opt->bp_implementation == BP_ION && (perf_opt->eid_format_forced == 'N' || perf_opt->eid_format_forced == 'I'))
 		// Use ION implementation with standard eid scheme
 		al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Server-CBHE",NULL);
-	else if(perf_opt->bp_implementation == BP_DTN && perf_opt->eid_format_forced == 'N')
+	else if(perf_opt->bp_implementation == BP_DTN && (perf_opt->eid_format_forced == 'N' || perf_opt->eid_format_forced == 'D'))
 		// Use DTN2 implementation with standard eid scheme
-		al_bp_build_local_eid(handle, &local_eid, MON_EP_STRING,"Server-DTN",NULL);
+	{
+		if (parameters->dedicated_monitor)
+			sprintf(temp, "%s_%d", MON_EP_STRING, parameters->client_id);
+		else
+			sprintf(temp, "%s", MON_EP_STRING);
+		al_bp_build_local_eid(handle, &local_eid, temp,"Server-DTN",NULL);
+	}
 	else if(perf_opt->bp_implementation == BP_ION && perf_opt->eid_format_forced == 'D')
 		// Use ION implementation with forced DTN scheme
-		al_bp_build_local_eid(handle, &local_eid, MON_EP_STRING,"Server-DTN",NULL);
+	{
+		if (parameters->dedicated_monitor)
+			sprintf(temp, "%s_%d", MON_EP_STRING, parameters->client_id);
+		else
+			sprintf(temp, "%s", MON_EP_STRING);
+		al_bp_build_local_eid(handle, &local_eid, temp,"Server-DTN",NULL);
+	}
 	else if(perf_opt->bp_implementation == BP_DTN && perf_opt->eid_format_forced == 'I')
 		// Use DTN2 implementation with forced IPN scheme
 		sprintf(local_eid.uri, "ipn:%d.%s", perf_opt->ipn_local_num, MON_EP_NUM_SERVICE);
