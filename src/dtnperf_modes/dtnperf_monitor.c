@@ -183,7 +183,11 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	}
 	else if(perf_opt->bp_implementation == BP_DTN && perf_opt->eid_format_forced == 'I')
 		// Use DTN2 implementation with forced IPN scheme
-		sprintf(local_eid.uri, "ipn:%d.%s", perf_opt->ipn_local_num, MON_EP_NUM_SERVICE);
+	{
+		//in this case the api al_bp_build_local_eid() wants ipn_local_number.service_number
+		sprintf(temp, "%d.%s", perf_opt->ipn_local_num, MON_EP_NUM_SERVICE);
+		al_bp_build_local_eid(handle, &local_eid, temp, CBHE_SCHEME);
+	}
 
 	if(debug && debug_level > 0)
 		printf("done\n");
