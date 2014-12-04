@@ -212,7 +212,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if(debug && debug_level > 0)
 		printf("[debug] building a local eid...");
 	//build a local EID according to the server EID
-	// if is an CBHE scheme EID client will register with IPN scheme
+	// if it is a CBHE scheme EID client will register with IPN scheme
 	if(strncmp(perf_opt->dest_eid,CBHE_SCHEME_STRING,3) == 0)
 		{
 			client_demux_string = malloc (5 + 1);
@@ -220,7 +220,12 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			if (getpid()<10000)
 				temp = temp + 10000;
 			sprintf(client_demux_string,"%lu",temp);
-			al_bp_build_local_eid(handle, &local_eid,client_demux_string,CBHE_SCHEME);
+			//if using a DTN2 implementation, al_bp_build_local_eid() wants ipn_local_number.service_number
+			if (al_bp_get_implementation() == BP_DTN)
+				sprintf(temp1, "%d.%s", perf_opt->ipn_local_num, client_demux_string);
+			else
+				strcpy(temp1, client_demux_string);
+			al_bp_build_local_eid(handle, &local_eid, temp1, CBHE_SCHEME);
 		}
 	// if is an DTN scheme EID client will register with DTN scheme
 	else if(strncmp(perf_opt->dest_eid,DTN_SCHEME_STRING,3) == 0)
@@ -242,7 +247,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if (strlen(perf_opt->mon_eid) == 0)
 	{
 		//if the scheme is not "ipn" copy from local EID only the URI (not the demux string)
-		if(strncmp(dest_eid.uri,"ipn",3) != 0 || perf_opt->bp_implementation == BP_DTN){
+		if(strncmp(dest_eid.uri,"ipn",3) != 0){
 			perf_opt->eid_format_forced = 'D';
 			char * ptr;
 			ptr = strstr(local_eid.uri, CLI_EP_STRING);
@@ -250,6 +255,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			strncpy(perf_opt->mon_eid, local_eid.uri, ptr - local_eid.uri);
 		}
 		else
+		//if the scheme is "ipn"
 		{
 			perf_opt->eid_format_forced = 'I';
 			char * ptr, * temp;
@@ -1546,6 +1552,7 @@ void print_client_usage(char* progname)
 			"     --ack-lifetime <time>   ACK lifetime (value given to the server). Default is the same as bundle lifetime\n"
             "     --ack-priority <val>    ACK priority (value given to the server) [bulk|normal|expedited|reserved]. Default is the same as bundle priority\n"
 			"     --no-bundle-stop        Do not send bundles stop and force-stop to the monitor. Use it only if you know what you are doing\n"
+			"     --ipn-local <num>       Set ipn local number (Use only on DTN2)\n"
 			"     --ordinal <num>         ECOS \"ordinal priority\" [0-254]. Default: 0 (ION Only).\n"
 			"     --unreliable            Set ECOS \"unreliable flag\" to True. Default: False (ION Only).\n"
 			"     --critical              Set ECOS \"critical flag\" to True. Default: False (ION Only).\n"
@@ -1605,6 +1612,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"ack-priority", required_argument, 0, 47},	// set server ack priority as indicated or equal to client bundles
 				{"del", no_argument,0,48},					//request of bundle status deleted report
 				{"no-bundle-stop", no_argument, 0, 49},		// do not send bundle stop and force stop to the monitor
+				{"ipn-local", required_argument, 0, 51},   // ipn local number (DTN2 only)
 				{"ordinal", required_argument, 0, 52},
 				{"unreliable", no_argument, 0, 53},
 				{"critical", no_argument, 0, 54},
@@ -1859,6 +1867,15 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 
 		case 49:
 			perf_opt->no_bundle_stop = TRUE;
+			break;
+
+		case 51:
+			perf_opt->ipn_local_num = atoi(optarg);
+			if (perf_opt->ipn_local_num <= 0)
+			{
+				fprintf(stderr, "[DTNperf syntax error] wrong --ipn_local argument\n");
+				exit(1);
+			}
 			break;
 
 		case 52:
