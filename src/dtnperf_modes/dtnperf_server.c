@@ -71,6 +71,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	char* pl_filename = NULL;
 	size_t pl_filename_len = 0;
 	char* pl_buffer = NULL;
+	char temp[256];
 	size_t pl_buffer_size = 0;
 	boolean_t is_file_transfer_bundle;
 	int indicator; // for file transfer functions purposes
@@ -225,7 +226,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,DTN_SCHEME);
 	else if(perf_opt->bp_implementation == BP_DTN && perf_opt->eid_format_forced == 'I')
 		// Use DTN2 implementation with forced IPN scheme
-		sprintf(local_eid.uri, "ipn:%d.%s", perf_opt->ipn_local_num, SERV_EP_NUM_SERVICE);
+	{
+		//in this case the api al_bp_build_local_eid() wants ipn_local_number.service_number
+		sprintf(temp, "%d.%s", perf_opt->ipn_local_num, SERV_EP_NUM_SERVICE);
+		al_bp_build_local_eid(handle, &local_eid, temp, CBHE_SCHEME);
+	}
 
 
 	if(debug && debug_level > 0)
