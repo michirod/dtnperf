@@ -113,6 +113,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	char temp1[256]; // buffer for various purpose
 	char temp2[256];
+	unsigned long int temp;
 //	FILE * stream; // stream for preparing payolad
 	al_bp_bundle_object_t bundle_stop;
 	monitor_parameters_t mon_params;
@@ -183,10 +184,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	 *   initialize and parse bundle src/dest/replyto EIDs
 	 * ----------------------------------------------------- */
 
-	// append process id to the client demux string
-	client_demux_string = malloc (strlen(CLI_EP_STRING) + 10);
-	sprintf(client_demux_string, "%s_%d", CLI_EP_STRING, getpid());
-
 	// parse SERVER EID
 	//  if the scheme is not "ipn" append server demux string to destination eid
 	if(strncmp(perf_opt->dest_eid,"ipn",3) != 0)
@@ -212,9 +209,28 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		fprintf(log_file, "Destination: %s\n", dest_eid.uri);
 
 	//build a local EID
-			if(debug && debug_level > 0)
-				printf("[debug] building a local eid...");
-			al_bp_build_local_eid(handle, &local_eid,client_demux_string,"Client",dest_eid.uri);
+	if(debug && debug_level > 0)
+		printf("[debug] building a local eid...");
+	//build a local EID according to the server EID
+	// if is an CBHE scheme EID client will register with IPN scheme
+	if(strncmp(perf_opt->dest_eid,CBHE_SCHEME_STRING,3) == 0)
+		{
+			client_demux_string = malloc (5 + 1);
+			temp = getpid();
+			if (getpid()<10000)
+				temp = temp + 10000;
+			sprintf(client_demux_string,"%lu",temp);
+			al_bp_build_local_eid(handle, &local_eid,client_demux_string,CBHE_SCHEME);
+		}
+	// if is an DTN scheme EID client will register with DTN scheme
+	else if(strncmp(perf_opt->dest_eid,DTN_SCHEME_STRING,3) == 0)
+		{
+		// append process id to the client demux string
+			client_demux_string = malloc (strlen(CLI_EP_STRING) + 10);
+			sprintf(client_demux_string, "%s_%d", CLI_EP_STRING, getpid());
+			al_bp_build_local_eid(handle, &local_eid,client_demux_string,DTN_SCHEME);
+		}
+
 			if(debug && debug_level > 0)
 				printf("done\n");
 			if (debug)

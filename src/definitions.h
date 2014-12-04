@@ -139,6 +139,12 @@
 // default value (in bytes) for bundle payload
 #define DEFAULT_PAYLOAD 50000
 
+// CBHE scheme
+#define CBHE_SCHEME_STRING "ipn"
+
+// DTN scheme
+#define DTN_SCHEME_STRING "dtn"
+
 // server endpoint demux string
 #define SERV_EP_STRING "/dtnperf:/dest"
 #define SERV_EP_NUM_SERVICE "2000"

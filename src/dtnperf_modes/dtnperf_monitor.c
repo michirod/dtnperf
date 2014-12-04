@@ -162,7 +162,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	}
 	if(perf_opt->bp_implementation == BP_ION && (perf_opt->eid_format_forced == 'N' || perf_opt->eid_format_forced == 'I'))
 		// Use ION implementation with standard eid scheme
-		al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Server-CBHE",NULL);
+		al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,CBHE_SCHEME);
 	else if(perf_opt->bp_implementation == BP_DTN && (perf_opt->eid_format_forced == 'N' || perf_opt->eid_format_forced == 'D'))
 		// Use DTN2 implementation with standard eid scheme
 	{
@@ -170,7 +170,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			sprintf(temp, "%s_%d", MON_EP_STRING, parameters->client_id);
 		else
 			sprintf(temp, "%s", MON_EP_STRING);
-		al_bp_build_local_eid(handle, &local_eid, temp,"Server-DTN",NULL);
+		al_bp_build_local_eid(handle, &local_eid, temp,DTN_SCHEME);
 	}
 	else if(perf_opt->bp_implementation == BP_ION && perf_opt->eid_format_forced == 'D')
 		// Use ION implementation with forced DTN scheme
@@ -179,7 +179,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			sprintf(temp, "%s_%d", MON_EP_STRING, parameters->client_id);
 		else
 			sprintf(temp, "%s", MON_EP_STRING);
-		al_bp_build_local_eid(handle, &local_eid, temp,"Server-DTN",NULL);
+		al_bp_build_local_eid(handle, &local_eid, temp,DTN_SCHEME);
 	}
 	else if(perf_opt->bp_implementation == BP_DTN && perf_opt->eid_format_forced == 'I')
 		// Use DTN2 implementation with forced IPN scheme
