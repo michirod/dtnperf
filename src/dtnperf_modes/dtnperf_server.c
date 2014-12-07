@@ -71,7 +71,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	char* pl_filename = NULL;
 	size_t pl_filename_len = 0;
 	char* pl_buffer = NULL;
-	char temp[256];
 	size_t pl_buffer_size = 0;
 	boolean_t is_file_transfer_bundle;
 	int indicator; // for file transfer functions purposes
@@ -214,23 +213,18 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		else
 			printf("standard...");
 	}
-
 	if(perf_opt->bp_implementation == BP_ION && perf_opt->eid_format_forced == 'N')
 		// Use ION implementation with standard eid scheme
-		al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,CBHE_SCHEME);
+		al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
 	else if(perf_opt->bp_implementation == BP_DTN && perf_opt->eid_format_forced == 'N')
 		// Use DTN2 implementation with standard eid scheme
-		al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,DTN_SCHEME);
+		al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
 	else if(perf_opt->bp_implementation == BP_ION && perf_opt->eid_format_forced == 'D')
 		// Use ION implementation with forced DTN scheme
-		al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,DTN_SCHEME);
+		al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,"Server-DTN",NULL);
 	else if(perf_opt->bp_implementation == BP_DTN && perf_opt->eid_format_forced == 'I')
 		// Use DTN2 implementation with forced IPN scheme
-	{
-		//in this case the api al_bp_build_local_eid() wants ipn_local_number.service_number
-		sprintf(temp, "%d.%s", perf_opt->ipn_local_num, SERV_EP_NUM_SERVICE);
-		al_bp_build_local_eid(handle, &local_eid, temp, CBHE_SCHEME);
-	}
+		sprintf(local_eid.uri, "ipn:%d.%s", perf_opt->ipn_local_num, SERV_EP_NUM_SERVICE);
 
 
 	if(debug && debug_level > 0)
@@ -502,41 +496,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("\n");
 			}
 
-			// process file transfer bundle
-			if(is_file_transfer_bundle)
-			{
-				if ((debug) && (debug_level > 0))
-					printf("[debug]\tprocessing file transfer bundle...");
-
-				pthread_mutex_lock(&mutexdata);
-				indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
-						&bundle_object,perf_opt->file_dir, (bundle_ack_options.crc_enabled == TRUE ? &bundle_object.payload->buf.buf_crc : (uint32_t *) NULL));
-
-				pthread_mutex_unlock(&mutexdata);
-				sched_yield();
-
-				// WRONG CRC
-				if (indicator == -2)
-				{
-					if (debug)
-						printf("CRC differs from the received one.\n");
-					bundle_ack_options.crc_enabled=TRUE;
-				}
-				else
-					bundle_ack_options.crc_enabled=FALSE;
-
-				if (indicator < 0) // error in processing bundle
-				{
-					fprintf(stderr, "[DTNperf warning] in processing file transfer bundle: %s\n", strerror(errno));
-				}
-				if ((debug) && (debug_level > 0))
-				{
-					printf("done.\n");
-					if (indicator == 1)
-						printf("Transfer Completed\n");
-				}
-			}
-			
+			int crc_ok = 1;
 			if (bundle_ack_options.crc_enabled==TRUE)
 			{
 
@@ -547,6 +507,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				uint32_t local_crc;
 
 				local_crc = 0;
+				crc_ok = 0;
 
 				// get info about bundle size
 				al_bp_bundle_get_payload_size(bundle_object, &pl_size);
@@ -594,10 +555,51 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				else
 					bundle_ack_options.crc_enabled=FALSE;
 
+				if (bundle_ack_options.crc_enabled==FALSE)
+				{
+					crc_ok = 1;
+				}
+
 				free(transfer);
 				close_payload_stream_read(pl_stream);
 
 			}
+
+			// process file transfer bundle
+			if(is_file_transfer_bundle && crc_ok == 1)
+			{
+				if ((debug) && (debug_level > 0))
+					printf("[debug]\tprocessing file transfer bundle...");
+
+				pthread_mutex_lock(&mutexdata);
+				indicator = process_incoming_file_transfer_bundle(&file_transfer_info_list,
+						&bundle_object,perf_opt->file_dir, (bundle_ack_options.crc_enabled == TRUE ? &bundle_object.payload->buf.buf_crc : (uint32_t *) NULL));
+
+				pthread_mutex_unlock(&mutexdata);
+				sched_yield();
+
+				// WRONG CRC
+				//if (indicator == -2)
+				//{
+				//	if (debug)
+				//		printf("CRC differs from the received one.\n");
+				//	bundle_ack_options.crc_enabled=TRUE;
+				//}
+				//else
+				//	bundle_ack_options.crc_enabled=FALSE;
+
+				if (indicator < 0) // error in processing bundle
+				{
+					fprintf(stderr, "[DTNperf warning] in processing file transfer bundle: %s\n", strerror(errno));
+				}
+				if ((debug) && (debug_level > 0))
+				{
+					printf("done.\n");
+					if (indicator == 1)
+						printf("Transfer Completed\n");
+				}
+			}
+			
 
 			// get bundle expiration time
 			if (bundle_ack_options.set_ack_expiration)
