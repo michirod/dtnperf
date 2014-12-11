@@ -117,6 +117,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 //	FILE * stream; // stream for preparing payolad
 	al_bp_bundle_object_t bundle_stop;
 	monitor_parameters_t mon_params;
+	char eid_format; // N=default, D=DTN, I=IPN
 
 	void * ext_buf;
 	void * meta_buf;
@@ -137,6 +138,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	source_file_created = FALSE;
 	tot_bundles = 0;
 	process_interrupted = FALSE;
+	eid_format = 'N';
 
 	wrong_crc = 0;
 
@@ -211,43 +213,63 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	//build a local EID
 	if(debug && debug_level > 0)
 		printf("[debug] building a local eid...");
-	//build a local EID according to the server EID
-	// if it is a CBHE scheme EID client will register with IPN scheme
-	if(strncmp(perf_opt->dest_eid,CBHE_SCHEME_STRING,3) == 0)
-		{
-			client_demux_string = malloc (5 + 1);
-			temp = getpid();
-			if (getpid()<10000)
-				temp = temp + 10000;
-			sprintf(client_demux_string,"%lu",temp);
-			//if using a DTN2 implementation, al_bp_build_local_eid() wants ipn_local_number.service_number
-			if (al_bp_get_implementation() == BP_DTN)
-				sprintf(temp1, "%d.%s", perf_opt->ipn_local_num, client_demux_string);
-			else
-				strcpy(temp1, client_demux_string);
-			al_bp_build_local_eid(handle, &local_eid, temp1, CBHE_SCHEME);
-		}
-	// if is an DTN scheme EID client will register with DTN scheme
-	else if(strncmp(perf_opt->dest_eid,DTN_SCHEME_STRING,3) == 0)
-		{
+	//checking scheme to use
+	if (perf_opt->eid_format_forced != 'N')
+		eid_format = perf_opt->eid_format_forced;
+	else if (al_bp_get_implementation() == BP_ION)
+		eid_format = 'I';
+	else if (al_bp_get_implementation() == BP_DTN)
+		eid_format = 'D';
+	else {
+		fprintf(stderr, "[DTNperf fatal error] Don't know what eid scheme to use with this BP implementation");
+		if (create_log)
+			fprintf(log_file, "\n[DTNperf fatal error] Don't know what eid scheme to use with this BP implementation");
+		client_clean_exit(1);
+	}
+	//build a local EID
+	//client will register with IPN scheme
+	if(eid_format == 'I')
+	{
+		client_demux_string = malloc (5 + 1);
+		temp = getpid();
+		if (getpid()<10000)
+			temp = temp + 10000;
+		sprintf(client_demux_string,"%lu",temp);
+		//if using a DTN2 implementation, al_bp_build_local_eid() wants ipn_local_number.service_number
+		if (al_bp_get_implementation() == BP_DTN)
+			sprintf(temp1, "%d.%s", perf_opt->ipn_local_num, client_demux_string);
+		else
+			strcpy(temp1, client_demux_string);
+		error = al_bp_build_local_eid(handle, &local_eid, temp1, CBHE_SCHEME);
+	}
+	//client will register with DTN scheme
+	else if(eid_format == 'D')
+	{
 		// append process id to the client demux string
-			client_demux_string = malloc (strlen(CLI_EP_STRING) + 10);
-			sprintf(client_demux_string, "%s_%d", CLI_EP_STRING, getpid());
-			al_bp_build_local_eid(handle, &local_eid,client_demux_string,DTN_SCHEME);
-		}
+		client_demux_string = malloc (strlen(CLI_EP_STRING) + 10);
+		sprintf(client_demux_string, "%s_%d", CLI_EP_STRING, getpid());
+		error = al_bp_build_local_eid(handle, &local_eid,client_demux_string,DTN_SCHEME);
+	}
 
-			if(debug && debug_level > 0)
-				printf("done\n");
-			if (debug)
-				printf("Source     : %s\n", local_eid.uri);
+	if(debug && debug_level > 0)
+		printf("done\n");
+	if (debug)
+		printf("Source     : %s\n", local_eid.uri);
+	if (create_log)
+		fprintf(log_file, "\nSource     : %s\n", local_eid.uri);
+	if (error != BP_SUCCESS)
+		{
+			fprintf(stderr, "[DTNperf fatal error] in building local EID: '%s'\n", al_bp_strerror(error));
 			if (create_log)
-				fprintf(log_file, "\nSource     : %s\n", local_eid.uri);
+				fprintf(log_file, "\n[DTNperf fatal error] in building local EID: '%s'", al_bp_strerror(error));
+			client_clean_exit(1);
+		}
 
 	// parse REPLY-TO (if not specified, the same as the source)
 	if (strlen(perf_opt->mon_eid) == 0)
 	{
-		//if the scheme is not "ipn" copy from local EID only the URI (not the demux string)
-		if(strncmp(dest_eid.uri,"ipn",3) != 0){
+		//if the scheme is "dtn" copy from local EID only the URI (not the demux string)
+		if(eid_format == 'D'){
 			perf_opt->eid_format_forced = 'D';
 			char * ptr;
 			ptr = strstr(local_eid.uri, CLI_EP_STRING);
@@ -1552,6 +1574,7 @@ void print_client_usage(char* progname)
 			"     --ack-lifetime <time>   ACK lifetime (value given to the server). Default is the same as bundle lifetime\n"
             "     --ack-priority <val>    ACK priority (value given to the server) [bulk|normal|expedited|reserved]. Default is the same as bundle priority\n"
 			"     --no-bundle-stop        Do not send bundles stop and force-stop to the monitor. Use it only if you know what you are doing\n"
+			"     --force-eid <[DTN|IPN]  Force scheme of registration EID.\n"
 			"     --ipn-local <num>       Set ipn local number (Use only on DTN2)\n"
 			"     --ordinal <num>         ECOS \"ordinal priority\" [0-254]. Default: 0 (ION Only).\n"
 			"     --unreliable            Set ECOS \"unreliable flag\" to True. Default: False (ION Only).\n"
@@ -1612,6 +1635,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				{"ack-priority", required_argument, 0, 47},	// set server ack priority as indicated or equal to client bundles
 				{"del", no_argument,0,48},					//request of bundle status deleted report
 				{"no-bundle-stop", no_argument, 0, 49},		// do not send bundle stop and force stop to the monitor
+				{"force-eid", required_argument, 0, 50},   // force client to register with a different scheme
 				{"ipn-local", required_argument, 0, 51},   // ipn local number (DTN2 only)
 				{"ordinal", required_argument, 0, 52},
 				{"unreliable", no_argument, 0, 53},
@@ -1869,6 +1893,21 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			perf_opt->no_bundle_stop = TRUE;
 			break;
 
+		case 50:
+			switch( find_forced_eid(strdup(optarg)) )
+			{
+			case 'D':
+				perf_opt->eid_format_forced = 'D';
+				break;
+			case 'I':
+				perf_opt->eid_format_forced = 'I';
+				break;
+			case '?':
+				fprintf(stderr, "[DTNperf syntax error] wrong --force-eid argument\n");
+				exit(1);
+			}
+			break;
+
 		case 51:
 			perf_opt->ipn_local_num = atoi(optarg);
 			if (perf_opt->ipn_local_num <= 0)
@@ -2117,6 +2156,15 @@ void check_options(dtnperf_global_options_t * global_options)
 	if (perf_opt->window <= 0)
 	{
 		fprintf(stderr, "\n[DTNperf syntax error] (-W option) the window must be set to a posotive integer value \n\n");
+		exit(2);
+	}
+
+	//if underlying implementation is DTN2 and forced scheme is "ipn", ipn-local must be set
+	if (al_bp_get_implementation() == BP_DTN && perf_opt->eid_format_forced == 'I'
+			&& perf_opt->ipn_local_num <= 0)
+	{
+		fprintf(stderr, "\n[DTNperf syntax error] (--force-eid option) To use ipn registration in DTN2 implementation,"
+				"you must set the local ipn number with the option --ipn-local\n\n");
 		exit(2);
 	}
 
