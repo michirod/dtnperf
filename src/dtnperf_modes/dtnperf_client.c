@@ -240,7 +240,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			sprintf(temp1, "%d.%s", perf_opt->ipn_local_num, client_demux_string);
 		else
 			strcpy(temp1, client_demux_string);
-		al_bp_build_local_eid(handle, &local_eid, temp1, CBHE_SCHEME);
+		error = al_bp_build_local_eid(handle, &local_eid, temp1, CBHE_SCHEME);
 	}
 	//client will register with DTN scheme
 	else if(eid_format == 'D')
@@ -248,7 +248,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		// append process id to the client demux string
 		client_demux_string = malloc (strlen(CLI_EP_STRING) + 10);
 		sprintf(client_demux_string, "%s_%d", CLI_EP_STRING, getpid());
-		al_bp_build_local_eid(handle, &local_eid,client_demux_string,DTN_SCHEME);
+		error = al_bp_build_local_eid(handle, &local_eid,client_demux_string,DTN_SCHEME);
 	}
 
 	if(debug && debug_level > 0)
@@ -257,6 +257,13 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		printf("Source     : %s\n", local_eid.uri);
 	if (create_log)
 		fprintf(log_file, "\nSource     : %s\n", local_eid.uri);
+	if (error != BP_SUCCESS)
+		{
+			fprintf(stderr, "[DTNperf fatal error] in building local EID: '%s'\n", al_bp_strerror(error));
+			if (create_log)
+				fprintf(log_file, "\n[DTNperf fatal error] in building local EID: '%s'", al_bp_strerror(error));
+			client_clean_exit(1);
+		}
 
 	// parse REPLY-TO (if not specified, the same as the source)
 	if (strlen(perf_opt->mon_eid) == 0)
