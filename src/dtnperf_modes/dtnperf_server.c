@@ -217,26 +217,31 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 
 	if(perf_opt->bp_implementation == BP_ION && perf_opt->eid_format_forced == 'N')
 		// Use ION implementation with standard eid scheme
-		al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,CBHE_SCHEME);
+		error = al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,CBHE_SCHEME);
 	else if(perf_opt->bp_implementation == BP_DTN && perf_opt->eid_format_forced == 'N')
 		// Use DTN2 implementation with standard eid scheme
-		al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,DTN_SCHEME);
+		error = al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,DTN_SCHEME);
 	else if(perf_opt->bp_implementation == BP_ION && perf_opt->eid_format_forced == 'D')
 		// Use ION implementation with forced DTN scheme
-		al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,DTN_SCHEME);
+		error = al_bp_build_local_eid(handle, &local_eid, SERV_EP_STRING,DTN_SCHEME);
 	else if(perf_opt->bp_implementation == BP_DTN && perf_opt->eid_format_forced == 'I')
 		// Use DTN2 implementation with forced IPN scheme
 	{
 		//in this case the api al_bp_build_local_eid() wants ipn_local_number.service_number
 		sprintf(temp, "%d.%s", perf_opt->ipn_local_num, SERV_EP_NUM_SERVICE);
-		al_bp_build_local_eid(handle, &local_eid, temp, CBHE_SCHEME);
+		error = al_bp_build_local_eid(handle, &local_eid, temp, CBHE_SCHEME);
 	}
-
 
 	if(debug && debug_level > 0)
 		printf("done\n");
 	if (debug)
 		printf("local_eid = %s\n", local_eid.uri);
+	if (error != BP_SUCCESS)
+	{
+		fflush(stdout);
+		fprintf(stderr, "[DTNperf fatal error] in building local EID: '%s'\n", al_bp_strerror(error));
+		server_clean_exit(1);
+	}
 
 	// checking if there is already a registration
 	if(debug && debug_level > 0)
