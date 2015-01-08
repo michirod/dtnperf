@@ -145,8 +145,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	// command should be: mkdir -p "dest_dir"
 	if(debug && debug_level > 0)
 		printf("[debug] initializing shell command...");
-	command = malloc(sizeof(char) * (10 + strlen(perf_opt->dest_dir)));
-	sprintf(command, "mkdir -p %s", perf_opt->dest_dir);
+	command = malloc(sizeof(char) * (30 + strlen(perf_opt->dest_dir)));
+	sprintf(command, "mkdir -p %s && rm /tmp/ion_*", perf_opt->dest_dir);
 	if(debug && debug_level > 0)
 		printf("done. Shell command = %s\n", command);
 
@@ -694,23 +694,28 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				else if(perf_opt->bp_implementation == BP_ION)
 				{
 					char filename_ack[256];
-					int fd_ack;
+					FILE * fd_ack;
 					u32_t filename_ack_len;
 					sprintf(filename_ack,"%s_%d",SOURCE_FILE_ACK,num_ack);
 					filename_ack_len = strlen(filename_ack)+1;
-					fd_ack = open(filename_ack,O_WRONLY|O_CREAT,0777);
-					if(fd_ack < 0)
+					fd_ack = fopen(filename_ack,"w");
+					if(fd_ack == NULL)
 					{
 						fflush(stdout);
-						fprintf(stderr, "[DTNperf fatal error] in creating the payload of the bundle ack: %s\n", al_bp_strerror(error));
+						fprintf(stderr, "[DTNperf fatal error] in creating the payload of the bundle ack: %s\n", strerror(errno));
 						server_clean_exit(1);
 					}
-					if(write(fd_ack, pl_buffer, pl_buffer_size)<0){
+					if(fwrite(pl_buffer, pl_buffer_size, 1, fd_ack)<0){
 						fflush(stdout);
-						fprintf(stderr, "[DTNperf fatal error] in writing the payload of the bundle ack: %s\n", al_bp_strerror(error));
+						fprintf(stderr, "[DTNperf fatal error] in writing the payload of the bundle ack: %s\n", strerror(errno));
 						//server_clean_exit(1);
 					}
-					close(fd_ack);
+					if (fclose(fd_ack) != 0){
+						fflush(stdout);
+						fprintf(stderr, "[DTNperf fatal error] in closing the payload file of the bundle ack: %s\n", strerror(errno));
+						server_clean_exit(1);
+					}
+
 					if (debug && debug_level > 0)
 					{
 						printf("\n[debug] bundle payload ack saved in: %s ... ", filename_ack);
