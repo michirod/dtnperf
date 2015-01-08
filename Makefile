@@ -5,7 +5,13 @@ BIN_NAME_BASE=dtnperf
 CC=gcc
 LIB_PATHS=-L/usr/local/lib -L$(AL_BP_DIR)
 INSTALL_PATH=/usr/local/bin
-CFLAGS=-O0 -Wall -fmessage-length=0 -Werror
+DEBUG=0
+ifeq ($(DEBUG),0)
+DEBUG_FLAG=
+else
+DEBUG_FLAG=-g -fno-inline
+endif
+CFLAGS= $(DEBUG_FLAG) -O0 -Wall -fmessage-length=0 -Werror
 
 INSTALLED=$(wildcard $(INSTALL_PATH)/$(BIN_NAME_BASE)*)
 
@@ -52,6 +58,7 @@ help:
 	@echo "For DTN2: 	make DTN2_DIR=<dtn2_dir> AL_BP_DIR=<al_bp_dir>"
 	@echo "For ION:	make ION_DIR=<ion_dir> AL_BP_DIR=<al_bp_dir>"
 	@echo "For both: 	make DTN2_DIR=<dtn2_dir> ION_DIR=<ion_dir> AL_BP_DIR=<al_bp_dir>"
+	@echo "To compile with debug symbols add DEBUG=1"
 
 clean:
 	@rm -rf $(BIN_NAME_BASE)*

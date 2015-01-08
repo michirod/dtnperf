@@ -463,7 +463,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 					sprintf(full_filename, "%s/%s", perf_opt->logs_dir, filename);
 				}
 
-				file = fopen(full_filename, "w");
+				//open file in append mode
+				file = fopen(full_filename, "a");
 				if (oneCSVonly) //unique session, unique file
 					session = unique_session_create(full_filename, file, start,
 							relative_creation_timestamp.secs);
@@ -805,6 +806,7 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 				break;
 
 			case 'e':
+				//XXX aggiungere opzione per wait after stop (applicare expiration a wait after stop)
 				perf_opt->expiration_session = atoi(optarg);
 				break;
 

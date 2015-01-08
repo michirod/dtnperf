@@ -695,23 +695,8 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				{
 					char filename_ack[256];
 					int fd_ack;
-					char * tmp,* tmp_eid;
 					u32_t filename_ack_len;
-					tmp_eid = (char *) malloc(sizeof(char) * strlen(bundle_source_addr.uri)+1);
-					strcpy(tmp_eid,bundle_source_addr.uri);
-
-					if( strncmp(bundle_source_addr.uri,"ipn",3) == 0)
-					{
-						strtok(tmp_eid,":");
-						tmp = strtok(NULL,":");
-					}
-					else
-					{
-						strtok(tmp_eid, "/");
-						tmp = strtok(NULL, "/");
-					}
-
-					sprintf(filename_ack,"%s_%s_%d",SOURCE_FILE_ACK,tmp,num_ack);
+					sprintf(filename_ack,"%s_%d",SOURCE_FILE_ACK,num_ack);
 					filename_ack_len = strlen(filename_ack)+1;
 					fd_ack = open(filename_ack,O_WRONLY|O_CREAT,0777);
 					if(fd_ack < 0)
@@ -731,8 +716,9 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 						printf("\n[debug] bundle payload ack saved in: %s ... ", filename_ack);
 					}
 					num_ack++;
+					if (num_ack == 10000) //reset ack counter when it arrives at 10000
+						num_ack = 0;
 					error = al_bp_bundle_set_payload_file(&bundle_ack_object,filename_ack,filename_ack_len);
-					free(tmp_eid);
 				}
 				if (error != BP_SUCCESS)
 				{
@@ -870,14 +856,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 					if ((debug) && (debug_level > 0))
 						printf(" bundle ack sent to monitor\n");
 				}
-
 				//free memory for bundle ack
 				al_bp_bundle_free(&bundle_ack_object);
 				free(pl_buffer);
 				pl_buffer_size = 0;
 			}
-
-
 			// free memory for bundle
 			al_bp_bundle_free(&bundle_object);
 
