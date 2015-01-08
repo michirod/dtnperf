@@ -460,6 +460,7 @@ int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * 
 		// skip option
 		fseek(pl_stream, BUNDLE_OPT_SIZE, SEEK_SET);
 	}
+	close_payload_stream_read(pl_stream);
 
 	return 0;
 }
