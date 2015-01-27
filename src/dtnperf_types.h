@@ -97,7 +97,7 @@ typedef struct dtnperf_options
 	boolean_t 						no_acks;							// do not send ACKs (for retro-compatibility purpose)
 	//monitor options
 	char* 							logs_dir;							// dir where are saved monitor logs [LOGS_DIR_DEFAULT]
-	int 							expiration_session; 				// expiration time of session log file [60]
+	int 							expiration_session; 				// expiration time of session log file [120]
 	boolean_t						oneCSVonly;							// monitor opens an unique session and an unique csv log file [FALSE]
 	char*							uniqueCSVfilename;					// filename of the unique csv log file [MONITOR_UNIQUE_CSV_FILENAME]
 	// block options
