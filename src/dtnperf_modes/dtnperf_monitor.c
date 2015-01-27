@@ -377,11 +377,23 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			{
 				get_bundle_header_and_options(&bundle_object, & bundle_header, NULL);
 				if (bundle_header == FORCE_STOP_HEADER)
+				{
 					bundle_type = CLIENT_FORCE_STOP;
+					if ((debug) && (debug_level > 0))
+						printf("[debug] Monitor: bundle force stop arrived \n");
+				}
 				else if (bundle_header == STOP_HEADER)
+				{
 					bundle_type = CLIENT_STOP;
+					if ((debug) && (debug_level > 0))
+						printf("[debug] Monitor: bundle stop arrived\n");
+				}
 				else if (bundle_header == DSA_HEADER)
+				{
 					bundle_type = SERVER_ACK;
+					if ((debug) && (debug_level > 0))
+						printf("[debug] Monitor: server ack arrived\n");
+				}
 				else // unknown bundle type
 				{
 					fprintf(stderr, "[DTNperf warning] unknown bundle type\n");
@@ -499,6 +511,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				if(perf_opt->expiration_session > bundle_expiration)
 					session->expiration = bundle_expiration;
 			}
+			if ((debug) && (debug_level > 0))
+				printf("[debug] session expiration = %lu s\n", session->expiration);
 
 			file = session->file;
 			memcpy(&start, session->start, sizeof(struct timeval));
@@ -590,6 +604,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				else
 					session->wait_after_stop = bundle_expiration;
 				gettimeofday(session->stop_arrival_time, NULL);
+				if ((debug) && (debug_level > 0))
+					printf("[debug] bundle stop arrived: closing session in %lu s MAX\n", session->wait_after_stop);
 				pthread_mutex_unlock(&mutexdata);
 			}
 			else if (bundle_type == CLIENT_FORCE_STOP && !oneCSVonly)
@@ -644,7 +660,7 @@ void * session_expiration_timer(void * opt)
 			}
 
 			// stop bundle arrived but not all the status reports have arrived and the timer has expired
-			else if (session->total_to_receive > 0 &&session->stop_arrival_time->tv_sec + session->wait_after_stop < current_time.tv_sec)
+			else if (session->total_to_receive > 0 && session->stop_arrival_time->tv_sec + session->wait_after_stop < current_time.tv_sec)
 			{
 				fprintf(stdout, "DTNperf monitor: Session Expired: Bundle stop arrived, but not all the status reports did\n");
 
@@ -662,7 +678,8 @@ void * session_expiration_timer(void * opt)
 				}
 			}
 			// stop bundle is not yet arrived and the last bundle has expired
-			else if (session->last_bundle_time + session->expiration + 2 < current_dtn_time && (session->last_bundle_time + session->expiration != 0))
+			else if (session->stop_arrival_time != 0 &&
+					session->last_bundle_time + session->expiration + 2 < current_dtn_time && (session->last_bundle_time + session->expiration != 0))
 			{
 				fprintf(stdout, "DTNperf monitor: Session Expired: Bundle stop did not arrive\n");
 
@@ -792,7 +809,7 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 
 			};
 			int option_index = 0;
-			c = getopt_long(argc, argv, "hvao:s", long_options, &option_index);
+			c = getopt_long(argc, argv, "hve:ao:s", long_options, &option_index);
 
 			switch (c)
 			{
@@ -946,6 +963,8 @@ session_t * session_create(al_bp_endpoint_id_t client_eid, char * full_filename,
 	session = (session_t *) malloc(sizeof(session_t));
 	session->start = (struct timeval *) malloc(sizeof(struct timeval));
 	session->stop_arrival_time = (struct timeval *) malloc(sizeof(struct timeval));
+	session->stop_arrival_time->tv_sec = 0;
+	session->stop_arrival_time->tv_usec = 0;
 	al_bp_copy_eid(&(session->client_eid), &client_eid);
 	session->full_filename = strdup(full_filename);
 	session->file = file;
