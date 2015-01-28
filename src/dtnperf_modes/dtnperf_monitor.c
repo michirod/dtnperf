@@ -660,7 +660,8 @@ void * session_expiration_timer(void * opt)
 			}
 
 			// stop bundle arrived but not all the status reports have arrived and the timer has expired
-			else if (session->total_to_receive > 0 && session->stop_arrival_time->tv_sec + session->wait_after_stop < current_time.tv_sec)
+			else if (session->stop_arrival_time->tv_sec != 0 &&
+					session->total_to_receive > 0 && session->stop_arrival_time->tv_sec + session->wait_after_stop < current_time.tv_sec)
 			{
 				fprintf(stdout, "DTNperf monitor: Session Expired: Bundle stop arrived, but not all the status reports did\n");
 
@@ -678,7 +679,7 @@ void * session_expiration_timer(void * opt)
 				}
 			}
 			// stop bundle is not yet arrived and the last bundle has expired
-			else if (session->stop_arrival_time != 0 &&
+			else if (session->stop_arrival_time->tv_sec == 0 &&
 					session->last_bundle_time + session->expiration + 2 < current_dtn_time && (session->last_bundle_time + session->expiration != 0))
 			{
 				fprintf(stdout, "DTNperf monitor: Session Expired: Bundle stop did not arrive\n");
