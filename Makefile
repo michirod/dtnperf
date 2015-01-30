@@ -11,7 +11,7 @@ DEBUG_FLAG=
 else
 DEBUG_FLAG=-g -fno-inline
 endif
-CFLAGS= $(DEBUG_FLAG) -O0 -Wall -fmessage-length=0 -Werror
+CFLAGS= $(DEBUG_FLAG) -O2 -Wall -fmessage-length=0 -Werror
 
 INSTALLED=$(wildcard $(INSTALL_PATH)/$(BIN_NAME_BASE)*)
 
