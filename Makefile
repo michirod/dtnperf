@@ -7,11 +7,11 @@ LIB_PATHS=-L/usr/local/lib -L$(AL_BP_DIR)
 INSTALL_PATH=/usr/local/bin
 DEBUG=0
 ifeq ($(DEBUG),0)
-DEBUG_FLAG=
+DEBUG_FLAG= -O2
 else
-DEBUG_FLAG=-g -fno-inline
+DEBUG_FLAG=-g -fno-inline -O0
 endif
-CFLAGS= $(DEBUG_FLAG) -O2 -Wall -fmessage-length=0 -Werror
+CFLAGS= $(DEBUG_FLAG) -Wall -fmessage-length=0 -Werror
 
 INSTALLED=$(wildcard $(INSTALL_PATH)/$(BIN_NAME_BASE)*)
 
