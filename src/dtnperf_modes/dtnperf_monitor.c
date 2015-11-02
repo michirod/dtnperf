@@ -380,19 +380,19 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				{
 					bundle_type = CLIENT_FORCE_STOP;
 					if ((debug) && (debug_level > 0))
-						printf("[debug] bundle force stop arrived \n");
+						printf("[debug] Monitor: bundle force stop arrived \n");
 				}
 				else if (bundle_header == STOP_HEADER)
 				{
 					bundle_type = CLIENT_STOP;
 					if ((debug) && (debug_level > 0))
-						printf("[debug] bundle stop arrived\n");
+						printf("[debug] Monitor: bundle stop arrived\n");
 				}
 				else if (bundle_header == DSA_HEADER)
 				{
 					bundle_type = SERVER_ACK;
 					if ((debug) && (debug_level > 0))
-						printf("[debug] server ack arrived\n");
+						printf("[debug] Monitor: server ack arrived\n");
 				}
 				else // unknown bundle type
 				{
@@ -613,6 +613,9 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				printf("DTNperf monitor: received forced end session bundle\n");
 				session_close(session_list, session);
 			}
+
+			// free memory for bundle
+			al_bp_bundle_free(&bundle_object);
 		}
 
 	} // end loop
