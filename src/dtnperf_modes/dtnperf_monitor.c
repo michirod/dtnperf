@@ -351,7 +351,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				if ((debug) && (debug_level > 0))
 				{
 					printf(" done:\n");
-					printf("\tbundle expiration: %lu\n", bundle_expiration);
+					printf("\tbundle expiration: %u\n", bundle_expiration);
 					printf("\n");
 				}
 			}
@@ -436,7 +436,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				//if oneCSVonly (unique session)
 				if (oneCSVonly)
 				{
-					sprintf(temp, "%lu_%s", relative_creation_timestamp.secs, perf_opt->uniqueCSVfilename);
+					sprintf(temp, "%u_%s", relative_creation_timestamp.secs, perf_opt->uniqueCSVfilename);
 					full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(temp) + 2);
 					sprintf(full_filename, "%s/%s", perf_opt->logs_dir, temp);
 				}
@@ -452,7 +452,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 					}
 					filename = (char *) malloc(filename_len);
 					memset(filename, 0, filename_len);
-					sprintf(filename, "%lu_", relative_creation_timestamp.secs);
+					sprintf(filename, "%u_", relative_creation_timestamp.secs);
 					strncpy(temp, relative_source_addr.uri, strlen(relative_source_addr.uri) + 1);
 
 					if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
@@ -512,7 +512,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 					session->expiration = bundle_expiration;
 			}
 			if ((debug) && (debug_level > 0))
-				printf("[debug] session expiration = %lu s\n", session->expiration);
+				printf("[debug] session expiration = %u s\n", session->expiration);
 
 			file = session->file;
 			memcpy(&start, session->start, sizeof(struct timeval));
@@ -605,7 +605,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 					session->wait_after_stop = bundle_expiration;
 				gettimeofday(session->stop_arrival_time, NULL);
 				if ((debug) && (debug_level > 0))
-					printf("[debug] bundle stop arrived: closing session in %lu s MAX\n", session->wait_after_stop);
+					printf("[debug] bundle stop arrived: closing session in %u s MAX\n", session->wait_after_stop);
 				pthread_mutex_unlock(&mutexdata);
 			}
 			else if (bundle_type == CLIENT_FORCE_STOP && !oneCSVonly)

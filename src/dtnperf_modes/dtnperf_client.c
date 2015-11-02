@@ -411,12 +411,12 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	if ((debug) && (debug_level > 0))
 	{
-		printf("[debug] dtnperf header length: %lu\n", header_size);
+		printf("[debug] dtnperf header length: %u\n", header_size);
 		printf("[debug] dtnperf payload length: %f\n", dtnperf_payload);
 	}
 	if (create_log)
 	{
-		printf("[debug] dtnperf header length: %lu\n", header_size);
+		printf("[debug] dtnperf header length: %u\n", header_size);
 		printf("[debug] dtnperf payload length: %f\n", dtnperf_payload);
 	}
 	/* ------------------------------------------------------------------------------
@@ -1279,7 +1279,7 @@ void * congestion_control(void * opt)
 					wrong_crc++;
 
 				if ((debug) && (debug_level > 0))
-					printf("\t[debug cong ctrl] ack received timestamp: %lu %lu\n", reported_timestamp.secs, reported_timestamp.seqno);
+					printf("\t[debug cong ctrl] ack received timestamp: %u %u\n", reported_timestamp.secs, reported_timestamp.seqno);
 				position = is_in_info(send_info, reported_timestamp, perf_opt->window);
 				if (position < 0)
 				{
@@ -1926,7 +1926,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			conn_opt->priority.ordinal = atoi(optarg);
 			if(conn_opt->priority.ordinal > 254)
 			{
-				fprintf(stderr, "[DTNperf syntax error] Invalid ordinal number %lu\n", conn_opt->priority.ordinal);
+				fprintf(stderr, "[DTNperf syntax error] Invalid ordinal number %u\n", conn_opt->priority.ordinal);
 				exit(1);
 				return;
 			}
