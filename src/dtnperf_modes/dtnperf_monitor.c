@@ -36,6 +36,9 @@ al_bp_endpoint_id_t local_eid;
 // oneCSVonly flag
 boolean_t oneCSVonly;
 
+//rtPrint flag
+boolean_t rtPrint;
+
 // flags to exit cleanly
 boolean_t dedicated_monitor;
 boolean_t bp_handle_open;
@@ -83,6 +86,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	int debug_level = perf_opt->debug_level;
 
 	oneCSVonly = perf_opt->oneCSVonly;
+	rtPrint = perf_opt->rtPrint;
 
 	memset(&local_eid, 0, sizeof(local_eid));
 	dedicated_monitor = parameters->dedicated_monitor;
@@ -411,6 +415,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			case STATUS_REPORT:
 				al_bp_copy_eid(&relative_source_addr, &(status_report->bundle_id.source));
 				relative_creation_timestamp = status_report->bundle_id.creation_ts;
+				if (rtPrint)
+					printRealtimeStatusReport(perf_opt->rtPrintFile, bundle_source_addr, status_report);
 				break;
 
 			case SERVER_ACK:
@@ -772,9 +778,11 @@ void print_monitor_usage(char * progname)
 			"     --ip-addr <addr>          Ip address of the bp daemon api. Default: 127.0.0.1 (DTN2 only)\n"
 			"     --ip-port <port>          Ip port of the bp daemon api. Default: 5010 (DTN2 only)\n"
 			"     --force-eid <[DTN|IPN]    Force scheme of registration EID.\n"
-			"     --ipn-local <num>        Set ipn local number (Use only with --force-eid IPN on DTN2\n"
+			"     --ipn-local <num>         Set ipn local number (Use only with --force-eid IPN on DTN2\n"
 			"     --ldir <dir>              Logs directory. Default: %s .\n"
 			"     --oneCSVonly              Generate an unique csv file\n"
+			"     --rt-print[=filename]     Print realtime human readable status report information\n"
+			"                               If filename is not specified or not valid, will print to stdout\n"
 			"     --debug[=level]           Debug messages [0-1], if level is not indicated level = 1.\n"
 			" -v, --verbose                 Print some information message during the execution.\n"
 			" -h, --help                    This help.\n",
@@ -791,6 +799,7 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 	// kill daemon variables
 	int pid;
 	char cmd[256];
+	FILE *f;
 
 		while (!done)
 		{
@@ -805,6 +814,7 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 					{"force-eid", required_argument, 0, 50},
 					{"ipn-local", required_argument, 0, 51},
 					{"oneCSVonly", no_argument, 0, 52},
+					{"rt-print", optional_argument, 0, 53},
 					{"session-expiration", required_argument, 0,'e'},
 					{"daemon", no_argument, 0, 'a'},
 					{"output", required_argument, 0, 'o'},
@@ -898,6 +908,19 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 
 			case 52:
 				perf_opt->oneCSVonly = TRUE;
+				break;
+
+			case 53:
+				perf_opt->rtPrint = TRUE;
+				if (optarg == NULL)
+					break;
+				f = fopen(optarg, "w+");
+				if (f == NULL)
+				{
+					fprintf(stderr, "[DTNperf error] impossible to open file %s: %s\n", optarg, strerror(errno));
+				}
+				else
+					perf_opt->rtPrintFile = f;
 				break;
 
 			case 'a':
@@ -1070,6 +1093,30 @@ void session_del(session_list_t * list, session_t * session)
 	session_destroy(session);
 	list->count --;
 
+}
+
+void printRealtimeStatusReport(FILE *f, al_bp_endpoint_id_t sr_source, al_bp_bundle_status_report_t * status_report)
+{
+	if (status_report->flags & BP_STATUS_RECEIVED)
+		printSingleRealtimeStatusReport(f, sr_source, status_report, BP_STATUS_RECEIVED, status_report->receipt_ts);
+	if (status_report->flags & BP_STATUS_CUSTODY_ACCEPTED)
+		printSingleRealtimeStatusReport(f, sr_source, status_report, BP_STATUS_CUSTODY_ACCEPTED, status_report->custody_ts);
+	if (status_report->flags & BP_STATUS_FORWARDED)
+		printSingleRealtimeStatusReport(f, sr_source, status_report, BP_STATUS_FORWARDED, status_report->forwarding_ts);
+	if (status_report->flags & BP_STATUS_DELIVERED)
+		printSingleRealtimeStatusReport(f, sr_source, status_report, BP_STATUS_DELIVERED, status_report->delivery_ts);
+	if (status_report->flags & BP_STATUS_DELETED)
+		printSingleRealtimeStatusReport(f, sr_source, status_report, BP_STATUS_DELETED, status_report->deletion_ts);
+	if (status_report->flags & BP_STATUS_ACKED_BY_APP)
+		printSingleRealtimeStatusReport(f, sr_source, status_report, BP_STATUS_ACKED_BY_APP, status_report->ack_by_app_ts);
+
+}
+void printSingleRealtimeStatusReport(FILE *f, al_bp_endpoint_id_t sr_source, al_bp_bundle_status_report_t * status_report,
+		al_bp_status_report_flags_t type, al_bp_timestamp_t timestamp)
+{
+	fprintf(f, "%u %s: %u.%u %s %s %s\n", timestamp.secs, sr_source.uri, status_report->bundle_id.creation_ts.secs,
+			status_report->bundle_id.creation_ts.seqno, status_report->bundle_id.source.uri,
+			al_bp_status_report_flag_to_str(type), al_bp_status_report_reason_to_str(status_report->reason));
 }
 
 void monitor_handler(int signo)
