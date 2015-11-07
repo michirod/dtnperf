@@ -1109,6 +1109,7 @@ void printRealtimeStatusReport(FILE *f, al_bp_endpoint_id_t sr_source, al_bp_bun
 		printSingleRealtimeStatusReport(f, sr_source, status_report, BP_STATUS_DELETED, status_report->deletion_ts);
 	if (status_report->flags & BP_STATUS_ACKED_BY_APP)
 		printSingleRealtimeStatusReport(f, sr_source, status_report, BP_STATUS_ACKED_BY_APP, status_report->ack_by_app_ts);
+	fflush(f);
 
 }
 void printSingleRealtimeStatusReport(FILE *f, al_bp_endpoint_id_t sr_source, al_bp_bundle_status_report_t * status_report,
