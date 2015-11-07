@@ -146,7 +146,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	if(debug && debug_level > 0)
 		printf("[debug] initializing shell command...");
 	command = malloc(sizeof(char) * (30 + strlen(perf_opt->dest_dir)));
-	sprintf(command, "mkdir -p %s && rm /tmp/ion_*", perf_opt->dest_dir);
+	sprintf(command, "mkdir -p %s && rm -f /tmp/ion_*", perf_opt->dest_dir);
 	if(debug && debug_level > 0)
 		printf("done. Shell command = %s\n", command);
 
