@@ -1115,9 +1115,11 @@ void printRealtimeStatusReport(FILE *f, al_bp_endpoint_id_t sr_source, al_bp_bun
 void printSingleRealtimeStatusReport(FILE *f, al_bp_endpoint_id_t sr_source, al_bp_bundle_status_report_t * status_report,
 		al_bp_status_report_flags_t type, al_bp_timestamp_t timestamp)
 {
-	fprintf(f, "%u %s: %u.%u %s %s %s\n", timestamp.secs, sr_source.uri, status_report->bundle_id.creation_ts.secs,
-			status_report->bundle_id.creation_ts.seqno, status_report->bundle_id.source.uri,
-			al_bp_status_report_flag_to_str(type), al_bp_status_report_reason_to_str(status_report->reason));
+	char bundle_id[256];
+	bundle_id_sprintf(bundle_id, &(status_report->bundle_id));
+	fprintf(f, "SR %s at %u, from node %s, referring to bundle (%s) %s\n", al_bp_status_report_flag_to_str(type),
+			timestamp.secs, sr_source.uri, bundle_id,
+			al_bp_status_report_reason_to_str(status_report->reason));
 }
 
 void monitor_handler(int signo)
