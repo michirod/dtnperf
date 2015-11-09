@@ -729,3 +729,26 @@ u32_t get_current_dtn_time()
 	result = (u32_t) difftime(current, dtn_epoch);
 	return result;
 }
+
+int bundle_id_sprintf(char * dest, al_bp_bundle_id_t * bundle_id)
+{
+	char offset[16], length[16];
+	if (bundle_id->frag_offset != 0)
+	{
+		sprintf(offset, "%d", bundle_id->frag_offset);
+	}
+	else
+	{
+		offset[0] = '\0';
+	}
+	if (bundle_id->orig_length != 0)
+	{
+		sprintf(length, "%d", bundle_id->orig_length);
+	}
+	else
+	{
+		length[0] = '\0';
+	}
+	return sprintf(dest, "%s, %u.%u,%s,%s", bundle_id->source.uri, bundle_id->creation_ts.secs,
+			bundle_id->creation_ts.seqno, offset, length);
+}
