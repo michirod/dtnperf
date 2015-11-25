@@ -777,14 +777,14 @@ void print_monitor_usage(char * progname)
 			" -e, --session-expiration <s>  Max idle time of log files (s). Default: 120.\n"
 			"     --ip-addr <addr>          Ip address of the bp daemon api. Default: 127.0.0.1 (DTN2 only)\n"
 			"     --ip-port <port>          Ip port of the bp daemon api. Default: 5010 (DTN2 only)\n"
-			"     --force-eid <[DTN|IPN]    Force scheme of registration EID.\n"
-			"     --ipn-local <num>         Set ipn local number (Use only with --force-eid IPN on DTN2\n"
+			"     --force-eid <[DTN|IPN]    Force the scheme of the registration EID.\n"
+			"     --ipn-local <num>         Set the ipn local number (Use only with --force-eid IPN on DTN2\n"
 			"     --ldir <dir>              Logs directory. Default: %s .\n"
-			"     --oneCSVonly              Generate an unique csv file\n"
+			"     --oneCSVonly              Generate a unique csv file\n"
 			"     --rt-print[=filename]     Print realtime human readable status report information\n"
-			"                               If filename is not specified or not valid, will print to stdout\n"
-			"     --debug[=level]           Debug messages [0-1], if level is not indicated level = 1.\n"
-			" -v, --verbose                 Print some information message during the execution.\n"
+			"                               Print to stdout if filename is omitted \n"
+			"     --debug[=level]           Debug messages [0-2], if level is not indicated level = 1.\n"
+			" -v, --verbose                 Print information messages during execution.\n"
 			" -h, --help                    This help.\n",
 			MONITOR_OUTPUT_FILE, LOGS_DIR_DEFAULT);
 	fprintf(stderr, "\n");
