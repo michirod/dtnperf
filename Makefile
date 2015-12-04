@@ -9,7 +9,7 @@ DEBUG=0
 ifeq ($(DEBUG),0)
 DEBUG_FLAG= -O2
 else
-DEBUG_FLAG=-g -fno-inline -O0
+DEBUG_FLAG=-g -fno-inline -Og
 endif
 CFLAGS= $(DEBUG_FLAG) -Wall -fmessage-length=0 -Werror
 

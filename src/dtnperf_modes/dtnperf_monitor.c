@@ -400,6 +400,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				}
 				else // unknown bundle type
 				{
+					if ((debug) && (debug_level > 1))
+						printf("[DTNperf warning] unknown bundle type: %x\n", bundle_type);
 					fprintf(stderr, "[DTNperf warning] unknown bundle type\n");
 					continue;
 				}
@@ -514,7 +516,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			}
 			else
 			{
-				if(perf_opt->expiration_session > bundle_expiration)
+				if(perf_opt->expiration_session > (int) bundle_expiration)
 					session->expiration = bundle_expiration;
 			}
 			if ((debug) && (debug_level > 0))
