@@ -117,12 +117,14 @@
 
 // server endpoint demux string
 #define SERV_EP_STRING "/dtnperf:/dest"
+#define SERV_EP_NUM_SERVICE "2000"
 
 // client endpoint demux string
 #define CLI_EP_STRING "/dtnperf:/src"
 
 // monitor endpoint demux string
 #define MON_EP_STRING "/dtnperf:/mon"
+#define MON_EP_NUM_SERVICE "1000"
 
 // generic payload pattern
 #define PL_PATTERN "0123456789"

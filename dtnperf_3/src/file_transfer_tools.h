@@ -13,7 +13,7 @@
 
 typedef struct file_transfer_info
 {
-	bp_endpoint_id_t client_eid;
+	al_bp_endpoint_id_t client_eid;
 	int filename_len;
 	char * filename;
 	char * full_dir;
@@ -42,7 +42,7 @@ typedef struct file_transfer_info_list
 file_transfer_info_list_t file_transfer_info_list_create();
 void file_transfer_info_list_destroy(file_transfer_info_list_t * list);
 
-file_transfer_info_t * file_transfer_info_create(bp_endpoint_id_t client_eid,
+file_transfer_info_t * file_transfer_info_create(al_bp_endpoint_id_t client_eid,
 		int filename_len,
 		char * filename,
 		char * full_dir,
@@ -54,11 +54,11 @@ void file_transfer_info_destroy(file_transfer_info_t * info);
 
 void file_transfer_info_put(file_transfer_info_list_t * list, file_transfer_info_t * info);
 
-file_transfer_info_list_item_t *  file_transfer_info_get_list_item(file_transfer_info_list_t * list, bp_endpoint_id_t client);
+file_transfer_info_list_item_t *  file_transfer_info_get_list_item(file_transfer_info_list_t * list, al_bp_endpoint_id_t client);
 
-file_transfer_info_t *  file_transfer_info_get(file_transfer_info_list_t * list, bp_endpoint_id_t client);
+file_transfer_info_t *  file_transfer_info_get(file_transfer_info_list_t * list, al_bp_endpoint_id_t client);
 
-void file_transfer_info_del(file_transfer_info_list_t * list, bp_endpoint_id_t client);
+void file_transfer_info_del(file_transfer_info_list_t * list, al_bp_endpoint_id_t client);
 
 void file_transfer_info_list_item_delete(file_transfer_info_list_t * list, file_transfer_info_list_item_t * item);
 
@@ -71,12 +71,12 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 		u32_t pl_size, u32_t timestamp_secs, u32_t expiration);
 
 int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
-		bp_bundle_object_t * bundle,
+		al_bp_bundle_object_t * bundle,
 		char * dir);
 
 u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len);
 
-bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, int fd,
+al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, int fd,
 		char * filename, uint32_t file_dim, boolean_t * eof);
 
 

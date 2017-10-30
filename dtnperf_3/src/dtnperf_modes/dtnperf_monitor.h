@@ -29,7 +29,7 @@ typedef enum
 
 typedef struct session
 {
-	bp_endpoint_id_t client_eid;
+	al_bp_endpoint_id_t client_eid;
 	char * full_filename;
 	FILE * file;
 	struct timeval * start;
@@ -53,13 +53,13 @@ typedef struct session_list
 session_list_t * session_list_create();
 void session_list_destroy(session_list_t * list);
 
-session_t * session_create(bp_endpoint_id_t client_eid, char * full_filename, FILE * file, struct timeval start,
+session_t * session_create(al_bp_endpoint_id_t client_eid, char * full_filename, FILE * file, struct timeval start,
 		u32_t bundle_timestamp_secs, u32_t bundle_expiration_time);
 void session_destroy(session_t * session);
 
 void session_put(session_list_t * list, session_t * session);
 
-session_t * session_get(session_list_t * list, bp_endpoint_id_t client);
+session_t * session_get(session_list_t * list, al_bp_endpoint_id_t client);
 
 void session_del(session_list_t * list, session_t * session);
 void session_close(session_list_t * list, session_t * session);

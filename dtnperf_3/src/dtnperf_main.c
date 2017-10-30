@@ -248,15 +248,15 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 {
 	opt->verbose = FALSE;
 	opt->debug = FALSE;
-	opt->debug_level = 1;
+	opt->debug_level = 0;
 	opt->use_ip = FALSE;
 	opt->ip_addr = "127.0.0.1";
 	opt->ip_port = 5010;
 	opt->daemon = FALSE;
 	opt->server_output_file = SERVER_OUTPUT_FILE;
 	opt->monitor_output_file = MONITOR_OUTPUT_FILE;
-	memset(opt->dest_eid, 0, BP_MAX_ENDPOINT_ID);
-	memset(opt->mon_eid, 0, BP_MAX_ENDPOINT_ID);
+	memset(opt->dest_eid, 0, AL_BP_MAX_ENDPOINT_ID);
+	memset(opt->mon_eid, 0, AL_BP_MAX_ENDPOINT_ID);
 	opt->op_mode = 'D';
 	opt->data_qty = 0;
 	opt->D_arg = NULL;
@@ -298,5 +298,5 @@ void init_dtnperf_connection_options(dtnperf_connection_options_t* opt)
 	opt->receive_receipts = FALSE;   	// request per hop arrival receipt [0]
 	opt->wait_for_report = TRUE;   		// wait for bundle status reports [1]
 	opt->disable_fragmentation = FALSE; //disable bundle fragmentation[0]
-	opt->priority = BP_PRIORITY_NORMAL; // bundle priority [BP_PRIORITY_NORMAL]
+	opt->priority.priority = BP_PRIORITY_NORMAL; // bundle priority [BP_PRIORITY_NORMAL]
 }

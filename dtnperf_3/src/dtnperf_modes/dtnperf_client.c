@@ -16,7 +16,7 @@
 #include <semaphore.h>
 #include <libgen.h>
 #include <sys/stat.h>
-#include <bp_abstraction_api.h>
+#include <al_bp_api.h>
 
 
 /* pthread_yield() is not standard,
@@ -71,16 +71,16 @@ size_t bufferLen;                   // lenght of buffer
 
 
 // BP variables
-bp_error_t error;
-bp_handle_t handle;
-bp_reg_id_t regid;
-bp_reg_info_t reginfo;
-bp_bundle_id_t * bundle_id;
-bp_endpoint_id_t local_eid;
-bp_endpoint_id_t dest_eid;
-bp_endpoint_id_t mon_eid;
-bp_bundle_object_t bundle;
-bp_bundle_object_t ack;
+al_bp_error_t error;
+al_bp_handle_t handle;
+al_bp_reg_id_t regid;
+al_bp_reg_info_t reginfo;
+al_bp_bundle_id_t * bundle_id;
+al_bp_endpoint_id_t local_eid;
+al_bp_endpoint_id_t dest_eid;
+al_bp_endpoint_id_t mon_eid;
+al_bp_bundle_object_t bundle;
+al_bp_bundle_object_t ack;
 
 dtnperf_options_t * perf_opt;
 dtnperf_connection_options_t * conn_opt;
@@ -100,7 +100,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	char temp1[256]; // buffer for different purpose
 	char temp2[256];
 	FILE * stream; // stream for preparing payolad
-	bp_bundle_object_t bundle_stop;
+	al_bp_bundle_object_t bundle_stop;
 	monitor_parameters_t mon_params;
 
 
@@ -139,15 +139,15 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		printf("[debug] opening connection to local BP daemon...");
 
 	if (perf_opt->use_ip)
-		error = bp_open_with_ip(perf_opt->ip_addr,perf_opt->ip_port,&handle);
+		error = al_bp_open_with_ip(perf_opt->ip_addr,perf_opt->ip_port,&handle);
 	else
-		error = bp_open(&handle);
+		error = al_bp_open(&handle);
 
 	if (error != BP_SUCCESS)
 	{
-		fprintf(stderr, "fatal error opening bp handle: %s\n", bp_strerror(error));
+		fprintf(stderr, "fatal error opening bp handle: %s\n", al_bp_strerror(error));
 		if (create_log)
-			fprintf(log_file, "fatal error opening bp handle: %s\n", bp_strerror(error));
+			fprintf(log_file, "fatal error opening bp handle: %s\n", al_bp_strerror(error));
 		client_clean_exit(1);
 	}
 	else
@@ -169,25 +169,15 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	client_demux_string = malloc (strlen(CLI_EP_STRING) + 10);
 	sprintf(client_demux_string, "%s_%d", CLI_EP_STRING, getpid());
 
-	//build a local eid
-	if(debug && debug_level > 0)
-		printf("[debug] building a local eid...");
-	bp_build_local_eid(handle, &local_eid, client_demux_string);
-	if(debug && debug_level > 0)
-		printf("done\n");
-	if (debug)
-		printf("Source     : %s\n", local_eid.uri);
-	if (create_log)
-		fprintf(log_file, "\nSource     : %s\n", local_eid.uri);
-
 	// parse SERVER EID
-	// append server demux string to destination eid
-	strcat(perf_opt->dest_eid, SERV_EP_STRING);
+	// if isn't CBHE format append server demux string to destination eid
+	if(strncmp(perf_opt->dest_eid,"ipn",3) != 0)
+		strcat(perf_opt->dest_eid, SERV_EP_STRING);
 
 	if (verbose)
 		fprintf(stdout, "%s (local)\n", perf_opt->dest_eid);
 	// parse
-	error = bp_parse_eid_string(&dest_eid, perf_opt->dest_eid);
+	error = al_bp_parse_eid_string(&dest_eid, perf_opt->dest_eid);
 
 	if (error != BP_SUCCESS)
 	{
@@ -203,20 +193,35 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if (create_log)
 		fprintf(log_file, "Destination: %s\n", dest_eid.uri);
 
+	//build a local eid
+			if(debug && debug_level > 0)
+				printf("[debug] building a local eid...");
+			al_bp_build_local_eid(handle, &local_eid,client_demux_string,"Client",dest_eid.uri);
+			if(debug && debug_level > 0)
+				printf("done\n");
+			if (debug)
+				printf("Source     : %s\n", local_eid.uri);
+			if (create_log)
+				fprintf(log_file, "\nSource     : %s\n", local_eid.uri);
 
 	// parse REPLY-TO (if none specified, same as the source)
 	if (strlen(perf_opt->mon_eid) == 0)
 	{
-		char * ptr;
-		ptr = strstr(local_eid.uri, CLI_EP_STRING);
-		// copy from local eid only the uri (not the demux string)
-		strncpy(perf_opt->mon_eid, local_eid.uri, ptr - local_eid.uri);
-
+		//if isn't CHBE format copy from local eid only the uri (not the demux string)
+		if(strncmp(local_eid.uri,"ipn",3) != 0){
+			char * ptr;
+			ptr = strstr(local_eid.uri, CLI_EP_STRING);
+			// copy from local eid only the uri (not the demux string)
+			strncpy(perf_opt->mon_eid, local_eid.uri, ptr - local_eid.uri);
+		}
+		else
+			strncpy(perf_opt->mon_eid, local_eid.uri, strlen(local_eid.uri));
 	}
-	// append monitor demux string to replyto eid
-	strcat(perf_opt->mon_eid, MON_EP_STRING);
+	// if isn't CBHE Format append monitor demux string to replyto eid
+	if(strncmp(perf_opt->mon_eid,"ipn",3) != 0)
+		strcat(perf_opt->mon_eid, MON_EP_STRING);
 	// parse
-	error = bp_parse_eid_string(&mon_eid, perf_opt->mon_eid);
+	error = al_bp_parse_eid_string(&mon_eid, perf_opt->mon_eid);
 	if (error != BP_SUCCESS)
 	{
 		fprintf(stderr, "fatal error parsing bp EID: invalid eid string '%s'\n", perf_opt->dest_eid);
@@ -238,7 +243,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	{
 		if(debug && debug_level > 0)
 			printf("[debug] checking for existing monitor on this endpoint...\n");
-		error = bp_find_registration(handle, &mon_eid, &regid);
+		error = al_bp_find_registration(handle, &mon_eid, &regid);
 		if (error == BP_SUCCESS)
 		{
 			dedicated_monitor = FALSE;
@@ -252,7 +257,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 			mon_params.perf_g_opt = perf_g_opt;
 			printf("there is not a monitor on this endpoint.\n");
 			sprintf(temp1, "%s_%d", mon_eid.uri, mon_params.client_id);
-			bp_parse_eid_string(&mon_eid, temp1);
+			al_bp_parse_eid_string(&mon_eid, temp1);
 
 			// start dedicated monitor
 			if ((monitor_pid = fork()) == 0)
@@ -271,18 +276,18 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if(debug && debug_level > 0)
 		printf("[debug] registering to local daemon...");
 	memset(&reginfo, 0, sizeof(reginfo));
-	bp_copy_eid(&reginfo.endpoint, &local_eid);
+	al_bp_copy_eid(&reginfo.endpoint, &local_eid);
 	reginfo.flags = BP_REG_DEFER;
 	reginfo.regid = BP_REGID_NONE;
 	reginfo.expiration = 0;
-	if ((error = bp_register(handle, &reginfo, &regid)) != 0)
+	if ((error = al_bp_register(&handle, &reginfo, &regid)) != 0)
 	{
 		fflush(stdout);
 		fprintf(stderr, "error creating registration: %d (%s)\n",
-				error, bp_strerror(bp_errno(handle)));
+				error, al_bp_strerror(al_bp_errno(handle)));
 		if (create_log)
 			fprintf(log_file, "error creating registration: %d (%s)\n",
-					error, bp_strerror(bp_errno(handle)));
+					error, al_bp_strerror(al_bp_errno(handle)));
 		client_clean_exit(1);
 	}
 	if ((debug) && (debug_level > 0))
@@ -449,7 +454,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	// Create the bundle object
 	if ((debug) && (debug_level > 0))
 		printf("[debug] creating the bundle object...");
-	error = bp_bundle_create(& bundle);
+	error = al_bp_bundle_create(& bundle);
 	if (error != BP_SUCCESS)
 	{
 		fprintf(stderr, "ERROR: couldn't create bundle object\n");
@@ -460,15 +465,14 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
-
 	// Fill the payload
 	if ((debug) && (debug_level > 0))
 		printf("[debug] filling payload...");
 
 	if (perf_opt->use_file)
-		error = bp_bundle_set_payload_file(&bundle, source_file_abs, strlen(source_file_abs));
+		error = al_bp_bundle_set_payload_file(&bundle, source_file_abs, strlen(source_file_abs));
 	else
-		error = bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
+		error = al_bp_bundle_set_payload_mem(&bundle, buffer, bufferLen);
 	if (error != BP_SUCCESS)
 	{
 		fprintf(stderr, "ERROR: couldn't set bundle payload\n");
@@ -479,7 +483,6 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	if ((debug) && (debug_level > 0))
 		printf(" done\n");
-
 
 	// open payload stream in write mode
 	if (open_payload_stream_write(bundle, &stream) < 0)
@@ -508,21 +511,26 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	else // Time and Data mode
 	{
-		error = prepare_generic_payload(perf_opt, stream, perf_opt->bundle_payload);
+		error = prepare_generic_payload(perf_opt, stream);
 		if (error != BP_SUCCESS)
 		{
-			fprintf(stderr, "error preparing payload: %s\n", bp_strerror(error));
+			fprintf(stderr, "error preparing payload: %s\n", al_bp_strerror(error));
 			if (create_log)
-				fprintf(log_file, "error preparing payload: %s\n", bp_strerror(error));
+				fprintf(log_file, "error preparing payload: %s\n", al_bp_strerror(error));
 			client_clean_exit(1);
 		}
 	}
 
 	// close the stream
 	close_payload_stream_write(&bundle, stream);
+	if(bundle.payload->location == BP_PAYLOAD_MEM)
+		printf("bundle payload: %s %d",bundle.payload->buf.buf_val,bundle.payload->buf.buf_len);
+	else
+		printf("bundle payload: %s %d",bundle.payload->filename.filename_val,bundle.payload->filename.filename_len);
+
 
 	if(debug)
-		printf("[debug] payload prepared");
+		printf("[debug] payload prepared\n");
 
 	// Create the array for the bundle send info (only for sliding window congestion control)
 	if (perf_opt->congestion_ctrl == 'w') {
@@ -538,13 +546,13 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 
 	// Setting the bundle options
-	bp_bundle_set_source(&bundle, local_eid);
-	bp_bundle_set_dest(&bundle, dest_eid);
-	bp_bundle_set_replyto(&bundle, mon_eid);
+	al_bp_bundle_set_source(&bundle, local_eid);
+	al_bp_bundle_set_dest(&bundle, dest_eid);
+	al_bp_bundle_set_replyto(&bundle, mon_eid);
 	set_bp_options(&bundle, conn_opt);
 
 	// intialize stop bundle;
-	bp_bundle_create(&bundle_stop);
+	al_bp_bundle_create(&bundle_stop);
 
 	if ((debug) && (debug_level > 0))
 		printf("[debug] entering in loop\n");
@@ -605,16 +613,16 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 
 	// fill the stop bundle
 	prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority, sent_bundles);
-	bp_bundle_set_source(&bundle_stop, local_eid);
+	al_bp_bundle_set_source(&bundle_stop, local_eid);
 
 	// send stop bundle to monitor
 	if (debug)
 		printf("sending the stop bundle to the monitor...");
-	if ((error = bp_bundle_send(handle, regid, &bundle_stop)) != 0)
+	if ((error = al_bp_bundle_send(handle, regid, &bundle_stop)) != 0)
 	{
-		fprintf(stderr, "error sending the stop bundle: %d (%s)\n", error, bp_strerror(error));
+		fprintf(stderr, "error sending the stop bundle: %d (%s)\n", error, al_bp_strerror(error));
 		if (create_log)
-			fprintf(log_file, "error sending the stop bundle: %d (%s)\n", error, bp_strerror(error));
+			fprintf(log_file, "error sending the stop bundle: %d (%s)\n", error, al_bp_strerror(error));
 		client_clean_exit(1);
 	}
 	if (debug)
@@ -632,7 +640,7 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	if ((debug) && (debug_level > 0))
 		printf("[debug] closing DTN handle...");
 
-	if (bp_close(handle) != BP_SUCCESS)
+	if (al_bp_close(handle) != BP_SUCCESS)
 	{
 		fprintf(stderr, "fatal error closing bp handle: %s\n", strerror(errno));
 		if (create_log)
@@ -641,6 +649,19 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	else
 	{
+		bp_handle_open = FALSE;
+	}
+	// Unregister Local Eid
+	if (al_bp_unregister(handle,regid,local_eid) != BP_SUCCESS)
+	{
+		fprintf(stderr, "fatal error unregister endpoint: %s\n", strerror(errno));
+		if (create_log)
+			fprintf(log_file, "fatal error unregister endpoint: %s\n", strerror(errno));
+		client_clean_exit(1);
+	}
+	else
+	{
+		//bp_local_eid_register = FALSE;
 		bp_handle_open = FALSE;
 	}
 
@@ -674,8 +695,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	free(source_file);
 	free(transfer_filename);
 	free(send_info);
-	bp_bundle_free(&bundle);
-	bp_bundle_free(&bundle_stop);
+	al_bp_bundle_free(&bundle);
+	al_bp_bundle_free(&bundle_stop);
 
 
 	if (perf_opt->create_log)
@@ -761,17 +782,6 @@ void * send_bundles(void * opt)
 			close_payload_stream_write(&bundle, stream);
 		}
 
-		// prepare payload if last bundle of DATA MODE
-		if (perf_opt->op_mode == 'D')
-		{
-			if (sent_bundles == tot_bundles - 1 && perf_opt->data_qty % perf_opt->bundle_payload != 0)
-			{
-				open_payload_stream_write(bundle, &stream);
-				prepare_generic_payload(perf_opt, stream, perf_opt->data_qty % perf_opt->bundle_payload);
-				close_payload_stream_write(&bundle, stream);
-			}
-		}
-
 		// window debug
 		if ((debug) && (debug_level > 1))
 		{
@@ -782,13 +792,6 @@ void * send_bundles(void * opt)
 		// wait for the semaphore
 		sem_wait(&window);
 
-		if (perf_opt->op_mode == 'T') 	// TIME MODE
-		{								// force re-check of condition after the semaphore
-			gettimeofday(&now, NULL);
-			if (now.tv_sec > end.tv_sec)
-				break;
-		}
-
 		// Send the bundle
 		if (debug)
 			printf("sending the bundle...");
@@ -796,18 +799,18 @@ void * send_bundles(void * opt)
 		if (perf_opt->congestion_ctrl == 'w')
 			pthread_mutex_lock(&mutexdata);
 
-		if ((error = bp_bundle_send(handle, regid, &bundle)) != 0)
+		if ((error = al_bp_bundle_send(handle, regid, &bundle)) != 0)
 		{
-			fprintf(stderr, "error sending bundle: %d (%s)\n", error, bp_strerror(error));
+			fprintf(stderr, "error sending bundle: %d (%s)\n", error, al_bp_strerror(error));
 			if (create_log)
-				fprintf(log_file, "error sending bundle: %d (%s)\n", error, bp_strerror(error));
+				fprintf(log_file, "error sending bundle: %d (%s)\n", error, al_bp_strerror(error));
 			client_clean_exit(1);
 		}
-		if ((error = bp_bundle_get_id(bundle, &bundle_id)) != 0)
+		if ((error = al_bp_bundle_get_id(bundle, &bundle_id)) != 0)
 		{
-			fprintf(stderr, "error getting bundle id: %s\n", bp_strerror(error));
+			fprintf(stderr, "error getting bundle id: %s\n", al_bp_strerror(error));
 			if (create_log)
-				fprintf(log_file, "error getting bundle id: %s\n", bp_strerror(error));
+				fprintf(log_file, "error getting bundle id: %s\n", al_bp_strerror(error));
 			client_clean_exit(1);
 		}
 		if (debug)
@@ -836,7 +839,7 @@ void * send_bundles(void * opt)
 		if (create_log)
 			fprintf(log_file, "\t now bundles_sent is %d\n", sent_bundles);
 		// Increment data_qty
-		bp_bundle_get_payload_size(bundle, &actual_payload);
+		al_bp_bundle_get_payload_size(bundle, &actual_payload);
 		sent_data += actual_payload;
 
 		if (perf_opt->op_mode == 'T')	// TIME MODE
@@ -879,10 +882,10 @@ void * congestion_control(void * opt)
 	int debug_level = perf_opt->debug_level;
 	boolean_t create_log = perf_opt->create_log;
 
-	bp_timestamp_t reported_timestamp;
-	bp_endpoint_id_t ack_sender;
+	al_bp_timestamp_t reported_timestamp;
+	al_bp_endpoint_id_t ack_sender;
 	HEADER_TYPE ack_header;
-	bp_copy_eid(&ack_sender, &dest_eid);
+	al_bp_copy_eid(&ack_sender, &dest_eid);
 	struct timeval temp;
 
 	int position = -1;
@@ -892,7 +895,7 @@ void * congestion_control(void * opt)
 
 	if (perf_opt->congestion_ctrl == 'w') // window based congestion control
 	{
-		bp_bundle_create(&ack);
+		al_bp_bundle_create(&ack);
 
 		while ((close_ack_receiver == 0) || (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit))
 		{
@@ -911,14 +914,14 @@ void * congestion_control(void * opt)
 			if ((debug) && (debug_level > 0))
 				printf("\t[debug cong crtl] waiting for the reply...\n");
 
-			if ((error = bp_bundle_receive(handle, ack, BP_PAYLOAD_MEM, count_info(send_info, perf_opt->window) == 0 ? perf_opt->wait_before_exit : -1)) != BP_SUCCESS)
+			if ((error = al_bp_bundle_receive(handle, ack, BP_PAYLOAD_MEM, count_info(send_info, perf_opt->window) == 0 ? perf_opt->wait_before_exit : -1)) != BP_SUCCESS)
 			{
 				if(count_info(send_info, perf_opt->window) == 0 && close_ack_receiver == 1)
 					// send_bundles is terminated
 					break;
-				fprintf(stderr, "error getting server ack: %d (%s)\n", error, bp_strerror(bp_errno(handle)));
+				fprintf(stderr, "error getting server ack: %d (%s)\n", error, al_bp_strerror(al_bp_errno(handle)));
 				if (create_log)
-					fprintf(log_file, "error getting server ack: %d (%s)\n", error, bp_strerror(bp_errno(handle)));
+					fprintf(log_file, "error getting server ack: %d (%s)\n", error, al_bp_strerror(al_bp_errno(handle)));
 				client_clean_exit(1);
 			}
 
@@ -944,9 +947,9 @@ void * congestion_control(void * opt)
 			error = get_info_from_ack(&ack, NULL, &reported_timestamp);
 			if (error != BP_SUCCESS)
 			{
-				fprintf(stderr, "error getting info from ack: %s\n", bp_strerror(error));
+				fprintf(stderr, "error getting info from ack: %s\n", al_bp_strerror(error));
 				if (create_log)
-					fprintf(log_file, "error getting info from ack: %s\n", bp_strerror(error));
+					fprintf(log_file, "error getting info from ack: %s\n", al_bp_strerror(error));
 				client_clean_exit(1);
 			}
 			if ((debug) && (debug_level > 1))
@@ -975,7 +978,7 @@ void * congestion_control(void * opt)
 			sched_yield();
 		} // end while(n_bundles)
 
-		bp_bundle_free(&ack);
+		al_bp_bundle_free(&ack);
 	}
 	else if (perf_opt->congestion_ctrl == 'r') // Rate based congestion control
 	{
@@ -1036,7 +1039,7 @@ void * wait_for_sigint(void * arg)
 {
 	sigset_t sigset;
 	int signo;
-	bp_handle_t force_stop_handle;
+	al_bp_handle_t force_stop_handle;
 
 	sigemptyset(&sigset);
 	sigaddset(&sigset, SIGINT);
@@ -1058,48 +1061,48 @@ void * wait_for_sigint(void * arg)
 	else
 	{
 
-		bp_bundle_object_t bundle_force_stop;
+		al_bp_bundle_object_t bundle_force_stop;
 
 		// Open a new connection to BP Daemon
 		if ((perf_opt->debug) && (perf_opt->debug_level > 0))
 			printf("[debug] opening a new connection to local BP daemon...");
 
 		if (perf_opt->use_ip)
-			error = bp_open_with_ip(perf_opt->ip_addr,perf_opt->ip_port,&force_stop_handle);
+			error = al_bp_open_with_ip(perf_opt->ip_addr,perf_opt->ip_port,&force_stop_handle);
 		else
-			error = bp_open(&force_stop_handle);
+			error = al_bp_open(&force_stop_handle);
 
 		if (error != BP_SUCCESS)
 		{
-			fprintf(stderr, "fatal error opening a new bp handle: %s\n", bp_strerror(error));
+			fprintf(stderr, "fatal error opening a new bp handle: %s\n", al_bp_strerror(error));
 			if (perf_opt->create_log)
-				fprintf(log_file, "fatal error opening a new bp handle: %s\n", bp_strerror(error));
+				fprintf(log_file, "fatal error opening a new bp handle: %s\n", al_bp_strerror(error));
 			client_clean_exit(1);
 		}
 		if ((perf_opt->debug) && (perf_opt->debug_level > 0))
 			printf("done\n");
 
 		// create the bundle force stop
-		bp_bundle_create(&bundle_force_stop);
+		al_bp_bundle_create(&bundle_force_stop);
 
 		// fill the force stop bundle
 		prepare_force_stop_bundle(&bundle_force_stop, mon_eid, conn_opt->expiration, conn_opt->priority);
-		bp_bundle_set_source(&bundle_force_stop, local_eid);
+		al_bp_bundle_set_source(&bundle_force_stop, local_eid);
 
 		// send force_stop bundle to monitor
 		printf("Sending the force stop bundle to the monitor...");
-		if ((error = bp_bundle_send(force_stop_handle, regid, &bundle_force_stop)) != 0)
+		if ((error = al_bp_bundle_send(force_stop_handle, regid, &bundle_force_stop)) != 0)
 		{
-			fprintf(stderr, "error sending the force stop bundle: %d (%s)\n", error, bp_strerror(error));
+			fprintf(stderr, "error sending the force stop bundle: %d (%s)\n", error, al_bp_strerror(error));
 			if (perf_opt->create_log)
-				fprintf(log_file, "error sending the force stop bundle: %d (%s)\n", error, bp_strerror(error));
-			bp_close(force_stop_handle);
+				fprintf(log_file, "error sending the force stop bundle: %d (%s)\n", error, al_bp_strerror(error));
+			al_bp_close(force_stop_handle);
 			exit(1);
 		}
 		printf("done.\n");
 
 
-		bp_bundle_free(&bundle_force_stop);
+		al_bp_bundle_free(&bundle_force_stop);
 	}
 
 	process_interrupted = TRUE;
@@ -1270,11 +1273,11 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			break;
 
 		case 'd':
-			strncpy(perf_opt->dest_eid, optarg, BP_MAX_ENDPOINT_ID);
+			strncpy(perf_opt->dest_eid, optarg, AL_BP_MAX_ENDPOINT_ID);
 			break;
 
 		case 'm':
-			strncpy(perf_opt->mon_eid, optarg, BP_MAX_ENDPOINT_ID);
+			strncpy(perf_opt->mon_eid, optarg, AL_BP_MAX_ENDPOINT_ID);
 			break;
 
 		case 'i':
@@ -1355,13 +1358,13 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 
 		case 'p':
 			if (!strcasecmp(optarg, "bulk"))   {
-				conn_opt->priority = BP_PRIORITY_BULK;
+				conn_opt->priority.priority = BP_PRIORITY_BULK;
 			} else if (!strcasecmp(optarg, "normal")) {
-				conn_opt->priority = BP_PRIORITY_NORMAL;
+				conn_opt->priority.priority = BP_PRIORITY_NORMAL;
 			} else if (!strcasecmp(optarg, "expedited")) {
-				conn_opt->priority = BP_PRIORITY_EXPEDITED;
+				conn_opt->priority.priority = BP_PRIORITY_EXPEDITED;
 			} else if (!strcasecmp(optarg, "reserved")) {
-				conn_opt->priority = BP_PRIORITY_RESERVED;
+				conn_opt->priority.priority = BP_PRIORITY_RESERVED;
 			} else {
 				fprintf(stderr, "Invalid priority value %s\n", optarg);
 				exit(1);
@@ -1440,13 +1443,13 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			else
 			{
 				if (!strcasecmp(optarg, "bulk"))   {
-					perf_opt->bundle_ack_options.priority = BP_PRIORITY_BULK;
+					perf_opt->bundle_ack_options.priority.priority = BP_PRIORITY_BULK;
 				} else if (!strcasecmp(optarg, "normal")) {
-					perf_opt->bundle_ack_options.priority = BP_PRIORITY_NORMAL;
+					perf_opt->bundle_ack_options.priority.priority = BP_PRIORITY_NORMAL;
 				} else if (!strcasecmp(optarg, "expedited")) {
-					perf_opt->bundle_ack_options.priority = BP_PRIORITY_EXPEDITED;
+					perf_opt->bundle_ack_options.priority.priority = BP_PRIORITY_EXPEDITED;
 				} else if (!strcasecmp(optarg, "reserved")) {
-					perf_opt->bundle_ack_options.priority = BP_PRIORITY_RESERVED;
+					perf_opt->bundle_ack_options.priority.priority = BP_PRIORITY_RESERVED;
 				} else {
 					fprintf(stderr, "Invalid ack priority value %s\n", optarg);
 					exit(1);
@@ -1619,7 +1622,8 @@ void client_clean_exit(int status)
 	}
 
 	if (bp_handle_open)
-		bp_close(handle);
+		al_bp_close(handle);
+	al_bp_unregister(handle,regid,local_eid);
 	exit(status);
 }
 

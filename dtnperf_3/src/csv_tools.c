@@ -7,7 +7,7 @@
 
 #include "utils.h"
 #include "csv_tools.h"
-#include <bp_abstraction_api.h>
+#include <al_bp_api.h>
 
 void csv_print_rx_time(FILE * file, struct timeval time, struct timeval start_time)
 {
@@ -18,14 +18,14 @@ void csv_print_rx_time(FILE * file, struct timeval time, struct timeval start_ti
 	fwrite(buf, strlen(buf), 1, file);
 }
 
-void csv_print_eid(FILE * file, bp_endpoint_id_t eid)
+void csv_print_eid(FILE * file, al_bp_endpoint_id_t eid)
 {
 	char buf[256];
 	sprintf(buf, "%s;", eid.uri);
 	fwrite(buf, strlen(buf), 1, file);
 }
 
-void csv_print_timestamp(FILE * file, bp_timestamp_t timestamp)
+void csv_print_timestamp(FILE * file, al_bp_timestamp_t timestamp)
 {
 	char buf[50];
 	sprintf(buf, "%lu;%lu;", timestamp.secs, timestamp.seqno);
@@ -50,7 +50,7 @@ void csv_print_status_report_timestamps_header(FILE * file)
 
 	fwrite(buf, strlen(buf), 1, file);
 }
-void csv_print_status_report_timestamps(FILE * file, bp_bundle_status_report_t status_report)
+void csv_print_status_report_timestamps(FILE * file, al_bp_bundle_status_report_t status_report)
 {
 	char buf1[256];
 	char buf2[50];

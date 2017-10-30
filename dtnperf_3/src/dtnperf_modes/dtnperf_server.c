@@ -12,7 +12,7 @@
 #include "../file_transfer_tools.h"
 #include "../utils.h"
 
-#include <bp_abstraction_api.h>
+#include <al_bp_api.h>
 
 /*
  * Global variables
@@ -23,7 +23,7 @@ pthread_t file_exp_timer;
 pthread_mutex_t mutexdata;
 
 file_transfer_info_list_t file_transfer_info_list;
-bp_handle_t handle;
+al_bp_handle_t handle;
 
 // flags to exit cleanly
 boolean_t bp_handle_open;
@@ -41,19 +41,19 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
 	dtnperf_connection_options_t * conn_opt = perf_g_opt->conn_opt;
 
-	bp_endpoint_id_t local_eid;
-	bp_reg_info_t reginfo;
-	bp_reg_id_t regid;
-	bp_bundle_payload_location_t pl_location;
-	bp_endpoint_id_t bundle_source_addr;
-	bp_endpoint_id_t bundle_dest_addr;
-	bp_endpoint_id_t bundle_replyto_addr;
-	bp_error_t error;
-	bp_bundle_object_t bundle_object;
-	bp_bundle_object_t bundle_ack_object;
-	bp_bundle_delivery_opts_t bundle_ack_dopts;
-	bp_timestamp_t bundle_creation_timestamp;
-	bp_timeval_t bundle_expiration;
+	al_bp_endpoint_id_t local_eid;
+	al_bp_reg_info_t reginfo;
+	al_bp_reg_id_t regid;
+	al_bp_bundle_payload_location_t pl_location;
+	al_bp_endpoint_id_t bundle_source_addr;
+	al_bp_endpoint_id_t bundle_dest_addr;
+	al_bp_endpoint_id_t bundle_replyto_addr;
+	al_bp_error_t error;
+	al_bp_bundle_object_t bundle_object;
+	al_bp_bundle_object_t bundle_ack_object;
+	al_bp_bundle_delivery_opts_t bundle_ack_dopts;
+	al_bp_timestamp_t bundle_creation_timestamp;
+	al_bp_timeval_t bundle_expiration;
 	size_t bundle_payload_len;
 	dtnperf_server_ack_payload_t server_ack_payload;
 	HEADER_TYPE bundle_header;
@@ -102,7 +102,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			printf("\tsend acks to monitor: %s\n", perf_opt->acks_to_mon ? "yes":"no");
 			printf("\tacks expiration time: %d\n", (int) conn_opt->expiration);
 			char * prior;
-			switch(conn_opt->priority)
+			switch(conn_opt->priority.priority)
 			{
 			case BP_PRIORITY_BULK:
 				prior = "bulk";
@@ -175,13 +175,13 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	if(debug && debug_level > 0)
 		printf("[debug] opening connection to bundle protocol router...");
 	if (perf_opt->use_ip)
-		error = bp_open_with_ip(perf_opt->ip_addr, perf_opt->ip_port, &handle);
+		error = al_bp_open_with_ip(perf_opt->ip_addr, perf_opt->ip_port, &handle);
 	else
-		error = bp_open(&handle);
+		error = al_bp_open(&handle);
 	if (error != BP_SUCCESS)
 	{
 		fflush(stdout);
-		fprintf(stderr, "fatal error opening bp handle: %s\n", bp_strerror(error));
+		fprintf(stderr, "fatal error opening bp handle: %s\n", al_bp_strerror(error));
 		exit(1);
 	}
 	else
@@ -194,7 +194,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	//build a local eid
 	if(debug && debug_level > 0)
 		printf("[debug] building a local eid...");
-	bp_build_local_eid(handle, &local_eid, SERV_EP_STRING);
+	al_bp_build_local_eid(handle, &local_eid, SERV_EP_NUM_SERVICE,"Server-CBHE",NULL);
 	if(debug && debug_level > 0)
 		printf("done\n");
 	if (debug)
@@ -203,13 +203,13 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	// checking if there is already a registration
 	if(debug && debug_level > 0)
 		printf("[debug] checking for existing registration...");
-	error = bp_find_registration(handle, &local_eid, &regid);
+	error = al_bp_find_registration(handle, &local_eid, &regid);
 	if (error == BP_SUCCESS)
 	{
 		fflush(stdout);
 		fprintf(stderr, "error: there is a registration with the same eid.\n");
 		fprintf(stderr, "regid 0x%x\n", (unsigned int) regid);
-		bp_close(handle);
+		al_bp_close(handle);
 		exit(1);
 	}
 	if ((debug) && (debug_level > 0))
@@ -219,15 +219,15 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	if(debug && debug_level > 0)
 		printf("[debug] registering to local daemon...");
 	memset(&reginfo, 0, sizeof(reginfo));
-	bp_copy_eid(&reginfo.endpoint, &local_eid);
+	al_bp_copy_eid(&reginfo.endpoint, &local_eid);
 	reginfo.flags = BP_REG_DEFER;
 	reginfo.regid = BP_REGID_NONE;
 	reginfo.expiration = 0;
-	if ((error = bp_register(handle, &reginfo, &regid)) != 0)
+	if ((error = al_bp_register(&handle, &reginfo, &regid)) != 0)
 	{
 		fflush(stdout);
 		fprintf(stderr, "error creating registration: %d (%s)\n",
-				error, bp_strerror(bp_errno(handle)));
+				error, al_bp_strerror(al_bp_errno(handle)));
 		exit(1);
 	}
 	if ((debug) && (debug_level > 0))
@@ -249,7 +249,6 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 	pthread_mutex_init (&mutexdata, NULL);
 	pthread_create(&file_exp_timer, NULL, file_expiration_timer, NULL);
 
-	printf("DTNperf Server started\n Waiting for bundles...\n");
 
 
 	if ((debug) && (debug_level > 0))
@@ -261,11 +260,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		// create a bundle object
 		if ((debug) && (debug_level > 0))
 			printf("[debug] initiating memory for bundles...\n");
-		error = bp_bundle_create(&bundle_object);
+		error = al_bp_bundle_create(&bundle_object);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
-			fprintf(stderr, "fatal error initiating memory for bundles: %s\n", bp_strerror(error));
+			fprintf(stderr, "fatal error initiating memory for bundles: %s\n", al_bp_strerror(error));
 			exit(1);
 		}
 		if(debug && debug_level > 0)
@@ -277,12 +276,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		// wait until receive a bundle
 		if ((debug) && (debug_level > 0))
 			printf("[debug] waiting for bundles...\n");
-		error = bp_bundle_receive(handle, bundle_object, pl_location, -1);
+		error = al_bp_bundle_receive(handle, bundle_object, pl_location, -1);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
 			fprintf(stderr, "error getting recv reply: %d (%s)\n",
-					error, bp_strerror(bp_errno(handle)));
+					error, al_bp_strerror(al_bp_errno(handle)));
 			exit(1);
 		}
 		if ((debug) && (debug_level > 0))
@@ -291,12 +290,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		// find payload size
 		if ((debug) && (debug_level > 0))
 			printf("[debug] calculating bundle payload size...");
-		error = bp_bundle_get_payload_size(bundle_object, (u32_t *) &bundle_payload_len);
+		error = al_bp_bundle_get_payload_size(bundle_object, (u32_t *) &bundle_payload_len);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
 			fprintf(stderr, "error getting bundle payload size: %s\n",
-					bp_strerror(error));
+					al_bp_strerror(error));
 			exit(1);
 		}
 		if(debug && debug_level > 0)
@@ -320,12 +319,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		// get SOURCE eid
 		if ((debug) && (debug_level > 0))
 			printf("[debug]\tgetting source eid...");
-		error = bp_bundle_get_source(bundle_object, &bundle_source_addr);
+		error = al_bp_bundle_get_source(bundle_object, &bundle_source_addr);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
 			fprintf(stderr, "error getting bundle source eid: %s\n",
-					bp_strerror(error));
+					al_bp_strerror(error));
 			exit(1);
 		}
 		if ((debug) && (debug_level > 0))
@@ -338,12 +337,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		// get DEST eid
 		if ((debug) && (debug_level > 0))
 			printf("[debug]\tgetting destination eid...");
-		error = bp_bundle_get_dest(bundle_object, &bundle_dest_addr);
+		error = al_bp_bundle_get_dest(bundle_object, &bundle_dest_addr);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
 			fprintf(stderr, "error getting bundle destination eid: %s\n",
-					bp_strerror(error));
+					al_bp_strerror(error));
 			exit(1);
 		}
 		if ((debug) && (debug_level > 0))
@@ -356,12 +355,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		// get REPLY TO eid
 		if ((debug) && (debug_level > 0))
 			printf("[debug]\tgetting reply to eid...");
-		error = bp_bundle_get_replyto(bundle_object, &bundle_replyto_addr);
+		error = al_bp_bundle_get_replyto(bundle_object, &bundle_replyto_addr);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
 			fprintf(stderr, "error getting bundle reply to eid: %s\n",
-					bp_strerror(error));
+					al_bp_strerror(error));
 			exit(1);
 		}
 		if ((debug) && (debug_level > 0))
@@ -374,12 +373,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		// get bundle CREATION TIMESTAMP
 		if ((debug) && (debug_level > 0))
 			printf("[debug]\tgetting bundle creation timestamp...");
-		error = bp_bundle_get_creation_timestamp(bundle_object, &bundle_creation_timestamp);
+		error = al_bp_bundle_get_creation_timestamp(bundle_object, &bundle_creation_timestamp);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
 			fprintf(stderr, "error getting bundle creation timestamp: %s\n",
-					bp_strerror(error));
+					al_bp_strerror(error));
 			exit(1);
 		}
 		if ((debug) && (debug_level > 0))
@@ -397,12 +396,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		{
 			if ((debug) && (debug_level > 0))
 				printf("[debug]\tgetting bundle payload filename...");
-			error = bp_bundle_get_payload_file(bundle_object, &pl_filename, (u32_t *) &pl_filename_len);
+			error = al_bp_bundle_get_payload_file(bundle_object, &pl_filename, (u32_t *) &pl_filename_len);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
 				fprintf(stderr, "error getting bundle payload filename: %s\n",
-						bp_strerror(error));
+						al_bp_strerror(error));
 				exit(1);
 			}
 			if ((debug) && (debug_level > 0))
@@ -481,7 +480,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		// get bundle expiration time and priority
 		if (bundle_ack_options.set_ack_expiration)
 		{
-			bp_bundle_get_expiration(bundle_object, &bundle_expiration);
+			al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
 		}
 
 		// send acks to the client only if requested by client
@@ -495,15 +494,14 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				|| (bundle_ack_options.ack_to_mon == ATM_FORCE_YES);
 		if (send_ack_to_client || send_ack_to_monitor)
 		{
-
 			// create bundle ack to send
 			if ((debug) && (debug_level > 0))
 				printf("[debug] initiating memory for bundle ack...");
-			error = bp_bundle_create(&bundle_ack_object);
+			error = al_bp_bundle_create(&bundle_ack_object);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "fatal error initiating memory for bundle ack: %s\n", bp_strerror(error));
+				fprintf(stderr, "fatal error initiating memory for bundle ack: %s\n", al_bp_strerror(error));
 				exit(1);
 			}
 			if(debug && debug_level > 0)
@@ -523,7 +521,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "fatal error preparing the payload of the bundle ack: %s\n", bp_strerror(error));
+				fprintf(stderr, "fatal error preparing the payload of the bundle ack: %s\n", al_bp_strerror(error));
 				exit(1);
 			}
 			if(debug && debug_level > 0)
@@ -532,11 +530,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			// setting the bundle ack payload
 			if ((debug) && (debug_level > 0))
 				printf("[debug] setting the payload of the bundle ack...");
-			error = bp_bundle_set_payload_mem(&bundle_ack_object, pl_buffer, pl_buffer_size);
+			error = al_bp_bundle_set_payload_mem(&bundle_ack_object, pl_buffer, pl_buffer_size);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "fatal error setting the payload of the bundle ack: %s\n", bp_strerror(error));
+				fprintf(stderr, "fatal error setting the payload of the bundle ack: %s\n", al_bp_strerror(error));
 				exit(1);
 			}
 			if(debug && debug_level > 0)
@@ -547,11 +545,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			{
 				printf("[debug] setting source of the bundle ack: %s ...", bundle_source_addr.uri);
 			}
-			error = bp_bundle_set_source(& bundle_ack_object, local_eid);
+			error = al_bp_bundle_set_source(& bundle_ack_object, local_eid);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "fatal error setting the source of the bundle ack: %s\n", bp_strerror(error));
+				fprintf(stderr, "fatal error setting the source of the bundle ack: %s\n", al_bp_strerror(error));
 				exit(1);
 			}
 			if(debug && debug_level > 0)
@@ -561,11 +559,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			{
 				printf("[debug] setting destination of the bundle ack: %s ...", bundle_source_addr.uri);
 			}
-			error = bp_bundle_set_dest(& bundle_ack_object, bundle_source_addr);
+			error = al_bp_bundle_set_dest(& bundle_ack_object, bundle_source_addr);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "fatal error setting the destination of the bundle ack: %s\n", bp_strerror(error));
+				fprintf(stderr, "fatal error setting the destination of the bundle ack: %s\n", al_bp_strerror(error));
 				exit(1);
 			}
 			if(debug && debug_level > 0)
@@ -575,11 +573,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			{
 				printf("[debug] setting replyto eid of the bundle ack: %s ...", bundle_replyto_addr.uri);
 			}
-			bp_bundle_set_replyto(& bundle_ack_object, bundle_replyto_addr);
+			al_bp_bundle_set_replyto(& bundle_ack_object, bundle_replyto_addr);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "fatal error setting the reply to eid of the bundle ack: %s\n", bp_strerror(error));
+				fprintf(stderr, "fatal error setting the reply to eid of the bundle ack: %s\n", al_bp_strerror(error));
 				exit(1);
 			}
 			if(debug && debug_level > 0)
@@ -591,16 +589,16 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			}
 			if (bundle_ack_options.set_ack_priority == TRUE)
 			{
-				bp_bundle_set_priority(& bundle_ack_object, bundle_ack_options.priority);
+				al_bp_bundle_set_priority(& bundle_ack_object, bundle_ack_options.priority);
 			}
 			else
 			{
-				bp_bundle_set_priority(& bundle_ack_object, conn_opt->priority);
+				al_bp_bundle_set_priority(& bundle_ack_object, conn_opt->priority);
 			}
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "fatal error setting priority of the bundle ack: %s\n", bp_strerror(error));
+				fprintf(stderr, "fatal error setting priority of the bundle ack: %s\n", al_bp_strerror(error));
 				exit(1);
 			}
 			if(debug && debug_level > 0)
@@ -611,13 +609,13 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("[debug] setting expiration time of the bundle ack...");
 			}
 			if (bundle_ack_options.set_ack_expiration)
-				bp_bundle_set_expiration(& bundle_ack_object, bundle_expiration);
+				al_bp_bundle_set_expiration(& bundle_ack_object, bundle_expiration);
 			else
-				bp_bundle_set_expiration(& bundle_ack_object, conn_opt->expiration);
+				al_bp_bundle_set_expiration(& bundle_ack_object, conn_opt->expiration);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "fatal error setting expiration time of the bundle ack: %s\n", bp_strerror(error));
+				fprintf(stderr, "fatal error setting expiration time of the bundle ack: %s\n", al_bp_strerror(error));
 				exit(1);
 			}
 			if(debug && debug_level > 0)
@@ -628,11 +626,11 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 				printf("[debug] setting delivery options of the bundle ack...");
 			}
 			bundle_ack_dopts = BP_DOPTS_CUSTODY;
-			bp_bundle_set_delivery_opts(& bundle_ack_object, bundle_ack_dopts);
+			al_bp_bundle_set_delivery_opts(& bundle_ack_object, bundle_ack_dopts);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "fatal error setting delivery options of the bundle ack: %s\n", bp_strerror(error));
+				fprintf(stderr, "fatal error setting delivery options of the bundle ack: %s\n", al_bp_strerror(error));
 				exit(1);
 			}
 			if(debug && debug_level > 0)
@@ -643,12 +641,12 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			{
 				if ((debug) && (debug_level > 0))
 					printf("[debug] sending bundle ack to client...");
-				error = bp_bundle_send(handle, regid, & bundle_ack_object);
+				error = al_bp_bundle_send(handle, regid, & bundle_ack_object);
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
 					fprintf(stderr, "error sending bundle ack to client: %d (%s)\n",
-							error, bp_strerror(bp_errno(handle)));
+							error, al_bp_strerror(al_bp_errno(handle)));
 					exit(1);
 				}
 				if ((debug) && (debug_level > 0))
@@ -658,35 +656,35 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 			// send the bundle ack to the monitor
 			if (send_ack_to_monitor)
 			{
-				bp_bundle_set_dest(& bundle_ack_object, bundle_replyto_addr);
+				al_bp_bundle_set_dest(& bundle_ack_object, bundle_replyto_addr);
 				if ((debug) && (debug_level > 0))
 					printf("[debug] sending bundle ack to monitor...");
-				error = bp_bundle_send(handle, regid, & bundle_ack_object);
+				error = al_bp_bundle_send(handle, regid, & bundle_ack_object);
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
 					fprintf(stderr, "error sending bundle ack to monitor: %d (%s)\n",
-							error, bp_strerror(bp_errno(handle)));
+							error, al_bp_strerror(al_bp_errno(handle)));
 					exit(1);
 				}
 				if ((debug) && (debug_level > 0))
 					printf(" bundle ack sent to monitor\n");
 			}
 			//free memory for bundle ack
-			bp_bundle_free(&bundle_ack_object);
+			al_bp_bundle_free(&bundle_ack_object);
 			free(pl_buffer);
 			pl_buffer_size = 0;
 		}
 
 		// free memory for bundle
-		bp_bundle_free(&bundle_object);
+		al_bp_bundle_free(&bundle_object);
 		free(pl_filename);
 		pl_filename_len = 0;
 
 
 	}// while(1)
 
-	bp_close(handle);
+	al_bp_close(handle);
 	bp_handle_open = FALSE;
 
 
@@ -808,13 +806,13 @@ void parse_server_options(int argc, char ** argv, dtnperf_global_options_t * per
 
 		case 'p':
 			if (!strcasecmp(optarg, "bulk"))   {
-				conn_opt->priority = BP_PRIORITY_BULK;
+				conn_opt->priority.priority = BP_PRIORITY_BULK;
 			} else if (!strcasecmp(optarg, "normal")) {
-				conn_opt->priority = BP_PRIORITY_NORMAL;
+				conn_opt->priority.priority = BP_PRIORITY_NORMAL;
 			} else if (!strcasecmp(optarg, "expedited")) {
-				conn_opt->priority = BP_PRIORITY_EXPEDITED;
+				conn_opt->priority.priority = BP_PRIORITY_EXPEDITED;
 			} else if (!strcasecmp(optarg, "reserved")) {
-				conn_opt->priority = BP_PRIORITY_RESERVED;
+				conn_opt->priority.priority = BP_PRIORITY_RESERVED;
 			} else {
 				fprintf(stderr, "Invalid priority value %s\n", optarg);
 				exit(1);
@@ -941,7 +939,7 @@ void server_clean_exit(int status)
 	}
 
 	if (bp_handle_open)
-		bp_close(handle);
+		al_bp_close(handle);
 	printf("DTNperf server: Exit.\n");
 	exit(status);
 }

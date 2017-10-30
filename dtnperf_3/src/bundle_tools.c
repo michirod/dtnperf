@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "bundle_tools.h"
 #include "definitions.h"
-#include <bp_abstraction_api.h>
+#include <al_bp_api.h>
 #include <arpa/inet.h>
 
 
@@ -30,7 +30,7 @@ long bundles_needed (long data, long pl)
 /* ----------------------------
  * print_eid
  * ---------------------------- */
-void print_eid(char * label, bp_endpoint_id_t * eid)
+void print_eid(char * label, al_bp_endpoint_id_t * eid)
 {
     printf("%s [%s]\n", label, eid->uri);
 } // end print_eid
@@ -51,7 +51,7 @@ void init_info(send_information_t *send_info, int window)
 
 
 
-long add_info(send_information_t* send_info, bp_bundle_id_t bundle_id, struct timeval p_start, int window)
+long add_info(send_information_t* send_info, al_bp_bundle_id_t bundle_id, struct timeval p_start, int window)
 {
     int i;
 
@@ -87,7 +87,7 @@ long add_info(send_information_t* send_info, bp_bundle_id_t bundle_id, struct ti
 } // end add_info
 
 
-int is_in_info(send_information_t* send_info, bp_timestamp_t bundle_timestamp, int window)
+int is_in_info(send_information_t* send_info, al_bp_timestamp_t bundle_timestamp, int window)
 {
     int i;
 
@@ -132,15 +132,15 @@ void remove_from_info(send_information_t* send_info, int position)
 } // end remove_from_info
 
 
-void set_bp_options(bp_bundle_object_t *bundle, dtnperf_connection_options_t *opt)
+void set_bp_options(al_bp_bundle_object_t *bundle, dtnperf_connection_options_t *opt)
 {
-	bp_bundle_delivery_opts_t dopts = BP_DOPTS_NONE;
+	al_bp_bundle_delivery_opts_t dopts = BP_DOPTS_NONE;
 
 	// Bundle expiration
-	bp_bundle_set_expiration(bundle, opt->expiration);
+	al_bp_bundle_set_expiration(bundle, opt->expiration);
 
 	// Bundle priority
-	bp_bundle_set_priority(bundle, opt->priority);
+	al_bp_bundle_set_priority(bundle, opt->priority);
 
 	// Delivery receipt option
 	if (opt->delivery_receipts)
@@ -169,28 +169,28 @@ void set_bp_options(bp_bundle_object_t *bundle, dtnperf_connection_options_t *op
 		dopts |= BP_DOPTS_DO_NOT_FRAGMENT;
 
 	//Set options
-	bp_bundle_set_delivery_opts(bundle, dopts);
+	al_bp_bundle_set_delivery_opts(bundle, dopts);
 
 } // end set_bp_options
 
-int open_payload_stream_read(bp_bundle_object_t bundle, FILE ** f)
+int open_payload_stream_read(al_bp_bundle_object_t bundle, FILE ** f)
 {
-	bp_bundle_payload_location_t pl_location;
+	al_bp_bundle_payload_location_t pl_location;
 	char * buffer;
 	u32_t buffer_len;
 
-	bp_bundle_get_payload_location(bundle, &pl_location);
+	al_bp_bundle_get_payload_location(bundle, &pl_location);
 
 	if (pl_location == BP_PAYLOAD_MEM)
 	{
-		bp_bundle_get_payload_mem(bundle, &buffer, &buffer_len);
+		al_bp_bundle_get_payload_mem(bundle, &buffer, &buffer_len);
 		*f = fmemopen(buffer, buffer_len, "rb");
 		if (*f == NULL)
 			return -1;
 	}
 	else
 	{
-		bp_bundle_get_payload_file(bundle, &buffer, &buffer_len);
+		al_bp_bundle_get_payload_file(bundle, &buffer, &buffer_len);
 		*f = fopen(buffer, "rb");
 		if (*f == NULL)
 		{
@@ -206,22 +206,22 @@ int close_payload_stream_read(FILE * f)
 	return fclose(f);
 }
 
-int open_payload_stream_write(bp_bundle_object_t bundle, FILE ** f)
+int open_payload_stream_write(al_bp_bundle_object_t bundle, FILE ** f)
 {
-	bp_bundle_payload_location_t pl_location;
+	al_bp_bundle_payload_location_t pl_location;
 
-	bp_bundle_get_payload_location(bundle, &pl_location);
+	al_bp_bundle_get_payload_location(bundle, &pl_location);
 
 	if (pl_location == BP_PAYLOAD_MEM)
 	{
-		bp_bundle_get_payload_mem(bundle, &buffer, &buffer_len);
+		al_bp_bundle_get_payload_mem(bundle, &buffer, &buffer_len);
 		*f= open_memstream(&buffer, (size_t *) &buffer_len);
 		if (*f == NULL)
 			return -1;
 	}
 	else
 	{
-		bp_bundle_get_payload_file(bundle, &buffer, &buffer_len);
+		al_bp_bundle_get_payload_file(bundle, &buffer, &buffer_len);
 		*f = fopen(buffer, "wb");
 		if (*f == NULL)
 			return -1;
@@ -229,25 +229,25 @@ int open_payload_stream_write(bp_bundle_object_t bundle, FILE ** f)
 	return 0;
 }
 
-int close_payload_stream_write(bp_bundle_object_t * bundle, FILE *f)
+int close_payload_stream_write(al_bp_bundle_object_t * bundle, FILE *f)
 {
-	bp_bundle_payload_location_t pl_location;
-	bp_bundle_get_payload_location(*bundle, &pl_location);
+	al_bp_bundle_payload_location_t pl_location;
+	al_bp_bundle_get_payload_location(*bundle, &pl_location);
 
 	fclose(f);
 
 	if (pl_location == BP_PAYLOAD_MEM)
 	{
-		bp_bundle_set_payload_mem(bundle, buffer, buffer_len);
+		al_bp_bundle_set_payload_mem(bundle, buffer, buffer_len);
 	}
 	else
 	{
-		bp_bundle_set_payload_file(bundle, buffer, buffer_len);
+		al_bp_bundle_set_payload_file(bundle, buffer, buffer_len);
 	}
 	return 0;
 }
 
-bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FILE * f)
+al_bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FILE * f)
 {
 	if (f == NULL)
 		return BP_ENULLPNTR;
@@ -292,7 +292,7 @@ bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FILE *
 	if (opt->bundle_ack_options.set_ack_priority)
 	{
 		options |= BO_SET_PRIORITY;
-		switch (opt->bundle_ack_options.priority)
+		switch (opt->bundle_ack_options.priority.priority)
 		{
 		case BP_PRIORITY_BULK:
 			options |= BO_PRIORITY_BULK;
@@ -318,7 +318,7 @@ bp_error_t prepare_payload_header_and_ack_options(dtnperf_options_t *opt, FILE *
 	return BP_SUCCESS;
 }
 
-int get_bundle_header_and_options(bp_bundle_object_t * bundle, HEADER_TYPE * header, dtnperf_bundle_ack_options_t * options)
+int get_bundle_header_and_options(al_bp_bundle_object_t * bundle, HEADER_TYPE * header, dtnperf_bundle_ack_options_t * options)
 {
 	if (bundle == NULL)
 		return -1;
@@ -371,19 +371,19 @@ int get_bundle_header_and_options(bp_bundle_object_t * bundle, HEADER_TYPE * hea
 		{
 			options->set_ack_priority = TRUE;
 			if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_BULK)
-				options->priority = BP_PRIORITY_BULK;
+				options->priority.priority = BP_PRIORITY_BULK;
 			else if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_NORMAL)
-				options->priority = BP_PRIORITY_NORMAL;
+				options->priority.priority = BP_PRIORITY_NORMAL;
 			else if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_EXPEDITED)
-				options->priority = BP_PRIORITY_EXPEDITED;
+				options->priority.priority = BP_PRIORITY_EXPEDITED;
 			else if ((opt & BO_PRIORITY_MASK) == BO_PRIORITY_RESERVED)
-				options->priority = BP_PRIORITY_RESERVED;
+				options->priority.priority = BP_PRIORITY_RESERVED;
 		}
 	}
 	return 0;
 }
 
-bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f, u32_t payload_size)
+al_bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f)
 {
 	if (f == NULL)
 		return BP_ENULLPNTR;
@@ -391,17 +391,13 @@ bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f, u32_t paylo
 	char * pattern = PL_PATTERN;
 	long remaining;
 	int i;
-	bp_error_t result;
+	al_bp_error_t result;
 
 	// prepare header and congestion control
 	result = prepare_payload_header_and_ack_options(opt, f);
 
-	// remaining = bundle_payload - HEADER_SIZE - BUNDLE_OPT_SIZE
-	remaining = payload_size - HEADER_SIZE - BUNDLE_OPT_SIZE;
-
-	// minimum payload size is HEADER_SIZE + BUNDLE_OPT_SIZE
-	if (remaining < 0)
-		remaining = 0;
+	// remaining = bundle_payload - HEADER_SIZE - congestion control char
+	remaining = opt->bundle_payload - HEADER_SIZE - 1;
 
 	// fill remainig payload with a pattern
 	for (i = remaining; i > strlen(pattern); i -= strlen(pattern))
@@ -413,52 +409,52 @@ bp_error_t prepare_generic_payload(dtnperf_options_t *opt, FILE * f, u32_t paylo
 	return result;
 }
 
-bp_error_t prepare_force_stop_bundle(bp_bundle_object_t * start, bp_endpoint_id_t monitor,
-		bp_timeval_t expiration, bp_bundle_priority_t priority)
+al_bp_error_t prepare_force_stop_bundle(al_bp_bundle_object_t * start, al_bp_endpoint_id_t monitor,
+		al_bp_timeval_t expiration, al_bp_bundle_priority_t priority)
 {
 	FILE * start_stream;
 	HEADER_TYPE start_header = FORCE_STOP_HEADER;
-	bp_endpoint_id_t none;
-	bp_bundle_delivery_opts_t opts = BP_DOPTS_NONE;
-	bp_bundle_set_payload_location(start, BP_PAYLOAD_MEM);
+	al_bp_endpoint_id_t none;
+	al_bp_bundle_delivery_opts_t opts = BP_DOPTS_NONE;
+	al_bp_bundle_set_payload_location(start, BP_PAYLOAD_MEM);
 	open_payload_stream_write(*start, &start_stream);
 	fwrite(&start_header, HEADER_SIZE, 1, start_stream);
 	close_payload_stream_write(start, start_stream);
-	bp_bundle_set_dest(start, monitor);
-	bp_get_none_endpoint(&none);
-	bp_bundle_set_replyto(start, none);
-	bp_bundle_set_delivery_opts(start, opts);
-	bp_bundle_set_expiration(start, expiration);
-	bp_bundle_set_priority(start, priority);
+	al_bp_bundle_set_dest(start, monitor);
+	al_bp_get_none_endpoint(&none);
+	al_bp_bundle_set_replyto(start, none);
+	al_bp_bundle_set_delivery_opts(start, opts);
+	al_bp_bundle_set_expiration(start, expiration);
+	al_bp_bundle_set_priority(start, priority);
 
 	return BP_SUCCESS;
 }
 
-bp_error_t prepare_stop_bundle(bp_bundle_object_t * stop, bp_endpoint_id_t monitor,
-		bp_timeval_t expiration, bp_bundle_priority_t priority, int sent_bundles)
+al_bp_error_t prepare_stop_bundle(al_bp_bundle_object_t * stop, al_bp_endpoint_id_t monitor,
+		al_bp_timeval_t expiration, al_bp_bundle_priority_t priority, int sent_bundles)
 {
 	FILE * stop_stream;
 	HEADER_TYPE stop_header = STOP_HEADER;
-	bp_endpoint_id_t none;
+	al_bp_endpoint_id_t none;
 	uint32_t buf;
-	bp_bundle_delivery_opts_t opts = BP_DOPTS_NONE;
-	bp_bundle_set_payload_location(stop, BP_PAYLOAD_MEM);
+	al_bp_bundle_delivery_opts_t opts = BP_DOPTS_NONE;
+	al_bp_bundle_set_payload_location(stop, BP_PAYLOAD_MEM);
 	open_payload_stream_write(*stop, &stop_stream);
 	fwrite(&stop_header, HEADER_SIZE, 1, stop_stream);
 	buf = htonl(sent_bundles);
 	fwrite(&buf, sizeof(buf), 1, stop_stream);
 	close_payload_stream_write(stop, stop_stream);
-	bp_bundle_set_dest(stop, monitor);
-	bp_get_none_endpoint(&none);
-	bp_bundle_set_replyto(stop, none);
-	bp_bundle_set_delivery_opts(stop, opts);
-	bp_bundle_set_expiration(stop, expiration);
-	bp_bundle_set_priority(stop, priority);
+	al_bp_bundle_set_dest(stop, monitor);
+	al_bp_get_none_endpoint(&none);
+	al_bp_bundle_set_replyto(stop, none);
+	al_bp_bundle_set_delivery_opts(stop, opts);
+	al_bp_bundle_set_expiration(stop, expiration);
+	al_bp_bundle_set_priority(stop, priority);
 
 	return BP_SUCCESS;
 }
 
-bp_error_t get_info_from_stop(bp_bundle_object_t * stop, int * sent_bundles)
+al_bp_error_t get_info_from_stop(al_bp_bundle_object_t * stop, int * sent_bundles)
 {
 	FILE * stop_stream;
 	uint32_t buf;
@@ -478,7 +474,7 @@ bp_error_t get_info_from_stop(bp_bundle_object_t * stop, int * sent_bundles)
 /**
  *
  */
-bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** payload, size_t * payload_size)
+al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** payload, size_t * payload_size)
 {
 	FILE * buf_stream;
 	char * buf;
@@ -504,9 +500,9 @@ bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, char ** 
 	return BP_SUCCESS;
 }
 
-bp_error_t get_info_from_ack(bp_bundle_object_t * ack, bp_endpoint_id_t * reported_eid, bp_timestamp_t * reported_timestamp)
+al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t * reported_eid, al_bp_timestamp_t * reported_timestamp)
 {
-	bp_error_t error;
+	al_bp_error_t error;
 	HEADER_TYPE header;
 	FILE * pl_stream;
 	uint16_t eid_len;

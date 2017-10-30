@@ -5,8 +5,7 @@
  *      Author: michele
  */
 
-#include <bp_errno.h>
-#include <bp_abstraction_api.h>
+#include <al_bp_api.h>
 
 #include "dtnperf_monitor.h"
 #include "../includes.h"
@@ -23,7 +22,7 @@ pthread_t session_exp_timer;
 pthread_mutex_t mutexdata;
 
 session_list_t * session_list;
-bp_handle_t handle;
+al_bp_handle_t handle;
 
 // flags to exit cleanly
 boolean_t dedicated_monitor;
@@ -40,17 +39,17 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	 * ------------------------ */
 	dtnperf_options_t * perf_opt = parameters->perf_g_opt->perf_opt;
 
-	bp_error_t error;
-	bp_endpoint_id_t local_eid;
-	bp_reg_info_t reginfo;
-	bp_reg_id_t regid;
-	bp_bundle_object_t bundle_object;
-	bp_bundle_status_report_t * status_report;
-	bp_endpoint_id_t bundle_source_addr;
-	bp_timestamp_t bundle_creation_timestamp;
-	bp_timeval_t bundle_expiration;
-	bp_endpoint_id_t relative_source_addr;
-	bp_timestamp_t relative_creation_timestamp;
+	al_bp_error_t error;
+	al_bp_endpoint_id_t local_eid;
+	al_bp_reg_info_t reginfo;
+	al_bp_reg_id_t regid;
+	al_bp_bundle_object_t bundle_object;
+	al_bp_bundle_status_report_t * status_report;
+	al_bp_endpoint_id_t bundle_source_addr;
+	al_bp_timestamp_t bundle_creation_timestamp;
+	al_bp_timeval_t bundle_expiration;
+	al_bp_endpoint_id_t relative_source_addr;
+	al_bp_timestamp_t relative_creation_timestamp;
 	HEADER_TYPE bundle_header;
 
 	session_t * session;
@@ -115,13 +114,13 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	if(debug && debug_level > 0)
 		printf("[debug] opening connection to bundle protocol router...");
 	if (perf_opt->use_ip)
-		error = bp_open_with_ip(perf_opt->ip_addr, perf_opt->ip_port, &handle);
+		error = al_bp_open_with_ip(perf_opt->ip_addr, perf_opt->ip_port, &handle);
 	else
-		error = bp_open(&handle);
+		error = al_bp_open(&handle);
 	if (error != BP_SUCCESS)
 	{
 		fflush(stdout);
-		fprintf(stderr, "fatal error opening bp handle: %s\n", bp_strerror(error));
+		fprintf(stderr, "fatal error opening bp handle: %s\n", al_bp_strerror(error));
 		monitor_clean_exit(1);
 	}
 	else
@@ -138,7 +137,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		sprintf(temp, "%s_%d", MON_EP_STRING, parameters->client_id);
 	else
 		sprintf(temp, "%s", MON_EP_STRING);
-	bp_build_local_eid(handle, &local_eid, temp);
+	al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE,"Monitor-CBHE",NULL);
 	if(debug && debug_level > 0)
 		printf("done\n");
 	if (debug)
@@ -147,7 +146,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	// checking if there is already a registration
 	if(debug && debug_level > 0)
 		printf("[debug] checking for existing registration...");
-	error = bp_find_registration(handle, &local_eid, &regid);
+	error = al_bp_find_registration(handle, &local_eid, &regid);
 	if (error == BP_SUCCESS)
 	{
 		fflush(stdout);
@@ -162,15 +161,15 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	if(debug && debug_level > 0)
 		printf("[debug] registering to local daemon...");
 	memset(&reginfo, 0, sizeof(reginfo));
-	bp_copy_eid(&reginfo.endpoint, &local_eid);
+	al_bp_copy_eid(&reginfo.endpoint, &local_eid);
 	reginfo.flags = BP_REG_DEFER;
 	reginfo.regid = BP_REGID_NONE;
 	reginfo.expiration = 0;
-	if ((error = bp_register(handle, &reginfo, &regid)) != 0)
+	if ((error = al_bp_register(&handle, &reginfo, &regid)) != 0)
 	{
 		fflush(stdout);
 		fprintf(stderr, "error creating registration: %d (%s)\n",
-				error, bp_strerror(bp_errno(handle)));
+				error, al_bp_strerror(al_bp_errno(handle)));
 		monitor_clean_exit(1);
 	}
 	if ((debug) && (debug_level > 0))
@@ -182,10 +181,6 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	pthread_mutex_init (&mutexdata, NULL);
 	pthread_create(&session_exp_timer, NULL, session_expiration_timer, (void *) parameters);
 
-	if (!dedicated_monitor)
-		printf("DTNperf Monitor started\n Waiting for bundles...\n");
-
-
 	// start infinite loop
 	while(1)
 	{
@@ -195,11 +190,11 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// create a bundle object
 		if ((debug) && (debug_level > 0))
 			printf("[debug] initiating memory for bundles...\n");
-		error = bp_bundle_create(&bundle_object);
+		error = al_bp_bundle_create(&bundle_object);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
-			fprintf(stderr, "fatal error initiating memory for bundles: %s\n", bp_strerror(error));
+			fprintf(stderr, "fatal error initiating memory for bundles: %s\n", al_bp_strerror(error));
 			monitor_clean_exit(1);
 		}
 		if(debug && debug_level > 0)
@@ -209,12 +204,12 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// wait until receive a bundle
 		if ((debug) && (debug_level > 0))
 			printf("[debug] waiting for bundles...\n");
-		error = bp_bundle_receive(handle, bundle_object, BP_PAYLOAD_MEM, -1);
+		error = al_bp_bundle_receive(handle, bundle_object, BP_PAYLOAD_MEM, -1);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
 			fprintf(stderr, "error getting recv reply: %d (%s)\n",
-					error, bp_strerror(bp_errno(handle)));
+					error, al_bp_strerror(al_bp_errno(handle)));
 			monitor_clean_exit(1);
 		}
 		if ((debug) && (debug_level > 0))
@@ -230,12 +225,12 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// get SOURCE eid
 		if ((debug) && (debug_level > 0))
 			printf("[debug]\tgetting source eid...");
-		error = bp_bundle_get_source(bundle_object, &bundle_source_addr);
+		error = al_bp_bundle_get_source(bundle_object, &bundle_source_addr);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
 			fprintf(stderr, "error getting bundle source eid: %s\n",
-					bp_strerror(error));
+					al_bp_strerror(error));
 			monitor_clean_exit(1);
 		}
 		if ((debug) && (debug_level > 0))
@@ -248,12 +243,12 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// get bundle CREATION TIMESTAMP
 		if ((debug) && (debug_level > 0))
 			printf("[debug]\tgetting bundle creation timestamp...");
-		error = bp_bundle_get_creation_timestamp(bundle_object, &bundle_creation_timestamp);
+		error = al_bp_bundle_get_creation_timestamp(bundle_object, &bundle_creation_timestamp);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
 			fprintf(stderr, "error getting bundle creation timestamp: %s\n",
-					bp_strerror(error));
+					al_bp_strerror(error));
 			monitor_clean_exit(1);
 		}
 		if ((debug) && (debug_level > 0))
@@ -268,12 +263,12 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// get bundle EXPIRATION TIME
 		if ((debug) && (debug_level > 0))
 			printf("[debug]\tgetting bundle expiration time...");
-		error = bp_bundle_get_expiration(bundle_object, &bundle_expiration);
+		error = al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
 			fprintf(stderr, "error getting bundle expiration time: %s\n",
-					bp_strerror(error));
+					al_bp_strerror(error));
 			monitor_clean_exit(1);
 		}
 		if ((debug) && (debug_level > 0))
@@ -286,12 +281,12 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		// check if bundle is a status report
 		if ((debug) && (debug_level > 0))
 			printf("[debug] check if bundle is a status report...\n");
-		error = bp_bundle_get_status_report(bundle_object, &status_report);
+		error = al_bp_bundle_get_status_report(bundle_object, &status_report);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
 			fprintf(stderr, "error checking if bundle is a status report: %d (%s)\n",
-					error, bp_strerror(bp_errno(handle)));
+					error, al_bp_strerror(al_bp_errno(handle)));
 			continue;
 		}
 		if ((debug) && (debug_level > 0))
@@ -325,7 +320,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		switch (bundle_type)
 		{
 		case STATUS_REPORT:
-			bp_copy_eid(&relative_source_addr, &(status_report->bundle_id.source));
+			al_bp_copy_eid(&relative_source_addr, &(status_report->bundle_id.source));
 			relative_creation_timestamp = status_report->bundle_id.creation_ts;
 			break;
 
@@ -335,7 +330,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 
 		case CLIENT_STOP:
 		case CLIENT_FORCE_STOP:
-			bp_copy_eid(&relative_source_addr, &bundle_source_addr);
+			al_bp_copy_eid(&relative_source_addr, &bundle_source_addr);
 			relative_creation_timestamp = bundle_creation_timestamp;
 			break;
 
@@ -349,22 +344,36 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		{
 			// mark start time
 			start = current;
-			char * ptr;
-			filename_len = strlen(relative_source_addr.uri) - strlen("dtn://") + 15;
+			//if source eid of Status Report is CBHE Format
+			if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
+			{
+				filename_len = strlen(relative_source_addr.uri) - strlen("ipn:") + 15;
+			}
+			else
+			{
+				filename_len = strlen(relative_source_addr.uri) - strlen("dtn://") + 15;
+			}
 			filename = (char *) malloc(filename_len);
 			memset(filename, 0, filename_len);
-			strncpy(temp, relative_source_addr.uri, strlen(relative_source_addr.uri) + 1);
-			strtok(temp, "/");
 			sprintf(filename, "%lu_", relative_creation_timestamp.secs);
-			strcat(filename, strtok(NULL, "/"));
-
-			// remove .dtn suffix from the filename
-			ptr = strstr(filename, ".dtn");
-			if (ptr != NULL)
-				ptr[0] = '\0';
-
-			// add .csv extension
+			strncpy(temp, relative_source_addr.uri, strlen(relative_source_addr.uri) + 1);
+			if(strncmp(relative_source_addr.uri,"ipn",3) == 0)
+			{
+				strtok(temp, ":");
+				strcat(filename, strtok(NULL, "\0"));
+			}
+			else
+			{
+				char * ptr;
+				strtok(temp, "/"); printf("temp: %s\n",temp);
+				strcat(filename, strtok(NULL, "/"));
+				// remove .dtn suffix from the filename
+				ptr = strstr(filename, ".dtn");
+				if (ptr != NULL)
+					ptr[0] = '\0';
+			}
 			strcat(filename, ".csv");
+
 			full_filename = (char *) malloc(strlen(perf_opt->logs_dir) + strlen(filename) + 2);
 			sprintf(full_filename, "%s/%s", perf_opt->logs_dir, filename);
 			file = fopen(full_filename, "w");
@@ -373,8 +382,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 			session_put(session_list, session);
 			// write header in csv log file
 			fprintf(file,"Mon_RX_TIME;BSR_OR_ACK_SOURCE;BSR_OR_ACK_TIMESTAMP;BSR_OR_ACK_SEQNO;"
-					"TYPE;BUNDLE_X_SOURCE;BUNDLE_X_TIMESTAMP;BUNDLE_X_SEQNO;"
-					"FRAG_OFFSET;FRAG_LENGTH;");
+								"TYPE;BUNDLE_X_SOURCE;BUNDLE_X_TIMESTAMP;BUNDLE_X_SEQNO;"
+								"FRAG_OFFSET;FRAG_LENGTH;");
 			csv_print_status_report_timestamps_header(file);
 			csv_end_line(file);
 		}
@@ -460,7 +469,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	} // end loop
 
 	session_list_destroy(session_list);
-	bp_close(handle);
+	al_bp_close(handle);
 	bp_handle_open = FALSE;
 }
 // end monitor code
@@ -567,7 +576,7 @@ void monitor_clean_exit(int status)
 
 	// close bp_handle
 	if (bp_handle_open)
-		bp_close(handle);
+		al_bp_close(handle);
 	printf("Dtnperf Monitor: exit.\n");
 	exit(status);
 }
@@ -729,14 +738,14 @@ void session_list_destroy(session_list_t * list)
 	free(list);
 }
 
-session_t * session_create(bp_endpoint_id_t client_eid, char * full_filename, FILE * file, struct timeval start,
+session_t * session_create(al_bp_endpoint_id_t client_eid, char * full_filename, FILE * file, struct timeval start,
 		u32_t bundle_timestamp_secs, u32_t bundle_expiration_time)
 {
 	session_t * session;
 	session = (session_t *) malloc(sizeof(session_t));
 	session->start = (struct timeval *) malloc(sizeof(struct timeval));
 	session->stop_arrival_time = (struct timeval *) malloc(sizeof(struct timeval));
-	bp_copy_eid(&(session->client_eid), &client_eid);
+	al_bp_copy_eid(&(session->client_eid), &client_eid);
 	session->full_filename = strdup(full_filename);
 	session->file = file;
 	memcpy(session->start, &start, sizeof(struct timeval));
@@ -774,7 +783,7 @@ void session_put(session_list_t * list, session_t * session)
 
 }
 
-session_t *  session_get(session_list_t * list, bp_endpoint_id_t client)
+session_t *  session_get(session_list_t * list, al_bp_endpoint_id_t client)
 {
 	session_t * item = list->first;
 	while (item != NULL)

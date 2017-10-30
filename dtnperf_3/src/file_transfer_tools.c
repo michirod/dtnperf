@@ -13,7 +13,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <bp_abstraction_api.h>
+#include <al_bp_api.h>
 #include "file_transfer_tools.h"
 #include "bundle_tools.h"
 
@@ -32,7 +32,7 @@ void file_transfer_info_list_destroy(file_transfer_info_list_t * list)
 	free(list);
 }
 
-file_transfer_info_t * file_transfer_info_create(bp_endpoint_id_t client_eid,
+file_transfer_info_t * file_transfer_info_create(al_bp_endpoint_id_t client_eid,
 		int filename_len,
 		char * filename,
 		char * full_dir,
@@ -42,7 +42,7 @@ file_transfer_info_t * file_transfer_info_create(bp_endpoint_id_t client_eid,
 {
 	file_transfer_info_t * info;
 	info = (file_transfer_info_t *) malloc(sizeof(file_transfer_info_t));
-	bp_copy_eid(&(info->client_eid), &client_eid);
+	al_bp_copy_eid(&(info->client_eid), &client_eid);
 	info->filename_len = filename_len;
 	info->full_dir = (char*) malloc(strlen(full_dir) + 1);
 	strncpy(info->full_dir, full_dir, strlen(full_dir) + 1);
@@ -84,7 +84,7 @@ void file_transfer_info_put(file_transfer_info_list_t * list, file_transfer_info
 	list->count ++;
 }
 
-file_transfer_info_list_item_t *  file_transfer_info_get_list_item(file_transfer_info_list_t * list, bp_endpoint_id_t client)
+file_transfer_info_list_item_t *  file_transfer_info_get_list_item(file_transfer_info_list_t * list, al_bp_endpoint_id_t client)
 {
 	file_transfer_info_list_item_t * item = list->first;
 	while (item != NULL)
@@ -98,7 +98,7 @@ file_transfer_info_list_item_t *  file_transfer_info_get_list_item(file_transfer
 	return NULL;
 }
 
-file_transfer_info_t *  file_transfer_info_get(file_transfer_info_list_t * list, bp_endpoint_id_t client)
+file_transfer_info_t *  file_transfer_info_get(file_transfer_info_list_t * list, al_bp_endpoint_id_t client)
 {
 	file_transfer_info_list_item_t * item;
 	item = file_transfer_info_get_list_item(list, client);
@@ -109,7 +109,7 @@ file_transfer_info_t *  file_transfer_info_get(file_transfer_info_list_t * list,
 	return NULL;
 }
 
-void file_transfer_info_del(file_transfer_info_list_t * list, bp_endpoint_id_t client)
+void file_transfer_info_del(file_transfer_info_list_t * list, al_bp_endpoint_id_t client)
 {
 	file_transfer_info_list_item_t * item;
 	item = file_transfer_info_get_list_item(list, client);
@@ -203,12 +203,12 @@ int assemble_file(file_transfer_info_t * info, FILE * pl_stream,
 }
 
 int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
-		bp_bundle_object_t * bundle,
+		al_bp_bundle_object_t * bundle,
 		char * dir)
 {
-	bp_endpoint_id_t client_eid;
-	bp_timestamp_t timestamp;
-	bp_timeval_t expiration;
+	al_bp_endpoint_id_t client_eid;
+	al_bp_timestamp_t timestamp;
+	al_bp_timeval_t expiration;
 	file_transfer_info_t * info;
 	FILE * pl_stream;
 	int result;
@@ -220,17 +220,17 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 	char * full_dir;
 
 	// get info from bundle
-	bp_bundle_get_source(*bundle, &client_eid);
-	bp_bundle_get_creation_timestamp(*bundle, &timestamp);
-	bp_bundle_get_expiration(*bundle, &expiration);
-	bp_bundle_get_payload_size(*bundle, &pl_size);
+	al_bp_bundle_get_source(*bundle, &client_eid);
+	al_bp_bundle_get_creation_timestamp(*bundle, &timestamp);
+	al_bp_bundle_get_expiration(*bundle, &expiration);
+	al_bp_bundle_get_payload_size(*bundle, &pl_size);
 
 	// create stream from incoming bundle payload
 	if (open_payload_stream_read(*bundle, &pl_stream) < 0)
 		return -1;
 
 	// skip header and congestion control char
-	fseek(pl_stream, HEADER_SIZE + BUNDLE_OPT_SIZE, SEEK_SET);
+	fseek(pl_stream, HEADER_SIZE + 1, SEEK_SET);
 
 	info = file_transfer_info_get(info_list, client_eid);
 	if (info == NULL) // this is the first bundle
@@ -300,20 +300,20 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 u32_t get_file_fragment_size(u32_t payload_size, uint16_t filename_len)
 {
 	u32_t result;
-	// file fragment size is payload without header, ack options and offset
-	result = payload_size - (HEADER_SIZE + BUNDLE_OPT_SIZE + sizeof(uint32_t));
+	// file fragment size is payload without header, congestion ctrl char and offset
+	result = payload_size - (HEADER_SIZE + 1 + sizeof(uint32_t));
 	// ... without filename_len, filename, file_size
 	result -= (filename_len + sizeof(filename_len) + sizeof(uint32_t));
 	return result;
 }
 
-bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, int fd,
+al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, int fd,
 		char * filename, uint32_t file_dim, boolean_t * eof)
 {
 	if (f == NULL)
 		return BP_ENULLPNTR;
 
-	bp_error_t result;
+	al_bp_error_t result;
 	uint32_t fragment_len;
 	char * fragment;
 	uint32_t offset;

@@ -9,7 +9,7 @@
 #define DTNPERF_TYPES_H_
 
 #include "definitions.h"
-#include <bp_types.h>
+#include <al_bp_types.h>
 
 typedef enum {
 	DTNPERF_SERVER = 1,
@@ -32,7 +32,7 @@ typedef struct dtnperf_bundle_ack_options
 	dtnperf_ack_to_mon_options_t ack_to_mon;
 	boolean_t set_ack_expiration;
 	boolean_t set_ack_priority;
-	bp_bundle_priority_t priority;
+	al_bp_bundle_priority_t priority;
 } dtnperf_bundle_ack_options_t;
 
 /**
@@ -52,8 +52,8 @@ typedef struct dtnperf_options
 	char * server_output_file;	// stdout and stderr redirect here if daemon is TRUE [SERVER_OUTPUT_FILE]
 	char * monitor_output_file;	// stdout and stderr redirect here if daemon is TRUE [MONITOR_OUTPUT_FILE]
 	//client options
-	char dest_eid[BP_MAX_ENDPOINT_ID];	// destination eid
-	char mon_eid[BP_MAX_ENDPOINT_ID];	// monitor eid
+	char dest_eid[AL_BP_MAX_ENDPOINT_ID];	// destination eid
+	char mon_eid[AL_BP_MAX_ENDPOINT_ID];	// monitor eid
 	char op_mode;    		// operative mode (T = time_mode, D = data_mode, F = file_mode) [D]
 	unsigned long data_qty;	// data to be transmitted (bytes) [0]
 	char * D_arg;			// arguments of -D option
@@ -69,7 +69,7 @@ typedef struct dtnperf_options
 	int wait_before_exit;	// additional interval before exit [0]
 	long bundle_payload;  	// quantity of data (in bytes) to send (-p option) [DEFAULT_PAYLOAD]
 	dtnperf_bundle_ack_options_t bundle_ack_options; // options to send to the server
-	bp_bundle_payload_location_t payload_type;	// the type of data source for the bundle [DTN_PAYLOAD_FILE]
+	al_bp_bundle_payload_location_t payload_type;	// the type of data source for the bundle [DTN_PAYLOAD_FILE]
 	boolean_t create_log;	// create log file [FALSE]
 	char * log_filename;	// log filename [LOG_FILENAME]
 	//server options
@@ -87,8 +87,8 @@ typedef struct dtnperf_options
  */
 typedef struct dtnperf_connection_options
 	{
-		bp_timeval_t expiration;			// bundle expiration time (sec)
-		bp_bundle_priority_t priority;		// bundle priority
+		al_bp_timeval_t expiration;			// bundle expiration time (sec)
+		al_bp_bundle_priority_t priority;		// bundle priority
 		boolean_t delivery_receipts;
 		boolean_t forwarding_receipts;
 		boolean_t custody_transfer;
@@ -107,8 +107,8 @@ typedef struct dtnperf_global_options
 
 typedef struct dtnperf_server_ack_payload
 {
-	bp_endpoint_id_t bundle_source;
-	bp_timestamp_t bundle_creation_ts;
+	al_bp_endpoint_id_t bundle_source;
+	al_bp_timestamp_t bundle_creation_ts;
 } dtnperf_server_ack_payload_t;
 
 
