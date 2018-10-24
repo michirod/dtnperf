@@ -1,6 +1,7 @@
 /********************************************************
  **  Authors: Michele Rodolfi, michele.rodolfi@studio.unibo.it
  **           Anna d'Amico, anna.damico@studio.unibo.it
+ **           Davide Pallotti, davide.pallotti@studio.unibo.it
  **           Carlo Caini (DTNperf_3 project supervisor), carlo.caini@unibo.it
  **
  **
@@ -123,6 +124,30 @@ int is_in_info(send_information_t* send_info, al_bp_timestamp_t bundle_timestamp
     }
     return -1;
 } // end is_in_info
+
+int is_in_info_timestamp(send_information_t* send_info, al_bp_timestamp_t bundle_timestamp, int window)
+{
+    static const uint32_t TOLERANCE = 1;
+
+	int oldest_i = -1;
+	int i;
+	for (i = 0; i < window; i++)
+	{
+        if (send_info[i].bundle_id.creation_ts.secs >= bundle_timestamp.secs &&
+				send_info[i].bundle_id.creation_ts.secs <= bundle_timestamp.secs + TOLERANCE)
+		{
+			if (oldest_i < 0 ||
+					send_info[i].bundle_id.creation_ts.secs < send_info[oldest_i].bundle_id.creation_ts.secs ||
+					(send_info[i].bundle_id.creation_ts.secs == send_info[oldest_i].bundle_id.creation_ts.secs &&
+						send_info[i].bundle_id.creation_ts.seqno < send_info[oldest_i].bundle_id.creation_ts.seqno))
+			{
+				oldest_i = i;
+			}
+        }
+    }
+
+    return oldest_i;
+}
 
 int count_info(send_information_t* send_info, int window)
 {
@@ -592,7 +617,7 @@ al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, dtnpe
 	uint32_t extension_header;
 	extension_header = 0;
 
-	// THIS FLAG IS = 1 IF EXTENSION IS USED AND THEN IT HAS TO BE ATTACHED AT THE END 
+	// THIS FLAG IS = 1 IF EXTENSION IS USED AND THEN IT HAS TO BE ATTACHED AT THE END
 	// OF THE PAYLOAD
 	uint8_t  extension=0;
 
@@ -611,10 +636,10 @@ al_bp_error_t prepare_server_ack_payload(dtnperf_server_ack_payload_t ack, dtnpe
 		extension_header |= BO_CRC_ENABLED;
 		extension=1;
 	}
-	// IF OTHER EXTENSIONS NEED TO BE USED, PUT THE 
+	// IF OTHER EXTENSIONS NEED TO BE USED, PUT THE
 	// CODE TO ENABLE THEM HERE...
 	// [..]
-	
+
 	// CHECK IF ONE (OR MORE) EXTENSION HAS BEEN SET AND THEN WRITE IT
 	// AT THE END OF THE PAYLOAD
 	if (extension==1)

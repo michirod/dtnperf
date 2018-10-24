@@ -182,9 +182,9 @@ void csv_time_report(int b_sent, int payload, struct timeval start, struct timev
 
     g_put = (data * 8 * 1000) / ((double)(end.tv_sec - start.tv_sec) * 1000.0 +
                           (double)(end.tv_usec - start.tv_usec) / 1000.0);
-    
+
     double time_s =  ((double)(end.tv_sec - start.tv_sec) * 1000.0 + (double)(end.tv_usec - start.tv_usec) / 1000.0) / 1000;
-    
+
     fprintf(csv_log, "%d,%d,%.1f,%E,%.3f\n", b_sent, payload, time_s, data, g_put);
 
 } // end csv_time_report
@@ -205,7 +205,7 @@ void csv_data_report(int b_id, int payload, struct timeval start, struct timeval
 
     g_put = (payload * 8) / ((double)(end.tv_sec - start.tv_sec) * 1000.0 +
                              (double)(end.tv_usec - start.tv_usec) / 1000.0) / 1000.0;
-                             
+
     double time_s =  ((double)(end.tv_sec - start.tv_sec) * 1000.0 + (double)(end.tv_usec - start.tv_usec) / 1000.0) / 1000;
 
     fprintf(csv_log, "%d,%d,%.1f,%.3f\n", b_id, payload, time_s, g_put);
@@ -276,12 +276,12 @@ void show_report (u_int buf_len, char* eid, struct timeval start, struct timeval
     double time_s = ((double)(end.tv_sec - start.tv_sec) * 1000.0 + (double)(end.tv_usec - start.tv_usec) / 1000.0) / 1000.0;
 
     double data_MB = data / 1000000.0;
-    
+
     if (output == NULL)
         printf("got %d byte report from [%s]: time=%.1f s - %E Mbytes sent", buf_len, eid, time_s, data_MB);
     else
         fprintf(output, "\n total time=%.1f s - %E Mbytes sent", time_s, data_MB);
-  
+
     // report goodput (bits transmitted / time)
     g_put = (data_MB * 8) / time_s;
     if (output == NULL)
