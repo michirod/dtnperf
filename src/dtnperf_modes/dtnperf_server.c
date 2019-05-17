@@ -280,7 +280,7 @@ void run_dtnperf_server(dtnperf_global_options_t * perf_g_opt)
 		case BP_EXTB_SUCCESS:
 			receive_ok = TRUE;
 			break;
-		case BP_EXTB_ERRRECEPOINTER:
+		case BP_EXTB_ERRRECEPINTER:
 			error_print("[DTNperf warning] bundle reception interrupted\n");
 			al_bp_bundle_free(&bundle_object);
 			break;

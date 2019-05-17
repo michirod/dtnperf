@@ -224,7 +224,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		case BP_EXTB_SUCCESS:
 			receive_ok = TRUE;
 			break;
-		case BP_EXTB_ERRRECEPOINTER:
+		case BP_EXTB_ERRRECEPINTER:
 			error_print("[DTNperf warning] bundle reception interrupted\n");
 			al_bp_bundle_free(&bundle_object);
 			break;
