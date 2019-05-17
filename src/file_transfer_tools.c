@@ -1,6 +1,7 @@
 /********************************************************
  **  Authors: Michele Rodolfi, michele.rodolfi@studio.unibo.it
  **           Anna d'Amico, anna.damico@studio.unibo.it
+ **           Andrea Bisacchi, andrea.bisacchi5@studio.unibo.it
  **           Carlo Caini (DTNperf_3 project supervisor), carlo.caini@unibo.it
  **
  **
@@ -281,8 +282,7 @@ int process_incoming_file_transfer_bundle(file_transfer_info_list_t *info_list,
 		}
 		full_dir = (char*) malloc(strlen(dir) + strlen(eid) + 20);
 		sprintf(full_dir, "%s%s/", dir, eid);
-		sprintf(temp, "mkdir -p %s", full_dir);
-		if(system(temp)<0){
+		if(mkpath(full_dir)<0){
 			printf(" Error: Couldn't create temporary file\n");
 			return -1;
 		}
@@ -406,5 +406,26 @@ al_bp_error_t prepare_file_transfer_payload(dtnperf_options_t *opt, FILE * f, in
 
 	//printf("\n\tFRAGMENT:\n\t%s\n", fragment);
 	return result;
+}
+
+int mkpath(char* dir)
+{
+	char* p;
+	int offset = 0;
+	char* temp;
+	if (dir == NULL) return -1;
+	if (dir[0] == '/') offset = 1;
+	temp = (char*) malloc(sizeof(char) * (strlen(dir) + 1));
+	for (p = strchr(dir + offset, '/'); p; p = strchr(p+1, '/'))
+	{
+		memset(temp, '\0', sizeof(char) * (strlen(dir) + 1));
+		memcpy(temp, dir, p - dir);
+		if (mkdir(temp, S_IRWXU) == -1)
+		{
+			if (errno != EEXIST) { free(temp); return -1; }
+		}
+	}
+	free(temp);
+	return 0;
 }
 

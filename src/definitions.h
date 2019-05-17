@@ -1,6 +1,7 @@
 /********************************************************
  **  Authors: Michele Rodolfi, michele.rodolfi@studio.unibo.it
  **           Anna d'Amico, anna.damico@studio.unibo.it
+ **           Andrea Bisacchi, andrea.bisacchi5@studio.unibo.it
  **           Carlo Caini (DTNperf_3 project supervisor), carlo.caini@unibo.it
  **
  **
@@ -18,7 +19,7 @@
 #include <stdint.h>
 
 // dtnperf version
-#define DTNPERF_VERSION "3.5.1"
+#define DTNPERF_VERSION "3.6.1"
 
 // dtnperf server mode string
 #define SERVER_STRING "--server"
@@ -138,6 +139,9 @@
 
 // default value (in bytes) for bundle payload
 #define DEFAULT_PAYLOAD 50000
+
+// DTN none
+#define DTNNONE_STRING "dtn:none"
 
 // CBHE scheme
 #define CBHE_SCHEME_STRING "ipn"

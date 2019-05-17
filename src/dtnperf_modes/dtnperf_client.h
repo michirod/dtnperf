@@ -27,12 +27,12 @@ void client_handler(int sig);
 void client_clean_exit(int status);
 
 //create payload function
-void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_log, int num_bundle);
+void create_fill_payload_buf(int num_bundle);
 
 //pthread functions
 void * send_bundles(void * opt);
 void * congestion_control(void * opt);
 void * congestion_window_expiration_timer(void * opt);
-void * start_dedicated_monitor(void * params);
+//void * start_dedicated_monitor(void * params);
 void * wait_for_sigint(void * arg);
 #endif /* DTNPERF_CLIENT_H_ */

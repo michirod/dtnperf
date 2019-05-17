@@ -2,6 +2,8 @@
  **  Authors: Michele Rodolfi, michele.rodolfi@studio.unibo.it
  **           Anna d'Amico, anna.damico@studio.unibo.it
  **           Davide Pallotti, davide.pallotti@studio.unibo.it
+ **           Marco Bertolazzi, marco.bertolazzi3@studio.unibo.it
+ **           Andrea Bisacchi, andrea.bisacchi5@studio.unibo.it
  **           Carlo Caini (DTNperf_3 project supervisor), carlo.caini@unibo.it
  **
  **
@@ -14,36 +16,43 @@
  */
 
 #include <al_bp_api.h>
+#include <al_bp_extB.h>
 
+#include "../dtnperf_debugger.h"
 #include "dtnperf_monitor.h"
 #include "../includes.h"
 #include "../utils.h"
 #include "../bundle_tools.h"
 #include "../csv_tools.h"
 
+#ifdef mingw
+#include <windows.h>
+BOOL WINAPI ConsoleHandler(DWORD);
+BOOL WINAPI ConsoleHandlerDedicated(DWORD dwType);
+#endif
+
 /*
  * Global Variables
  */
 
 // pthread variables
-pthread_t session_exp_timer;
-pthread_mutex_t mutexdata;
+static pthread_t session_exp_timer;
+static pthread_mutex_t mutexdata;
 
-session_list_t * session_list;
-al_bp_handle_t handle;
-al_bp_reg_id_t regid;
-al_bp_endpoint_id_t local_eid;
+static session_list_t * session_list;
 
 // oneCSVonly flag
-boolean_t oneCSVonly;
+static boolean_t oneCSVonly;
 
 //rtPrint flag
-boolean_t rtPrint;
+static boolean_t rtPrint;
 
-// flags to exit cleanly
-boolean_t dedicated_monitor;
-boolean_t bp_handle_open;
+static al_bp_extB_registration_descriptor registration_descriptor;
 
+static pthread_mutex_t mutex_forced_close;
+static boolean_t forced_close = FALSE;
+static boolean_t get_forced_close_monitor();
+static void set_forced_close_monitor(boolean_t value);
 
 /*  ----------------------------
  *          MONITOR CODE
@@ -55,8 +64,8 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	 * ------------------------ */
 	dtnperf_options_t * perf_opt = parameters->perf_g_opt->perf_opt;
 
+	al_bp_extB_error_t utility_error;
 	al_bp_error_t error;
-	al_bp_reg_info_t reginfo;
 	al_bp_bundle_object_t bundle_object;
 	al_bp_bundle_status_report_t * status_report;
 	al_bp_endpoint_id_t bundle_source_addr;
@@ -69,8 +78,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	session_t * session;
 	bundle_type_t bundle_type;
 	struct timeval current, start;
-//	struct stat file_stat;
-	char * command;
+	//	struct stat file_stat;
 	char temp[256];
 	char * filename;
 	int filename_len;
@@ -78,20 +86,16 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	FILE * file;
 	uint32_t extension_ack;
 
-//	int stat_res;
+	boolean_t receive_ok;
+
+	//	int stat_res;
 
 	/* ------------------------
 	 * initialize variables
 	 * ------------------------ */
-	boolean_t debug = perf_opt->debug;
-	int debug_level = perf_opt->debug_level;
 
 	oneCSVonly = perf_opt->oneCSVonly;
 	rtPrint = perf_opt->rtPrint;
-
-	memset(&local_eid, 0, sizeof(local_eid));
-	dedicated_monitor = parameters->dedicated_monitor;
-	bp_handle_open = FALSE;
 
 	perf_opt->logs_dir = correct_dirname(perf_opt->logs_dir);
 
@@ -99,162 +103,93 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	session_list = session_list_create();
 
 	// set out buffer size if daemon
-	if (perf_opt->daemon)
+	/*if (perf_opt->daemon)
 	{
 		setlinebuf(stdout);
 		setlinebuf(stderr);
+	}*/
+
+	debugger_init(perf_opt->debug, perf_opt->create_log, perf_opt->log_filename);
+
+	utility_error = al_bp_extB_init(perf_opt->eid_format_forced, perf_opt->ipn_local_num);
+	if (utility_error != BP_EXTB_SUCCESS)
+	{
+		error_print("[DTNperf fatal error] no BP protocol found.\n");
+		monitor_clean_exit(1);
 	}
 
 	// create dir where dtnperf monitor will save logs
-	// command should be: mkdir -p "logs_dir"
-	if(debug && debug_level > 0)
-		printf("[debug] initializing shell command...");
-	command = malloc(sizeof(char) * (10 + strlen(perf_opt->logs_dir)));
-	sprintf(command, "mkdir -p %s", perf_opt->logs_dir);
-	if(debug && debug_level > 0)
-		printf("done. Shell command = %s\n", command);
-
-	// execute shell command
-	if(debug && debug_level > 0)
-		printf("[debug] executing shell command...");
-	if (system(command) < 0)
+	if (mkpath(perf_opt->logs_dir) < 0)
 	{
 		perror("[DTNperf fatal error] in opening monitor logs dir");
 		monitor_clean_exit(-1);
 	}
-	free(command);
-	if(debug && debug_level > 0)
-		printf("done\n");
 
 	if(oneCSVonly)
 		printf("Opening monitor in Unique session mode. CTRL^C to exit\n");
 
 	// signal handlers
+#ifdef mingw
+	signal(SIGINT,SIG_IGN);
+	if (!dedicated_monitor) { //if dedicated i block the signals in win(it closes with FORCE STOP or STOP bundle)
+		if (!SetConsoleCtrlHandler(ConsoleHandler,TRUE)) {
+			fprintf(stderr, "Unable to install handler!\n");
+			monitor_clean_exit(1);
+		}
+	}
+	else {
+		if (!SetConsoleCtrlHandler(ConsoleHandlerDedicated,TRUE)) {
+			fprintf(stderr, "Unable to install handler!\n");
+			monitor_clean_exit(1);
+		}
+	}
+#else
 	signal(SIGINT, monitor_handler);
+
 	signal(SIGUSR1, monitor_handler);
 	signal(SIGUSR2, monitor_handler);
+#endif
 
-	//open the connection to the bundle protocol router
-	if(debug && debug_level > 0)
-		printf("[debug] opening connection to bundle protocol router...");
-	if (perf_opt->use_ip)
-		error = al_bp_open_with_ip(perf_opt->ip_addr, perf_opt->ip_port, &handle);
+	// XXX no more supported
+	/*if (perf_opt->use_ip)
+		utility_error = al_bp_extB_register(&registration_descriptor, perf_opt->ip_addr, perf_opt->ip_port, perf_opt->ipn_local_num, atoi(MON_EP_NUM_SERVICE), MON_EP_STRING, perf_opt->bp_implementation);
 	else
-		error = al_bp_open(&handle);
-	if (error != BP_SUCCESS)
+		utility_error = al_bp_extB_register(&registration_descriptor, NULL, 0, perf_opt->ipn_local_num, atoi(MON_EP_NUM_SERVICE), MON_EP_STRING, perf_opt->bp_implementation);*/
+	
+	utility_error = al_bp_extB_register(&registration_descriptor, MON_EP_STRING, atoi(MON_EP_NUM_SERVICE));
+
+	switch (utility_error)
 	{
+	case BP_EXTB_SUCCESS:
+		break;
+	case BP_EXTB_ERROPEN:
 		fflush(stdout);
-		fprintf(stderr, "[DTNperf fatal error] in opening bp handle: %s\n", al_bp_strerror(error));
+		error_print("[DTNperf fatal error] in opening bp handle: %s\n", al_bp_extB_strerror(registration_descriptor));
 		monitor_clean_exit(1);
-	}
-	else
-	{
-		bp_handle_open = TRUE;
-	}
-	if(debug && debug_level > 0)
-		printf("done\n");
-
-	//build a local eid
-	if(debug && debug_level > 0)
-	{
-		printf("[debug] building a local eid in format ");
-		if (perf_opt->eid_format_forced == 'D' && perf_opt->bp_implementation != BP_DTN && perf_opt->bp_implementation != BP_IBR)
-			printf("forced DTN...");
-		else if (perf_opt->eid_format_forced == 'I' && perf_opt->bp_implementation != BP_ION)
-			printf("forced IPN...");
-		else
-			printf("standard...");
-	}
-	if(perf_opt->bp_implementation == BP_ION && (perf_opt->eid_format_forced == 'N' || perf_opt->eid_format_forced == 'I'))
-		// Use ION implementation with standard eid scheme
-		error = al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE, CBHE_SCHEME);
-	else if(perf_opt->bp_implementation == BP_DTN && (perf_opt->eid_format_forced == 'N' || perf_opt->eid_format_forced == 'D'))
-		// Use DTN2 implementation with standard eid scheme
-	{
-		if (parameters->dedicated_monitor)
-			sprintf(temp, "%s_%d", MON_EP_STRING, parameters->client_id);
-		else
-			sprintf(temp, "%s", MON_EP_STRING);
-		error = al_bp_build_local_eid(handle, &local_eid, temp, DTN_SCHEME);
-	}
-	else if(perf_opt->bp_implementation == BP_IBR && (perf_opt->eid_format_forced == 'N' || perf_opt->eid_format_forced == 'D'))
-		// Use IBR-DTN implementation with standard eid scheme
-	{
-		if (parameters->dedicated_monitor)
-			sprintf(temp, "%s_%d", MON_EP_STRING, parameters->client_id);
-		else
-			sprintf(temp, "%s", MON_EP_STRING);
-		error = al_bp_build_local_eid(handle, &local_eid, temp, DTN_SCHEME);
-	}
-	else if(perf_opt->bp_implementation == BP_ION && perf_opt->eid_format_forced == 'D')
-		// Use ION implementation with forced DTN scheme
-	{
-		if (parameters->dedicated_monitor)
-			sprintf(temp, "%s_%d", MON_EP_STRING, parameters->client_id);
-		else
-			sprintf(temp, "%s", MON_EP_STRING);
-		error = al_bp_build_local_eid(handle, &local_eid, temp, DTN_SCHEME);
-	}
-	else if(perf_opt->bp_implementation == BP_DTN && perf_opt->eid_format_forced == 'I')
-		// Use DTN2 implementation with forced IPN scheme
-	{
-		//in this case the api al_bp_build_local_eid() wants ipn_local_number.service_number
-		sprintf(temp, "%d.%s", perf_opt->ipn_local_num, MON_EP_NUM_SERVICE);
-		error = al_bp_build_local_eid(handle, &local_eid, temp, CBHE_SCHEME);
-	}
-	else if (perf_opt->bp_implementation == BP_IBR && perf_opt->eid_format_forced == 'I')
-		// Use IBR-DTN implementation with forced IPN scheme
-	{
-		error = al_bp_build_local_eid(handle, &local_eid, MON_EP_NUM_SERVICE, CBHE_SCHEME);
-	}
-
-	if(debug && debug_level > 0)
-		printf("done\n");
-
-	if (debug)
-		printf("local_eid = %s\n", local_eid.uri);
-	if (error != BP_SUCCESS)
-	{
+		break;
+	case BP_EXTB_ERRLOCALEID:
 		fflush(stdout);
-		fprintf(stderr, "[DTNperf fatal error] in building local EID: '%s'\n", al_bp_strerror(error));
+		error_print("[DTNperf fatal error] in building local EID: '%s'\n", al_bp_extB_strerror(registration_descriptor));
 		monitor_clean_exit(1);
+		break;
+
+	case BP_EXTB_ERRREGISTER:
+		fflush(stdout);
+		error_print("[DTNperf fatal error] existing a registration with the same eid.\n");
+		error_print("regid 0x%x\n", (unsigned int) al_bp_extB_get_regid(registration_descriptor));
+		monitor_clean_exit(1);
+		break;
+	default:
+		error_print("[DTNperf fatal error] unkown error.\n");
+		monitor_clean_exit(1);
+		break;
 	}
 
-	// checking if there is already a registration
-	if(debug && debug_level > 0)
-		printf("[debug] checking for existing registration...");
-	error = al_bp_find_registration(handle, &local_eid, &regid);
-	if ( (error == BP_SUCCESS && perf_opt->bp_implementation == BP_DTN)
-			|| (perf_opt->bp_implementation == BP_ION && (error == BP_EBUSY || error == BP_EPARSEEID))
-			|| (perf_opt->bp_implementation == BP_IBR && error == BP_SUCCESS))
 	{
-		fflush(stdout);
-		fprintf(stderr, "[DTNperf fatal error] existing a registration with the same eid.\n");
-		fprintf(stderr, "regid 0x%x\n", (unsigned int) regid);
-		monitor_clean_exit(1);
+		al_bp_endpoint_id_t temp = al_bp_extB_get_local_eid(registration_descriptor);
+		debug_print(DEBUG_OFF, "local_eid = %s\n", temp.uri);
 	}
-	if ((debug) && (debug_level > 0))
-		printf(" done\n");
-
-	//create a new registration to the local router based on this eid
-	if(debug && debug_level > 0)
-		printf("[debug] registering to local daemon...");
-	memset(&reginfo, 0, sizeof(reginfo));
-	al_bp_copy_eid(&reginfo.endpoint, &local_eid);
-	reginfo.flags = BP_REG_DEFER;
-	reginfo.regid = BP_REGID_NONE;
-	reginfo.expiration = 0;
-	if ((error = al_bp_register(&handle, &reginfo, &regid)) != 0)
-	{
-		fflush(stdout);
-		fprintf(stderr, "[DTNperf fatal error] in creating registration: %d (%s)\n",
-				error, al_bp_strerror(al_bp_errno(handle)));
-		monitor_clean_exit(1);
-	}
-	if ((debug) && (debug_level > 0))
-		printf(" done\n");
-	if (debug)
-		printf("regid 0x%x\n", (unsigned int) regid);
+	debug_print(DEBUG_L1,"[DEBUG_L1] regid 0x%x\n", (unsigned int) al_bp_extB_get_regid(registration_descriptor));
 
 	// start expiration timer thread
 	if (!oneCSVonly) //no need of timer in case of unique session
@@ -270,125 +205,111 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 		bundle_type = NONE;
 
 		// create a bundle object
-		if ((debug) && (debug_level > 0))
-			printf("[debug] initiating memory for bundles...\n");
+		debug_print(DEBUG_L2,"[DEBUG_L2] initiating memory for bundles...");
 		error = al_bp_bundle_create(&bundle_object);
 		if (error != BP_SUCCESS)
 		{
 			fflush(stdout);
-			fprintf(stderr, "[DTNperf fatal error] in initiating memory for bundles: %s\n", al_bp_strerror(error));
+			error_print("[DTNperf fatal error] in initiating memory for bundles: %s\n", al_bp_strerror(error));
 			monitor_clean_exit(1);
 		}
-		if(debug && debug_level > 0)
-			printf("done\n");
+		debug_print(DEBUG_L2,"done\n");
 
 
 		// wait until receive a bundle
-		if ((debug) && (debug_level > 0))
-			printf("[debug] waiting for bundles...\n");
-		error = al_bp_bundle_receive(handle, bundle_object, BP_PAYLOAD_MEM, -1);
-		if(error == BP_ERECVINT || error == BP_ETIMEOUT)
-		{
-			if(error == BP_ERECVINT )
-				fprintf(stderr, "[DTNperf warning] bundle reception interrupted\n");
-			if(error == BP_ETIMEOUT )
-				fprintf(stderr, "[DTNperf warning] bundle reception timeout expired\n");
-
-			// free memory for bundle
+		debug_print(DEBUG_L2,"[DEBUG_L2] waiting for bundles...\n");
+		utility_error = al_bp_extB_receive(registration_descriptor, bundle_object, BP_PAYLOAD_MEM, -1);
+		receive_ok = FALSE;
+		switch (utility_error) {
+		case BP_EXTB_SUCCESS:
+			receive_ok = TRUE;
+			break;
+		case BP_EXTB_ERRRECEPOINTER:
+			error_print("[DTNperf warning] bundle reception interrupted\n");
 			al_bp_bundle_free(&bundle_object);
+			break;
+		case BP_EXTB_ERRTIMEOUT:
+			error_print("[DTNperf warning] bundle reception timeout expired\n");
+			al_bp_bundle_free(&bundle_object);
+			break;
+		default:
+			fflush(stdout);
+			error_print("[DTNperf fatal error] in getting recv reply: %d (%s)\n", al_bp_extB_get_error(registration_descriptor), al_bp_strerror(al_bp_extB_errno(registration_descriptor)));
+			monitor_clean_exit(1);
+			break;
 		}
-		else
+		if (receive_ok)
 		{
-			if (error != BP_SUCCESS)
-			{
-				fflush(stdout);
-				fprintf(stderr, "[DTNperf fatal error] in getting recv reply: %d (%s)\n",
-						error, al_bp_strerror(al_bp_errno(handle)));
-				monitor_clean_exit(1);
-			}
-			if ((debug) && (debug_level > 0))
-				printf(" bundle received\n");
+			debug_print(DEBUG_L1,"[DEBUG_L1] bundle received\n");
 
 			// mark current time
-			if ((debug) && (debug_level > 0))
-				printf("[debug] marking time...");
+			debug_print(DEBUG_L2,"[DEBUG_L2] marking time...");
 			gettimeofday(&current, NULL);
-			if ((debug) && (debug_level > 0))
-				printf(" done\n");
+			debug_print(DEBUG_L2," done\n");
 
 			// get SOURCE eid
-			if ((debug) && (debug_level > 0))
-				printf("[debug]\tgetting source eid...");
+			debug_print(DEBUG_L2,"[DEBUG_L2] getting source eid...");
 			error = al_bp_bundle_get_source(bundle_object, &bundle_source_addr);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "[DTNperf fatal error] in getting bundle source eid: %s\n",
+				error_print("[DTNperf fatal error] in getting bundle source eid: %s\n",
 						al_bp_strerror(error));
 				monitor_clean_exit(1);
 			}
-			if ((debug) && (debug_level > 0))
-			{
-				printf(" done:\n");
-				printf("\tbundle_source_addr = %s\n", bundle_source_addr.uri);
-				printf("\n");
-			}
+
+			debug_print(DEBUG_L2," done:\n");
+			debug_print(DEBUG_L1,"[DEBUG_L1] bundle_source_addr = %s\n\n", bundle_source_addr.uri);
 
 			// get bundle CREATION TIMESTAMP
-			if ((debug) && (debug_level > 0))
-				printf("[debug]\tgetting bundle creation timestamp...");
+			debug_print(DEBUG_L2,"[DEBUG_L2]\tgetting bundle creation timestamp...");
 			error = al_bp_bundle_get_creation_timestamp(bundle_object, &bundle_creation_timestamp);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "[DTNperf fatal error] in getting bundle creation timestamp: %s\n",
+				error_print("[DTNperf fatal error] in getting bundle creation timestamp: %s\n",
 						al_bp_strerror(error));
 				monitor_clean_exit(1);
 			}
-			if ((debug) && (debug_level > 0))
-			{
-				printf(" done:\n");
-				printf("\tbundle creation timestamp:\n"
-						"\tsecs = %d\n\tseqno= %d\n",
-						(int)bundle_creation_timestamp.secs, (int)bundle_creation_timestamp.seqno);
-				printf("\n");
-			}
+
+			debug_print(DEBUG_L2," done:\n");
+			debug_print(DEBUG_L2,"\tbundle creation timestamp:\n"
+					"\tsecs = %d\n\tseqno= %d\n",
+					(int)bundle_creation_timestamp.secs, (int)bundle_creation_timestamp.seqno);
+			debug_print(DEBUG_L2,"\n");
+
 
 			// get bundle EXPIRATION TIME only in DTN2 and IBR-DTN
 			if(perf_opt->bp_implementation == BP_DTN || perf_opt->bp_implementation == BP_IBR)
 			{
-				if ((debug) && (debug_level > 0))
-				printf("[debug]\tgetting bundle expiration time...");
+				debug_print(DEBUG_L2,"[DEBUG_L2]\tgetting bundle expiration time...");
 
 				error = al_bp_bundle_get_expiration(bundle_object, &bundle_expiration);
 				if (error != BP_SUCCESS)
 				{
 					fflush(stdout);
-					fprintf(stderr, "[DTNperf fatal error] in getting bundle expiration time: %s\n",
+					error_print("[DTNperf fatal error] in getting bundle expiration time: %s\n",
 							al_bp_strerror(error));
 					monitor_clean_exit(1);
 				}
-				if ((debug) && (debug_level > 0))
-				{
-					printf(" done:\n");
-					printf("\tbundle expiration: %u\n", bundle_expiration);
-					printf("\n");
-				}
+
+				debug_print(DEBUG_L2," done:\n");
+				debug_print(DEBUG_L2,"\tbundle expiration: %u\n", bundle_expiration);
+				debug_print(DEBUG_L2,"\n");
+
 			}
 
 			// check if bundle is a status report
-			if ((debug) && (debug_level > 0))
-				printf("[debug] check if bundle is a status report...\n");
+			debug_print(DEBUG_L1,"[DEBUG_L1] check if bundle is a status report... ");
 			error = al_bp_bundle_get_status_report(bundle_object, &status_report);
 			if (error != BP_SUCCESS)
 			{
 				fflush(stdout);
-				fprintf(stderr, "[DTNperf fatal error] in checking if bundle is a status report: %d (%s)\n",
-						error, al_bp_strerror(al_bp_errno(handle)));
+				error_print("[DTNperf fatal error] in checking if bundle is a status report: %d (%s)\n",
+						error, al_bp_strerror(al_bp_extB_errno(registration_descriptor)));
 				continue;
 			}
-			if ((debug) && (debug_level > 0))
-				printf(" %s\n", status_report == NULL ? "no" : "yes");
+			debug_print(DEBUG_L1," %s\n", (status_report == NULL) ? "no" : "yes");
 
 			// check for other bundle types
 			if (status_report != NULL)
@@ -399,24 +320,21 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				if (bundle_header == FORCE_STOP_HEADER)
 				{
 					bundle_type = CLIENT_FORCE_STOP;
-					if ((debug) && (debug_level > 0))
-						printf("[debug] Monitor: bundle force stop arrived \n");
+					debug_print(DEBUG_L2,"[DEBUG_L2] Monitor: bundle force stop arrived \n");
 				}
 				else if (bundle_header == STOP_HEADER)
 				{
 					bundle_type = CLIENT_STOP;
-					if ((debug) && (debug_level > 0))
-						printf("[debug] Monitor: bundle stop arrived\n");
+					debug_print(DEBUG_L2,"[DEBUG_L2] Monitor: bundle stop arrived\n");
 				}
 				else if (bundle_header == DSA_HEADER)
 				{
 					bundle_type = SERVER_ACK;
-					if ((debug) && (debug_level > 0))
-						printf("[debug] Monitor: server ack arrived\n");
+					debug_print(DEBUG_L2,"[DEBUG_L2] Monitor: server ack arrived\n");
 				}
 				else // unknown bundle type
 				{
-					fprintf(stderr, "[DTNperf warning] unknown bundle type\n");
+					error_print("[DTNperf warning] unknown bundle type\n");
 					continue;
 				}
 			}
@@ -504,13 +422,13 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 							relative_creation_timestamp.secs);
 				else // standard behavior
 					session = session_create(relative_source_addr, full_filename, file, start,
-						relative_creation_timestamp.secs, bundle_expiration);
+							relative_creation_timestamp.secs, bundle_expiration);
 				session_put(session_list, session);
 
 				// write header in csv log file
 				fprintf(file,"RX_TIME;Report_SRC;Report_TST;Report_SQN;"
-								"Report_Type;Bndl_SRC;Bndl_TST;Bndl_SQN;"
-								"Bndl_FO;Bndl_FL;");
+						"Report_Type;Bndl_SRC;Bndl_TST;Bndl_SQN;"
+						"Bndl_FO;Bndl_FL;");
 
 				csv_print_status_report_timestamps_header(file);
 
@@ -533,8 +451,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				if(perf_opt->expiration_session > bundle_expiration)
 					session->expiration = bundle_expiration;
 			}
-			if ((debug) && (debug_level > 0))
-				printf("[debug] session expiration = %u s\n", session->expiration);
+			debug_print(DEBUG_L2,"[DEBUG_L2] session expiration = %u s\n", session->expiration);
 
 			file = session->file;
 			memcpy(&start, session->start, sizeof(struct timeval));
@@ -607,7 +524,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 					csv_print(file, "1;");
 				else
 					csv_print(file, "0;");
-			}
+			} 
 			else
 				csv_print(file, " ;");
 
@@ -626,8 +543,7 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 				else
 					session->wait_after_stop = bundle_expiration;
 				gettimeofday(session->stop_arrival_time, NULL);
-				if ((debug) && (debug_level > 0))
-					printf("[debug] bundle stop arrived: closing session in %u s MAX\n", session->wait_after_stop);
+				debug_print(DEBUG_L2,"[DEBUG_L2] bundle stop arrived: closing session in %u s MAX\n", session->wait_after_stop);
 				pthread_mutex_unlock(&mutexdata);
 			}
 			else if (bundle_type == CLIENT_FORCE_STOP && !oneCSVonly)
@@ -643,10 +559,12 @@ void run_dtnperf_monitor(monitor_parameters_t * parameters)
 	} // end loop
 
 	session_list_destroy(session_list);
-	al_bp_close(handle);
-	if(parameters->dedicated_monitor == TRUE)
-		al_bp_unregister(handle,regid,local_eid);
-	bp_handle_open = FALSE;
+
+	al_bp_extB_unregister(registration_descriptor);
+	al_bp_extB_destroy();
+
+	debugger_destroy();
+
 }
 // end monitor code
 
@@ -657,11 +575,10 @@ void * session_expiration_timer(void * opt)
 	struct timeval current_time;
 	session_t * session, * next;
 
-	while(1)
+	while(!get_forced_close_monitor())
 	{
 		current_dtn_time = get_current_dtn_time();
 		gettimeofday(&current_time, NULL);
-		boolean_t close = FALSE;
 
 		pthread_mutex_lock(&mutexdata);
 
@@ -673,15 +590,7 @@ void * session_expiration_timer(void * opt)
 					// wait 3 seconds before closing the session
 					session->stop_arrival_time->tv_sec + 3 < current_time.tv_sec)
 			{
-				// close monitor if dedicated
-				if (dedicated_monitor)
-				{
-					close = TRUE;
-				}
-				else
-				{
-					session_close(session_list, session);
-				}
+				session_close(session_list, session);
 			}
 
 			// stop bundle arrived but not all the status reports have arrived and the timer has expired
@@ -689,49 +598,24 @@ void * session_expiration_timer(void * opt)
 					session->total_to_receive > 0 && session->stop_arrival_time->tv_sec + session->wait_after_stop < current_time.tv_sec)
 			{
 				fprintf(stdout, "DTNperf monitor: Session Expired: Bundle stop arrived, but not all the status reports did\n");
-
-				// close monitor if dedicated
-				if (dedicated_monitor)
-				{
-					close = TRUE;
-				}
-				else
-				{
-					fprintf(stdout, "\tsaved log file: %s\n\n", session->full_filename);
-					if (fclose(session->file) < 0)
-						perror("[DTNperf warning] closing expired file:");
-					session_del(session_list, session);
-				}
+				fprintf(stdout, "\tsaved log file: %s\n\n", session->full_filename);
+				if (fclose(session->file) < 0)
+					perror("[DTNperf warning] closing expired file:");
+				session_del(session_list, session);
 			}
 			// stop bundle is not yet arrived and the last bundle has expired
 			else if (session->stop_arrival_time->tv_sec == 0 &&
 					session->last_bundle_time + session->expiration + 2 < current_dtn_time && (session->last_bundle_time + session->expiration != 0))
 			{
 				fprintf(stdout, "DTNperf monitor: Session Expired: Bundle stop did not arrive\n");
-
-				// close monitor if dedicated
-				if (dedicated_monitor)
-				{
-					close = TRUE;
-				}
-				else
-				{
-					fprintf(stdout,"\tsaved log file: %s\n\n", session->full_filename);
-					if (fclose(session->file) < 0)
-						perror("[DTNperf warning] closing expired file:");
-					session_del(session_list, session);
-				}
+				fprintf(stdout,"\tsaved log file: %s\n\n", session->full_filename);
+				if (fclose(session->file) < 0)
+					perror("[DTNperf warning] closing expired file:");
+				session_del(session_list, session);
 			}
 		}
 		pthread_mutex_unlock(&mutexdata);
 		sched_yield();
-
-		// exit if dedicated monitor
-		if (close)
-		{
-			kill(getpid(), SIGUSR2);
-			break;
-		}
 		sleep(1);
 	}
 	pthread_exit(NULL);
@@ -742,37 +626,23 @@ void monitor_clean_exit(int status)
 	session_t * session;
 
 	// terminate all child thread
-	if (!oneCSVonly)
-		pthread_cancel(session_exp_timer);
+	//if (!oneCSVonly)
+	//	pthread_cancel(session_exp_timer);
 
-	// close all log files and delete all sessions
-	if (dedicated_monitor)
+	set_forced_close_monitor(TRUE);
+
+	while (session_list->first != NULL)
 	{
 		session = session_list->first;
 		session_close(session_list, session);
 	}
-	else
-	{
-		while (session_list->first != NULL)
-		{
-			session = session_list->first;
-			session_close(session_list, session);
-		}
-	}
 
 	session_list_destroy(session_list);
 
-	//with IBR-DTN, al_bp_close from a signal handler is blocking,
-	//and not needed since the process is being terminated
-	if (al_bp_get_implementation() != BP_IBR) //perf_opt is not available here
-	{
-		// close bp_handle
-		if (bp_handle_open)
-		{
-			al_bp_close(handle);
-			//al_bp_unregister(handle,regid,local_eid);
-		}
-	}
+	al_bp_extB_unregister(registration_descriptor);
+	al_bp_extB_destroy();
+
+	debugger_destroy();
 	printf("Dtnperf Monitor: exit.\n");
 	exit(status);
 }
@@ -786,17 +656,18 @@ void session_close(session_list_t * list, session_t * session)
 
 void print_monitor_usage(char * progname)
 {
-	fprintf(stderr, "\n");
-	fprintf(stderr, "DtnPerf3 monitor mode\n");
-	fprintf(stderr, "SYNTAX: %s %s [options]\n", progname, MONITOR_STRING);
-	fprintf(stderr, "\n");
-	fprintf(stderr, "options:\n"
-			" -a, --daemon                  Start the monitor as a daemon. Output is redirected to %s.\n"
+	error_print("\n");
+	error_print("DtnPerf3 monitor mode\n");
+	error_print("SYNTAX: %s %s [options]\n", progname, MONITOR_STRING);
+	error_print("\n");
+	error_print("options:\n"
+			//" -a, --daemon                  Start the monitor as a daemon. Output is redirected to %s.\n"
 			" -o, --output <file>           Change the default output file (Only with -a option).\n"
 			" -s, --stop                    Stop the monitor daemon.\n"
 			" -e, --session-expiration <s>  Max idle time of log files (s). Default: 120.\n"
-			"     --ip-addr <addr>          Ip address of the bp daemon api. Default: 127.0.0.1 (DTN2 and IBR-DTN only)\n"
-			"     --ip-port <port>          Ip port of the bp daemon api. Default: 5010 (DTN2 and IBR-DTN only)\n"
+			// XXX no more supported
+			//"     --ip-addr <addr>          Ip address of the bp daemon api. Default: 127.0.0.1 (DTN2 and IBR-DTN only)\n"
+			//"     --ip-port <port>          Ip port of the bp daemon api. Default: 5010 (DTN2 and IBR-DTN only)\n"
 			"     --force-eid <[DTN|IPN]    Force the scheme of the registration EID.\n"
 			"     --ipn-local <num>         Set the ipn local number (Use only with --force-eid IPN on DTN2)\n"
 			"     --ldir <dir>              Logs directory. Default: %s .\n"
@@ -804,124 +675,123 @@ void print_monitor_usage(char * progname)
 			"     --rt-print[=filename]     Print realtime human readable status report information\n"
 			"                               Print to stdout if filename is omitted \n"
 			"     --debug[=level]           Debug messages [0-2], if level is not indicated level = 1.\n"
-			" -v, --verbose                 Print information messages during execution.\n"
 			" -h, --help                    This help.\n",
 			MONITOR_OUTPUT_FILE, LOGS_DIR_DEFAULT);
-	fprintf(stderr, "\n");
+	error_print("\n");
+
+	al_bp_extB_unregister(registration_descriptor);
+	al_bp_extB_destroy();
+
+	debugger_destroy();
 	exit(1);
 }
 
 void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * perf_g_opt)
 {
 	char c, done = 0;
-	boolean_t output_set = FALSE;
+	//boolean_t output_set = FALSE;
 	dtnperf_options_t * perf_opt = perf_g_opt->perf_opt;
 	// kill daemon variables
 	int pid;
 	char cmd[256];
 	FILE *f;
 
-		while (!done)
+	while (!done)
+	{
+		static struct option long_options[] =
 		{
-			static struct option long_options[] =
-			{
-					{"help", no_argument, 0, 'h'},
-					{"verbose", no_argument, 0, 'v'},
-					{"debug", optional_argument, 0, 33},
-					{"ldir", required_argument, 0, 40},
-					{"ip-addr", required_argument, 0, 37},
-					{"ip-port", required_argument, 0, 38},
-					{"force-eid", required_argument, 0, 50},
-					{"ipn-local", required_argument, 0, 51},
-					{"oneCSVonly", no_argument, 0, 52},
-					{"rt-print", optional_argument, 0, 53},
-					{"session-expiration", required_argument, 0,'e'},
-					{"daemon", no_argument, 0, 'a'},
-					{"output", required_argument, 0, 'o'},
-					{"stop", no_argument, 0, 's'},
-					{0,0,0,0}	// The last element of the array has to be filled with zeros.
+				{"help", no_argument, 0, 'h'},
+				{"debug", optional_argument, 0, 33},
+				{"ldir", required_argument, 0, 40},
+				{"ip-addr", required_argument, 0, 37},
+				{"ip-port", required_argument, 0, 38},
+				{"force-eid", required_argument, 0, 50},
+				{"ipn-local", required_argument, 0, 51},
+				{"oneCSVonly", no_argument, 0, 52},
+				{"rt-print", optional_argument, 0, 53},
+				{"session-expiration", required_argument, 0,'e'},
+				{"daemon", no_argument, 0, 'a'},
+				{"output", required_argument, 0, 'o'},
+				{"stop", no_argument, 0, 's'},
+				{0,0,0,0}	// The last element of the array has to be filled with zeros.
 
-			};
-			int option_index = 0;
-			c = getopt_long(argc, argv, "hve:ao:s", long_options, &option_index);
+		};
+		int option_index = 0;
+		c = getopt_long(argc, argv, "hve:ao:s", long_options, &option_index);
 
-			switch (c)
-			{
-			case 'h':
-				print_monitor_usage(argv[0]);
-				exit(0);
-				return ;
+		switch (c)
+		{
+		case 'h':
+			print_monitor_usage(argv[0]);
+			exit(0);
+			return ;
 
-			case 'v':
-				perf_opt->verbose = TRUE;
-				break;
 
-			case 'e':
-				perf_opt->expiration_session = atoi(optarg);
-				break;
+		case 'e':
+			perf_opt->expiration_session = atoi(optarg);
+			break;
 
-			case 33: // debug
-				perf_opt->debug = TRUE;
-				if (optarg != NULL){
-					int debug_level = atoi(optarg);
-					if (debug_level >= 1 && debug_level <= 2)
-						perf_opt->debug_level = atoi(optarg) -1;
-					else {
-						fprintf(stderr, "[DTNperf syntax error] wrong --debug argument\n");
-						exit(1);
-						return;
-					}
+		case 33: // debug
+			if (optarg){
+				int debug = atoi(optarg);
+				if(!(debug >=1 && debug <=2)){
+					error_print("[DTNperf syntax error] wrong --debug argument\n");
+					exit(1);
+					return;
 				}
 				else
-					perf_opt->debug_level = 2;
-				break;
+					perf_opt->debug=debug;
+			}
+			else
+				perf_opt->debug = 2;
+			break;
 
-			case 37:
-				if(perf_opt->bp_implementation != BP_DTN && perf_opt->bp_implementation != BP_IBR)
-				{
-					fprintf(stderr, "[DTNperf error] --ip-addr supported only in DTN2 and IBR-DTN\n");
-					exit(1);
-					return;
-				}
-				perf_opt->ip_addr = strdup(optarg);
-				perf_opt->use_ip = TRUE;
-				break;
+		case 37:
+			if(perf_opt->bp_implementation != BP_DTN && perf_opt->bp_implementation != BP_IBR)
+			{
+				error_print("[DTNperf error] --ip-addr supported only in DTN2 and IBR-DTN\n");
+				exit(1);
+				return;
+			}
+			perf_opt->ip_addr = strdup(optarg);
+			perf_opt->use_ip = TRUE;
+			break;
 
-			case 38:
-				if(perf_opt->bp_implementation != BP_DTN && perf_opt->bp_implementation != BP_IBR)
-				{
-					fprintf(stderr, "[DTNperf syntax error] --ip-port supported only in DTN2 and IBR-DTN\n");
-					exit(1);
-					return;
-				}
-				perf_opt->ip_port = atoi(optarg);
-				perf_opt->use_ip = TRUE;
-				break;
+		case 38:
+			if(perf_opt->bp_implementation != BP_DTN && perf_opt->bp_implementation != BP_IBR)
+			{
+				error_print("[DTNperf syntax error] --ip-port supported only in DTN2 and IBR-DTN\n");
+				exit(1);
+				return;
+			}
+			perf_opt->ip_port = atoi(optarg);
+			perf_opt->use_ip = TRUE;
+			break;
 
-			case 40:
-				perf_opt->logs_dir = strdup(optarg);
-				break;
+		case 40:
+			perf_opt->logs_dir = strdup(optarg);
+			break;
 
-			case 50:
-				switch( find_forced_eid(strdup(optarg)) )
-				{
-					case 'D':
-						perf_opt->eid_format_forced = 'D';
-						break;
-					case 'I':
-						perf_opt->eid_format_forced = 'I';
-						break;
-					case '?':
-						fprintf(stderr, "[DTNperf syntax error] wrong --force-eid argument\n");
-						exit(1);
-				}
+		case 50:
+			switch( find_forced_eid(strdup(optarg)) )
+			{
+			case 'D':
+				perf_opt->eid_format_forced = 'D';
 				break;
+			case 'I':
+				perf_opt->eid_format_forced = 'I';
+				break;
+			case '?':
+				error_print("[DTNperf syntax error] wrong --force-eid argument\n");
+				exit(1);
+			}
+			break;
 
 			case 51:
 				perf_opt->ipn_local_num = atoi(optarg);
 				if (perf_opt->ipn_local_num <= 0)
 				{
-					fprintf(stderr, "[DTNperf syntax error] wrong --ipn_local argument\n");
+					error_print("[DTNperf syntax error] wrong --ipn_local argument\n");
 					exit(1);
 				}
 				break;
@@ -937,19 +807,25 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 				f = fopen(optarg, "w+");
 				if (f == NULL)
 				{
-					fprintf(stderr, "[DTNperf error] impossible to open file %s: %s\n", optarg, strerror(errno));
+					error_print("[DTNperf error] impossible to open file %s: %s\n", optarg, strerror(errno));
 				}
 				else
 					perf_opt->rtPrintFile = f;
 				break;
 
 			case 'a':
-				perf_opt->daemon = TRUE;
+#ifdef mingw
+				fprintf(stdout, "Daemon not supported in MINGW.\n");
+				exit(1);
+#endif
+				//perf_opt->daemon = TRUE;
+				fprintf(stdout, "Daemon no more supported.\n");
+				exit(1);
 				break;
 
 			case 'o':
 				perf_opt->monitor_output_file = strdup(optarg);
-				output_set = TRUE;
+				//output_set = TRUE;
 				break;
 
 			case 's':
@@ -959,11 +835,15 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 				if (pid)
 				{
 					printf("Closing dtnperf monitor pid: %d\n", pid);
+#ifdef mingw
+					printf("Not supported in MINGW.\n");
+#else
 					kill(pid, SIGINT);
+#endif
 				}
 				else
 				{
-					fprintf(stderr, "[DTNperf error] cannot find a running instance of dtnperf monitor\n");
+					error_print("[DTNperf error] cannot find a running instance of dtnperf monitor\n");
 				}
 				exit(0);
 				break;
@@ -972,21 +852,21 @@ void parse_monitor_options(int argc, char ** argv, dtnperf_global_options_t * pe
 				break;
 
 			case (char)(-1):
-				done = 1;
-				break;
+																																				done = 1;
+			break;
 
 			default:
 				// getopt already prints an error message for unknown option characters
 				print_monitor_usage(argv[0]);
 				exit(1);
-			}
 		}
-		if (output_set && !perf_opt->daemon)
-		{
-			fprintf(stderr, "\n[DTNperf syntax error] -o option can be used only with -a option\n");   \
-			print_monitor_usage(argv[0]);                                               \
-			exit(1);
-		}
+	}
+	/*if (output_set && !perf_opt->daemon)
+	{
+		error_print("\n[DTNperf syntax error] -o option can be used only with -a option\n");   \
+		print_monitor_usage(argv[0]);                                               \
+		exit(1);
+	}*/
 }
 
 session_list_t * session_list_create()
@@ -1078,14 +958,14 @@ session_t *  session_get(session_list_t * list, al_bp_endpoint_id_t client)
 		return item;
 
 	while (item != NULL)
+	{
+		if (strcmp(item->client_eid.uri, client.uri) == 0)
 		{
-			if (strcmp(item->client_eid.uri, client.uri) == 0)
-			{
-				return item;
-			}
-			item = item->next;
+			return item;
 		}
-		return NULL;
+		item = item->next;
+	}
+	return NULL;
 }
 
 void session_del(session_list_t * list, session_t * session)
@@ -1142,26 +1022,55 @@ void printSingleRealtimeStatusReport(FILE *f, al_bp_endpoint_id_t sr_source, al_
 			al_bp_status_report_reason_to_str(status_report->reason));
 }
 
+static boolean_t get_forced_close_monitor()
+{
+	int result;
+	pthread_mutex_lock(&mutex_forced_close);
+	result = forced_close;
+	pthread_mutex_unlock(&mutex_forced_close);
+	return result;
+}
+
+static void set_forced_close_monitor(boolean_t value)
+{
+	pthread_mutex_lock(&mutex_forced_close);
+	forced_close = value;
+	pthread_mutex_unlock(&mutex_forced_close);
+}
+
+#ifdef mingw
+BOOL WINAPI ConsoleHandler(DWORD dwType)
+{
+	switch(dwType) {
+	case CTRL_C_EVENT:
+		printf("\nDtnperf monitor: received SIGINT. Exiting\n");
+		monitor_clean_exit(0);
+		break;
+	case CTRL_BREAK_EVENT:
+		printf("\nDtnperf monitor: received SIGINT. Exiting\n");
+		monitor_clean_exit(0);
+		break;
+	}
+	return TRUE;
+}
+
+BOOL WINAPI ConsoleHandlerDedicated(DWORD dwType)
+{
+	switch(dwType) {
+	case CTRL_C_EVENT:
+		break;
+	case CTRL_BREAK_EVENT:
+		break;
+	}
+	return TRUE;
+}
+#else
 void monitor_handler(int signo)
 {
-	if (dedicated_monitor)
+	if (signo == SIGINT)
 	{
-		if (signo == SIGUSR1)
-		{
-			printf("\nDtnperf monitor: received signal from client. Exiting\n");
-			monitor_clean_exit(0);
-		}
-		else if (signo == SIGUSR2)
-		{
-			monitor_clean_exit(0);
-		}
-	}
-	else
-	{
-		if (signo == SIGINT)
-		{
-			printf("\nDtnperf monitor: received SIGINT. Exiting\n");
-			monitor_clean_exit(0);
-		}
+		printf("\nDtnperf monitor: received SIGINT. Exiting\n");
+		monitor_clean_exit(0);
 	}
 }
+#endif

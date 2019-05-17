@@ -22,8 +22,8 @@
 typedef enum {
 	DTNPERF_SERVER = 1,
 	DTNPERF_CLIENT,
-	DTNPERF_MONITOR,
-	DTNPERF_CLIENT_MONITOR
+	DTNPERF_MONITOR
+	//DTNPERF_CLIENT_MONITOR
 } dtnperf_mode_t;
 
 typedef enum {
@@ -57,16 +57,14 @@ typedef struct dtnperf_options
 {
 	//general options
 	al_bp_implementation_t		 	bp_implementation; 					// Bundle Protocol implementation
-	boolean_t 						verbose;							// if true, execution becomes verbose [FALSE]
-	boolean_t 						debug;								// if true, debug messages are shown [FALSE]
-	int 							debug_level;						// set the debug level 0|1|2 [0]
+	int								debug;								// if true, debug messages are shown [FALSE]
 	int 							use_file;							// if set to 1, a file is used instead of memory [1]
 	boolean_t		 				use_ip;								// set different values of ip address and port [FALSE]
 	char*							ip_addr;							// daemon ip address [127.0.0.1]
 	short 							ip_port;							// daemon port [5010]
 	char 							eid_format_forced;					// is the format of the eid (U = URI, C = CBHE, N = None) [N]
 	int								ipn_local_num;						// local ipn eid number (Used only if dtnperf server or monitor must register with ipn scheme on DTN2) [0]
-	boolean_t 						daemon;								// run as daemon (server and monitor) [FALSE]
+	//boolean_t 						daemon;								// run as daemon (server and monitor) [FALSE]
 	char*							server_output_file;					// stdout and stderr redirect here if daemon is TRUE [SERVER_OUTPUT_FILE]
 	char*							monitor_output_file;				// stdout and stderr redirect here if daemon is TRUE [MONITOR_OUTPUT_FILE]
 	//client options
@@ -79,7 +77,7 @@ typedef struct dtnperf_options
 	char*							P_arg;								// arguments of -P option
 	char 							data_unit;							// B = bytes, K = kilobytes, M = megabytes [M]
 	int 							transmission_time;					// seconds of transmission [0]
-	char 							congestion_ctrl;					// w = window based, r = rate based [w]
+	char 							congestion_ctrl;					// W = window based, R = rate based [W]
 	int 							window;								// transmission window (bundles) [1]
 	char* 							rate_arg;							// argument of -r option
 	double 							rate;								// transmission rate [0]

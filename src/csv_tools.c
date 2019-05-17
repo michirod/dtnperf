@@ -27,7 +27,7 @@ void csv_print_rx_time(FILE * file, struct timeval time, struct timeval start_ti
 
 void csv_print_eid(FILE * file, al_bp_endpoint_id_t eid)
 {
-	char buf[256];
+	char buf[257];
 	sprintf(buf, "%s;", eid.uri);
 	fwrite(buf, strlen(buf), 1, file);
 }

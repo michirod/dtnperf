@@ -2,6 +2,7 @@
  **  Authors: Michele Rodolfi, michele.rodolfi@studio.unibo.it
  **           Anna d'Amico, anna.damico@studio.unibo.it
  **           Davide Pallotti, davide.pallotti@studio.unibo.it
+ **           Andrea Bisacchi, andrea.bisacchi5@studio.unibo.it
  **           Carlo Caini (DTNperf_3 project supervisor), carlo.caini@unibo.it
  **
  **
@@ -15,6 +16,7 @@
 #include "includes.h"
 #include "dtnperf_types.h"
 #include <al_bp_types.h>
+#include "dtnperf_debugger.h"
 
 
 typedef struct
@@ -40,7 +42,7 @@ typedef struct extension_block_info
 long bundles_needed (long data, long pl);
 void print_eid(char * label, al_bp_endpoint_id_t *eid);
 
-
+void destroy_info(send_information_t *send_info);
 void init_info(send_information_t *send_info, int window);
 long add_info(send_information_t* send_info, al_bp_bundle_id_t bundle_id, struct timeval p_start, int window);
 int is_in_info(send_information_t* send_info, al_bp_timestamp_t timestamp, int window);
@@ -91,4 +93,14 @@ u32_t get_current_dtn_time();
  * if an error is encountered.
  */
 int bundle_id_sprintf(char * dest, al_bp_bundle_id_t * bundle_id);
+
+/*
+ * Same as "mkdir -p"
+ */
+int mkpath(char* dir);
+
+void print_bundle(al_bp_bundle_object_t * bundle);
+
+void print_ext_or_metadata_blocks(u32_t blocks_len, al_bp_extension_block_t *blocks_val);
+
 #endif /*BUNDLE_TOOLS_H_*/

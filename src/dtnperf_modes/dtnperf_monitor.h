@@ -21,7 +21,7 @@
 typedef struct monitor_parameters
 {
 	dtnperf_global_options_t * perf_g_opt;
-	boolean_t dedicated_monitor;
+	//boolean_t dedicated_monitor;
 	int client_id;
 } monitor_parameters_t;
 

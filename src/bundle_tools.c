@@ -2,6 +2,7 @@
  **  Authors: Michele Rodolfi, michele.rodolfi@studio.unibo.it
  **           Anna d'Amico, anna.damico@studio.unibo.it
  **           Davide Pallotti, davide.pallotti@studio.unibo.it
+ **           Andrea Bisacchi, andrea.bisacchi5@studio.unibo.it
  **           Carlo Caini (DTNperf_3 project supervisor), carlo.caini@unibo.it
  **
  **
@@ -17,10 +18,14 @@
 #include <al_bp_api.h>
 #include <arpa/inet.h>
 #include "utils.h"
+#include "includes.h"
 
 // static variables for stream operations
 static char * buffer = NULL;
 static u32_t buffer_len = 0;
+
+static pthread_mutex_t mutexsendinfo;
+static boolean_t mutex_initilized = FALSE;
 
 
 /* ----------------------------------------------
@@ -28,15 +33,15 @@ static u32_t buffer_len = 0;
  * ---------------------------------------------- */
 long bundles_needed (long data, long pl)
 {
-    long res = 0;
-    ldiv_t r;
+	long res = 0;
+	ldiv_t r;
 
-    r = ldiv(data, pl);
-    res = r.quot;
-    if (r.rem > 0)
-        res += 1;
+	r = ldiv(data, pl);
+	res = r.quot;
+	if (r.rem > 0)
+		res += 1;
 
-    return res;
+	return res;
 } // end bundles_needed
 
 
@@ -45,113 +50,149 @@ long bundles_needed (long data, long pl)
  * ---------------------------- */
 void print_eid(char * label, al_bp_endpoint_id_t * eid)
 {
-    printf("%s [%s]\n", label, eid->uri);
+	printf("%s [%s]\n", label, eid->uri);
 } // end print_eid
 
-
-
+void destroy_info(send_information_t *send_info)
+{
+	pthread_mutex_destroy(&mutexsendinfo); // destroy mutex
+	mutex_initilized = FALSE;
+} // end destroy_info
 
 void init_info(send_information_t *send_info, int window)
 {
-    int i;
+	int i;
 
-    for (i = 0; i < window; i++)
-    {
-        send_info[i].bundle_id.creation_ts.secs = 0;
-        send_info[i].bundle_id.creation_ts.seqno = 0;
-    }
+	for (i = 0; i < window; i++)
+	{
+		send_info[i].bundle_id.creation_ts.secs = 0;
+		send_info[i].bundle_id.creation_ts.seqno = 0;
+	}
+
+	pthread_mutex_init (&mutexsendinfo, NULL); // initi mutex
+	mutex_initilized = TRUE;
 } // end init_info
-
-
 
 long add_info(send_information_t* send_info, al_bp_bundle_id_t bundle_id, struct timeval p_start, int window)
 {
-    int i;
+	int i;
 
-    static u_int id = 0;
-    static int last_inserted = -1;
-    for (i = (last_inserted + 1); i < window ; i++)
-    {
-        if ((send_info[i].bundle_id.creation_ts.secs == 0) && (send_info[i].bundle_id.creation_ts.seqno == 0))
-        {
-            send_info[i].bundle_id.creation_ts.secs = bundle_id.creation_ts.secs;
-            send_info[i].bundle_id.creation_ts.seqno = bundle_id.creation_ts.seqno;
-            send_info[i].send_time.tv_sec = p_start.tv_sec;
-            send_info[i].send_time.tv_usec = p_start.tv_usec;
-            send_info[i].relative_id = id;
-            last_inserted = i;
-            return id++;
-        }
-    }
-    for (i = 0; i <= last_inserted ; i++)
-    {
-        if ((send_info[i].bundle_id.creation_ts.secs == 0) && (send_info[i].bundle_id.creation_ts.seqno == 0))
-        {
-            send_info[i].bundle_id.creation_ts.secs = bundle_id.creation_ts.secs;
-            send_info[i].bundle_id.creation_ts.seqno = bundle_id.creation_ts.seqno;
-            send_info[i].send_time.tv_sec = p_start.tv_sec;
-            send_info[i].send_time.tv_usec = p_start.tv_usec;
-            send_info[i].relative_id = id;
-            last_inserted = i;
-            return id++;
-        }
-    }
-    return -1;
+	static u_int id = 0;
+	static int last_inserted = -1;
+
+	if (!mutex_initilized)
+		return -1;
+
+	pthread_mutex_lock(&mutexsendinfo);
+
+	for (i = (last_inserted + 1); i < window ; i++)
+	{
+		if ((send_info[i].bundle_id.creation_ts.secs == 0) && (send_info[i].bundle_id.creation_ts.seqno == 0))
+		{
+			send_info[i].bundle_id.creation_ts.secs = bundle_id.creation_ts.secs;
+			send_info[i].bundle_id.creation_ts.seqno = bundle_id.creation_ts.seqno;
+			send_info[i].send_time.tv_sec = p_start.tv_sec;
+			send_info[i].send_time.tv_usec = p_start.tv_usec;
+			send_info[i].relative_id = id;
+			last_inserted = i;
+			pthread_mutex_unlock(&mutexsendinfo);
+			return id++;
+		}
+	}
+	for (i = 0; i <= last_inserted ; i++)
+	{
+		if ((send_info[i].bundle_id.creation_ts.secs == 0) && (send_info[i].bundle_id.creation_ts.seqno == 0))
+		{
+			send_info[i].bundle_id.creation_ts.secs = bundle_id.creation_ts.secs;
+			send_info[i].bundle_id.creation_ts.seqno = bundle_id.creation_ts.seqno;
+			send_info[i].send_time.tv_sec = p_start.tv_sec;
+			send_info[i].send_time.tv_usec = p_start.tv_usec;
+			send_info[i].relative_id = id;
+			last_inserted = i;
+			pthread_mutex_unlock(&mutexsendinfo);
+			return id++;
+		}
+	}
+	pthread_mutex_unlock(&mutexsendinfo);
+	return -1;
 } // end add_info
-
 
 int is_in_info(send_information_t* send_info, al_bp_timestamp_t bundle_timestamp, int window)
 {
-    int i;
+	int i;
 
-    static int last_collected = -1;
-    for (i = (last_collected + 1); i < window; i++)
-    {
-        if ((send_info[i].bundle_id.creation_ts.secs == bundle_timestamp.secs) && (send_info[i].bundle_id.creation_ts.seqno == bundle_timestamp.seqno))
-    	{
-            last_collected = i;
-            return i;
-        }
-    }
-    for (i = 0; i <= last_collected; i++)
-    {
-    	if ((send_info[i].bundle_id.creation_ts.secs == bundle_timestamp.secs) && (send_info[i].bundle_id.creation_ts.seqno == bundle_timestamp.seqno))
-    	{
-            last_collected = i;
-            return i;
-        }
+	static int last_collected = -1;
 
-    }
-    return -1;
+	if (!mutex_initilized)
+		return -1;
+
+	pthread_mutex_lock(&mutexsendinfo);
+
+	for (i = (last_collected + 1); i < window; i++)
+	{
+		if ((send_info[i].bundle_id.creation_ts.secs == bundle_timestamp.secs) && (send_info[i].bundle_id.creation_ts.seqno == bundle_timestamp.seqno))
+		{
+			last_collected = i;
+			pthread_mutex_unlock(&mutexsendinfo);
+			return i;
+		}
+	}
+	for (i = 0; i <= last_collected; i++)
+	{
+		if ((send_info[i].bundle_id.creation_ts.secs == bundle_timestamp.secs) && (send_info[i].bundle_id.creation_ts.seqno == bundle_timestamp.seqno))
+		{
+			last_collected = i;
+			pthread_mutex_unlock(&mutexsendinfo);
+			return i;
+		}
+
+	}
+	pthread_mutex_unlock(&mutexsendinfo);
+
+	return -1;
 } // end is_in_info
 
 int is_in_info_timestamp(send_information_t* send_info, al_bp_timestamp_t bundle_timestamp, int window)
 {
-    static const uint32_t TOLERANCE = 1;
+	static const uint32_t TOLERANCE = 1;
 
 	int oldest_i = -1;
 	int i;
+
+	if (!mutex_initilized)
+		return -1;
+
+	pthread_mutex_lock(&mutexsendinfo);
+
 	for (i = 0; i < window; i++)
 	{
-        if (send_info[i].bundle_id.creation_ts.secs >= bundle_timestamp.secs &&
+		if (send_info[i].bundle_id.creation_ts.secs >= bundle_timestamp.secs &&
 				send_info[i].bundle_id.creation_ts.secs <= bundle_timestamp.secs + TOLERANCE)
 		{
 			if (oldest_i < 0 ||
 					send_info[i].bundle_id.creation_ts.secs < send_info[oldest_i].bundle_id.creation_ts.secs ||
 					(send_info[i].bundle_id.creation_ts.secs == send_info[oldest_i].bundle_id.creation_ts.secs &&
-						send_info[i].bundle_id.creation_ts.seqno < send_info[oldest_i].bundle_id.creation_ts.seqno))
+							send_info[i].bundle_id.creation_ts.seqno < send_info[oldest_i].bundle_id.creation_ts.seqno))
 			{
 				oldest_i = i;
 			}
-        }
-    }
+		}
+	}
 
-    return oldest_i;
+	pthread_mutex_unlock(&mutexsendinfo);
+	return oldest_i;
 }
 
 int count_info(send_information_t* send_info, int window)
 {
-	int i, count = 0;
+	int i;
+	int count = 0;
+
+	if (!mutex_initilized)
+		return 0;
+
+	pthread_mutex_lock(&mutexsendinfo);
+
 	for (i = 0; i < window; i++)
 	{
 		if (send_info[i].bundle_id.creation_ts.secs != 0)
@@ -159,15 +200,20 @@ int count_info(send_information_t* send_info, int window)
 			count++;
 		}
 	}
+
+	pthread_mutex_unlock(&mutexsendinfo);
 	return count;
 }
 
 void remove_from_info(send_information_t* send_info, int position)
 {
-    send_info[position].bundle_id.creation_ts.secs = 0;
-    send_info[position].bundle_id.creation_ts.seqno = 0;
+	if (!mutex_initilized)
+		return;
+	pthread_mutex_lock(&mutexsendinfo);
+	send_info[position].bundle_id.creation_ts.secs = 0;
+	send_info[position].bundle_id.creation_ts.seqno = 0;
+	pthread_mutex_unlock(&mutexsendinfo);
 } // end remove_from_info
-
 
 void set_bp_options(al_bp_bundle_object_t *bundle, dtnperf_connection_options_t *opt)
 {
@@ -275,6 +321,7 @@ int open_payload_stream_write(al_bp_bundle_object_t bundle, FILE ** f)
 		if (*f == NULL)
 			return -1;
 	}
+
 	return 0;
 }
 
@@ -292,6 +339,7 @@ int close_payload_stream_write(al_bp_bundle_object_t * bundle, FILE *f)
 	{
 		al_bp_bundle_set_payload_file(bundle, buffer, buffer_len);
 	}
+
 	return 0;
 }
 
@@ -576,7 +624,7 @@ al_bp_error_t prepare_stop_bundle(al_bp_bundle_object_t * stop, al_bp_endpoint_i
 	close_payload_stream_write(stop, stop_stream);
 	al_bp_bundle_set_dest(stop, monitor);
 	al_bp_get_none_endpoint(&none);
-	al_bp_bundle_set_replyto(stop, none);
+	al_bp_bundle_set_replyto(stop, monitor);
 	al_bp_bundle_set_delivery_opts(stop, opts);
 	al_bp_bundle_set_expiration(stop, expiration);
 	al_bp_bundle_set_priority(stop, priority);
@@ -708,17 +756,17 @@ al_bp_error_t get_info_from_ack(al_bp_bundle_object_t * ack, al_bp_endpoint_id_t
 
 boolean_t check_metadata(extension_block_info_t* ext_block)
 {
-    return ext_block->metadata;
+	return ext_block->metadata;
 } // end check_metadata
 
 void set_metadata_type(extension_block_info_t* ext_block, u_int64_t metadata_type)
 {
-    if (metadata_type > METADATA_TYPE_EXPT_MAX) {
-            fprintf(stderr, "Value of metadata_type greater than maximum allowed\n");
-            exit(1);
-    }
-    ext_block->metadata = TRUE;
-    ext_block->metadata_type = metadata_type;
+	if (metadata_type > METADATA_TYPE_EXPT_MAX) {
+		fprintf(stderr, "Value of metadata_type greater than maximum allowed\n");
+		exit(1);
+	}
+	ext_block->metadata = TRUE;
+	ext_block->metadata_type = metadata_type;
 } // end set_metadata
 
 void get_extension_block(extension_block_info_t* ext_block, al_bp_extension_block_t * extension_block)
@@ -728,22 +776,22 @@ void get_extension_block(extension_block_info_t* ext_block, al_bp_extension_bloc
 
 void set_block_buf(extension_block_info_t* ext_block, char * buf, u32_t len)
 {
-    if (ext_block->block.data.data_val != NULL) {
-        free(ext_block->block.data.data_val);
-        ext_block->block.data.data_val = NULL;
-        ext_block->block.data.data_len = 0;
-    }
-    if (ext_block->metadata) {
-        ext_block->block.data.data_val =
-                (char *)malloc(sizeof(char) * (len + 1));
-        ext_block->block.data.data_len = len;
-        strncpy(ext_block->block.data.data_val, buf, len);
-        free(buf);
-    }
-    else {
-        ext_block->block.data.data_val = buf;
-        ext_block->block.data.data_len = len;
-    }
+	if (ext_block->block.data.data_val != NULL) {
+		free(ext_block->block.data.data_val);
+		ext_block->block.data.data_val = NULL;
+		ext_block->block.data.data_len = 0;
+	}
+	if (ext_block->metadata) {
+		ext_block->block.data.data_val =
+				(char *)malloc(sizeof(char) * (len + 1));
+		ext_block->block.data.data_len = len;
+		strcpy(ext_block->block.data.data_val, buf);
+		free(buf);
+	}
+	else {
+		ext_block->block.data.data_val = buf;
+		ext_block->block.data.data_len = len;
+	}
 } // end set_block_buf
 
 u32_t get_current_dtn_time()
@@ -776,4 +824,64 @@ int bundle_id_sprintf(char * dest, al_bp_bundle_id_t * bundle_id)
 	}
 	return sprintf(dest, "%s, %u.%u,%s,%s", bundle_id->source.uri, bundle_id->creation_ts.secs,
 			bundle_id->creation_ts.seqno, offset, length);
+}
+
+/* Author: Laura Mazzuca, laura.mazzuca@studio.unibo.it*/
+void print_bundle(al_bp_bundle_object_t * bundle)
+{
+
+	debug_print(DEBUG_L2,"[DTNperf L2] printing BUNDLE...\n");
+	debug_print(DEBUG_L2,"[DTNperf L2] id-creation timestamp: %u\tsequence number: %u\n", bundle->id->creation_ts.secs, bundle->id->creation_ts.seqno);
+	debug_print(DEBUG_L2,"[DTNperf L2] id-source: %s\n", bundle->id->source.uri);
+	debug_print(DEBUG_L2,"[DTNperf L2] id-original length: %u\tfragmentation offset: %u\n", bundle->id->orig_length, bundle->id->frag_offset);
+
+	debug_print(DEBUG_L2,"[DTNperf L2] spec-creation timestamp: %u\tsequence number: %u\n\t\texpiration time: %u\n", bundle->spec->creation_ts.secs, bundle->spec->creation_ts.seqno, bundle->spec->expiration);
+	debug_print(DEBUG_L2,"[DTNperf L2] spec-delivery register id: %u\tdelivery options: %d\n", bundle->spec->delivery_regid, bundle->spec->dopts);
+	debug_print(DEBUG_L2,"[DTNperf L2] spec-source: %s\tdest: %s\treplyto: %s\n", bundle->spec->source.uri, bundle->spec->dest.uri, bundle->spec->replyto.uri);
+	debug_print(DEBUG_L2,"[DTNperf L2] spec-is critical: %c\tpriority: %d,%u\tis unreliable: %c\n", bundle->spec->critical, bundle->spec->priority.priority, bundle->spec->priority.ordinal, bundle->spec->unreliable);
+	debug_print(DEBUG_L2,"[DTNperf L2] spec-flow label: %u\n", bundle->spec->flow_label);
+	if(bundle->spec->metadata.metadata_len > 0)
+	{
+		debug_print(DEBUG_L1,"[DTNperf L1] printing METADATA blocks...\n");
+		print_ext_or_metadata_blocks(bundle->spec->metadata.metadata_len, bundle->spec->metadata.metadata_val);
+		debug_print(DEBUG_L1,"[DTNperf L1] done printing METADATA blocks.\n");
+	}
+	else
+	{
+		debug_print(DEBUG_L1,"[DTNperf L1] no METADATA blocks specified.\n");
+
+	}
+	if(bundle->spec->blocks.blocks_len > 0)
+	{
+		debug_print(DEBUG_L1,"[DTNperf L1] printing EXTENSION blocks...\n");
+		print_ext_or_metadata_blocks(bundle->spec->blocks.blocks_len, bundle->spec->blocks.blocks_val);
+		debug_print(DEBUG_L1,"[DTNperf L1] done printing EXTENSION blocks.\n");
+	}
+	else
+	{
+		debug_print(DEBUG_L1,"[DTNperf L1] no EXTENSION blocks specified.\n");
+
+	}
+	debug_print(DEBUG_L2,"[DTNperf L2] done.\n");
+
+
+//	debug_print(DEBUG_L2,"[DTNperf L2] payload-location: %d\n", bundle->payload->location);
+//	debug_print(DEBUG_L2,"[DTNperf L2] id-creation timestamp: %u\tsequence number: %u\n", bundle->payload->status_report->bundle_id., bundle->id->creation_ts.seqno);
+//	debug_print(DEBUG_L2,"[DTNperf L2] id-creation timestamp: %u\tsequence number: %u\n", bundle->id->creation_ts.secs, bundle->id->creation_ts.seqno);
+//	debug_print(DEBUG_L2,"[DTNperf L2] id-creation timestamp: %u\tsequence number: %u\n", bundle->id->creation_ts.secs, bundle->id->creation_ts.seqno);
+}
+
+/* Author: Laura Mazzuca, laura.mazzuca@studio.unibo.it*/
+void print_ext_or_metadata_blocks(u32_t blocks_len, al_bp_extension_block_t *blocks_val)
+{
+	int i=0;
+	debug_print(DEBUG_L1,"[DTNperf L1] number of blocks: %lu\n", blocks_len);
+	for (i = 0; i < blocks_len; i++)
+	{
+		debug_print(DEBUG_L1,"[DTNperf L1] Block[%d]\n", i);
+		debug_print(DEBUG_L1,"[DTNperf L1]---type: %lu\n", blocks_val[i].type);
+		debug_print(DEBUG_L1,"[DTNperf L1]---flags: %lu\n", blocks_val[i].flags);
+		debug_print(DEBUG_L1,"[DTNperf L1]---data_len: %lu\n", blocks_val[i].data.data_len);
+		debug_print(DEBUG_L1,"[DTNperf L1]---data_val: %s\n", blocks_val[i].data.data_val);
+	}
 }

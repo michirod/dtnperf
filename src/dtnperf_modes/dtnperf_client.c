@@ -2,18 +2,20 @@
  **  Authors: Michele Rodolfi, michele.rodolfi@studio.unibo.it
  **           Anna d'Amico, anna.damico@studio.unibo.it
  **           Davide Pallotti, davide.pallotti@studio.unibo.it
+ **           Marco Bertolazzi, marco.bertolazzi3@studio.unibo.it
+ **           Andrea Bisacchi, andrea.bisacchi5@studio.unibo.it
  **           Carlo Caini (DTNperf_3 project supervisor), carlo.caini@unibo.it
  **
  **
  **  Copyright (c) 2013, Alma Mater Studiorum, University of Bologna
  **  All rights reserved.
- **  Two minor fixes added on 29 Jan 2018
  ********************************************************/
 
 /*
  * dtnperf_client.c
  */
 
+#include "../dtnperf_debugger.h"
 
 #include "dtnperf_client.h"
 #include "dtnperf_monitor.h"
@@ -26,7 +28,26 @@
 #include <libgen.h>
 #include <sys/stat.h>
 #include <al_bp_api.h>
+#include <al_bp_extB.h>
 
+
+#ifdef mingw
+#include <windows.h>
+
+# define timersub(a, b, result) \
+		do { \
+			(result)->tv_sec = (a)->tv_sec - (b)->tv_sec; \
+			(result)->tv_usec = (a)->tv_usec - (b)->tv_usec; \
+			if ((result)->tv_usec < 0) { \
+				--(result)->tv_sec; \
+				(result)->tv_usec += 1000000; \
+			} \
+		} while (0)
+
+BOOL WINAPI ConsoleHandlerFirst(DWORD);
+BOOL WINAPI ConsoleHandlerSecond(DWORD);
+int wait_ctrl_c_block = 0; //for ctrl_c in windows
+#endif
 
 /* pthread_yield() is not standard,
    so use sched_yield if necessary */
@@ -38,69 +59,76 @@
 #endif
 
 // pthread variables
-pthread_t sender;
-pthread_t cong_ctrl;
-pthread_t cong_expir_timer;
-pthread_t wait_for_signal;
-pthread_mutex_t mutexdata;
-pthread_cond_t cond_ackreceiver;
-sem_t window;			// semaphore for congestion control
-int monitor_status;
-int monitor_pid;
+static pthread_t sender;
+static pthread_t cong_ctrl;
+static pthread_t cong_expir_timer;
+static pthread_t wait_for_signal;
+static pthread_mutex_t mutexclose;
+static pthread_mutex_t mutex_forced_close;
+static sem_t window;			// semaphore for congestion control (number of window)
+static sem_t inflight;				// semaphore for congestion control (number of window inflight)
 
 // variables of client threads
-send_information_t * send_info;		// array info of sent bundles
-long tot_bundles;					// for data mode
-struct timeval start, end, now;			// time variables
-struct timeval bundle_sent, ack_recvd;	// time variables
-int sent_bundles = 0;					// sent bundles counter
-unsigned long long sent_data = 0;				// sent byte counter
-int close_ack_receiver = 0;			// to signal the ack receiver to close
-unsigned int data_written = 0;			// num of bytes written on the source file
-long int wrong_crc;
+static send_information_t * send_info = NULL;		// array info of sent bundles
+static long tot_bundles;					// for data mode
+static struct timeval start, end, now;			// time variables
+static struct timeval bundle_sent, ack_recvd;	// time variables
+static int sent_bundles = 0;					// sent bundles counter
+static unsigned long long sent_data = 0;				// sent byte counter
+static int close_ack_receiver = 0;			// to signal the ack receiver to close
+//static unsigned int data_written = 0;			// num of bytes written on the source file
+static long int wrong_crc;
 
-boolean_t process_interrupted;
-boolean_t expir_timer_cong_window;
+static boolean_t process_interrupted;
+static boolean_t expir_timer_cong_window;
 
 
-FILE * log_file = NULL;
-char source_file[256];					// complete name of source file: SOURCE_FILE_pid[_numBundle]
-char * transfer_filename;			// basename of the file to transfer
-u32_t transfer_filedim;				// size of the file to transfer
-int transfer_fd;					// file descriptor
+static char source_file[256];					// complete name of source file: SOURCE_FILE_pid[_numBundle]
+static char * transfer_filename;			// basename of the file to transfer
+static u32_t transfer_filedim;				// size of the file to transfer
+static int transfer_fd;					// file descriptor
 
 // flags to exit cleanly
-boolean_t bp_handle_open;
-boolean_t log_open;
-boolean_t source_file_created;
-
-boolean_t dedicated_monitor; 	// if client must start a dedicated monitor
+static boolean_t source_file_created;
 
 // buffer settings
-char* buffer = NULL;        	    // buffer containing data to be transmitted
-size_t bufferLen;                   // length of buffer
+static char* buffer = NULL;        	    // buffer containing data to be transmitted
+static size_t bufferLen;                   // length of buffer
 
+static boolean_t forced_close = FALSE;
 
 // BP variables
-al_bp_error_t error;
-al_bp_handle_t handle;
-al_bp_reg_id_t regid;
-al_bp_reg_info_t reginfo;
-al_bp_bundle_id_t * bundle_id;
-al_bp_endpoint_id_t local_eid;
-al_bp_endpoint_id_t dest_eid;
-al_bp_endpoint_id_t mon_eid;
-al_bp_bundle_object_t bundle;
-char ** file_bundle_names;
-al_bp_bundle_object_t ack;
+static al_bp_extB_registration_descriptor registration_descriptor;
+static al_bp_bundle_id_t * bundle_id;
+static al_bp_endpoint_id_t dest_eid;
+static al_bp_endpoint_id_t mon_eid;
+static al_bp_bundle_object_t bundle;
+static char ** file_bundle_names;
 
-dtnperf_options_t * perf_opt;
-dtnperf_connection_options_t * conn_opt;
+
+static dtnperf_options_t * perf_opt;
+static dtnperf_connection_options_t * conn_opt;
 
 extension_block_info_t * ext_blocks;
 static u_int num_meta_blocks = 0;
 static u_int num_ext_blocks = 0;
 
+//useful function to parse eid
+static al_bp_error_t parse_eid(al_bp_endpoint_id_t* endpoint_pointer, char* eid, char* dtn_string);
+static void send_force_stop_bundle();
+static void print_mode();
+static void get_header_payload(u32_t* header_size, double* dtnperf_payload);
+static void parse_monitor(al_bp_endpoint_id_t* endpoint_pointer);
+static void parse_server(al_bp_endpoint_id_t* endpoint_pointer);
+static void open_bp_connection();
+static void set_close_ack_receiver(int value);
+static int get_close_ack_receiver();
+static boolean_t receive_ack(dtnperf_options_t *perf_opt);
+static void set_forced_close_client(boolean_t value);
+static boolean_t get_forced_close_client();
+
+void set_metadata_block_information(al_bp_bundle_object_t *bundle);
+void set_extension_block_information(al_bp_bundle_object_t *bundle);
 
 /*  ----------------------------
  *          CLIENT CODE
@@ -110,221 +138,89 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	/* ------------------------
 	 * variables
 	 * ------------------------ */
-	char * client_demux_string = "";
 	int pthread_status;
 
-	char temp1[256]; // buffer for various purpose
-	char temp2[256];
-	unsigned long int temp;
-//	FILE * stream; // stream for preparing payolad
+	//unsigned long int temp;
+	//	FILE * stream; // stream for preparing payolad
 	al_bp_bundle_object_t bundle_stop;
-	monitor_parameters_t mon_params;
-	char eid_format; // N=default, D=DTN, I=IPN
 
-	void * ext_buf;
-	void * meta_buf;
-	al_bp_extension_block_t * ext_bp;
-	al_bp_extension_block_t * meta_bp;
+	//void * ext_buf;
+	//void * meta_buf;
+
+	al_bp_extB_error_t utility_error;
+	al_bp_error_t error;
 
 	/* ------------------------
 	 * initialize variables
 	 * ------------------------ */
 	perf_opt = perf_g_opt->perf_opt;
 	conn_opt = perf_g_opt->conn_opt;
-	boolean_t debug = perf_opt->debug;
-	int debug_level =  perf_opt->debug_level;
-	boolean_t verbose = perf_opt->verbose;
-	boolean_t create_log = perf_opt->create_log;
-	log_open = FALSE;
-	bp_handle_open = FALSE;
 	source_file_created = FALSE;
 	tot_bundles = 0;
 	process_interrupted = FALSE;
-	eid_format = 'N';
+	//eid_format = 'N';
 
 	wrong_crc = 0;
 
 	perf_opt->log_filename = correct_dirname(perf_opt->log_filename);
 
-	// Create a new log file
-	if (create_log)
+
+	//init debug
+	if (debugger_init(perf_opt->debug, perf_opt->create_log, perf_opt->log_filename) != EXIT_SUCCESS)
 	{
-		if ((log_file = fopen(perf_opt->log_filename, "w")) == NULL)
-		{
-			fprintf(stderr, "[DTNperf fatal error] in opening log file\n");
-			client_clean_exit(1);
-		}
-		log_open = TRUE;
+		error_print("[DTNperf fatal error] in opening log file\n");
+		client_clean_exit(1);
 	}
 
 	// Connect to BP Daemon
-	if ((debug) && (debug_level > 0))
-		printf("[debug] opening connection to local BP daemon...");
-
-	if (perf_opt->use_ip)
-		error = al_bp_open_with_ip(perf_opt->ip_addr, perf_opt->ip_port, &handle);
-	else
-		error = al_bp_open(&handle);
-
-	if (error != BP_SUCCESS)
-	{
-		fprintf(stderr, "[DTNperf fatal error] in opening BP handle: %s\n", al_bp_strerror(error));
-		if (create_log)
-			fprintf(log_file, "[DTNperf fatal error] in opening BP handle: %s\n", al_bp_strerror(error));
-		client_clean_exit(1);
-	}
-	else
-	{
-		bp_handle_open = TRUE;
-	}
-
-	if ((debug) && (debug_level > 0))
-		printf("done\n");
+	debug_print(DEBUG_L2,"[DEBUG_L2] opening connection to local BP daemon...");
+	open_bp_connection();
+	debug_print(DEBUG_L2,"done\n");
 
 	// Ctrl+C handler
-	signal(SIGINT, &client_handler);
+#ifdef mingw
+	signal(SIGINT,SIG_IGN);
+	if (!SetConsoleCtrlHandler(ConsoleHandlerFirst,TRUE)) {
+		fprintf(stderr, "Unable to install handler!\n");
+		client_clean_exit(1);
+	}
+#else
+	signal(SIGINT, client_handler);
+#endif
 
 	/* -----------------------------------------------------
 	 *   initialize and parse bundle src/dest/replyto EIDs
 	 * ----------------------------------------------------- */
 
 	// parse SERVER EID
-	//  if the scheme is not "ipn" append server demux string to destination eid
-	if(strncmp(perf_opt->dest_eid, "ipn", 3) != 0)
-		strcat(perf_opt->dest_eid, SERV_EP_STRING);
+	parse_server(&dest_eid);
 
-
-	if (verbose)
-		fprintf(stdout, "%s (local)\n", perf_opt->dest_eid);
-	// parse
-	error = al_bp_parse_eid_string(&dest_eid, perf_opt->dest_eid);
-
-	if (error != BP_SUCCESS)
-	{
-		fprintf(stderr, "[DTNperf fatal error] in parsing BP EID: invalid eid string '%s'\n", perf_opt->dest_eid);
-		if (create_log)
-			fprintf(log_file, "\n[DTNperf fatal error] in parsing BP EID: invalid eid string '%s'", perf_opt->dest_eid);
-		client_clean_exit(1);
-	}
-
-	if (debug)
-		printf("Destination: %s\n", dest_eid.uri);
-
-	if (create_log)
-		fprintf(log_file, "Destination: %s\n", dest_eid.uri);
-
-	//build a local EID
-	if(debug && debug_level > 0)
-		printf("[debug] building a local eid...");
-	//checking scheme to use
-	if (perf_opt->eid_format_forced != 'N')
-		eid_format = perf_opt->eid_format_forced;
-	else if (al_bp_get_implementation() == BP_ION)
-		eid_format = 'I';
-	else if (al_bp_get_implementation() == BP_DTN)
-		eid_format = 'D';
-	else if (al_bp_get_implementation() == BP_IBR)
-		eid_format = 'D';
-	else {
-		fprintf(stderr, "[DTNperf fatal error] Don't know what eid scheme to use with this BP implementation");
-		if (create_log)
-			fprintf(log_file, "\n[DTNperf fatal error] Don't know what eid scheme to use with this BP implementation");
-		client_clean_exit(1);
-	}
-	//build a local EID
-	//client will register with IPN scheme
-	if(eid_format == 'I')
-	{
-		client_demux_string = malloc (5 + 1);
-		temp = getpid();
-		if (getpid()<10000)
-			temp = temp + 10000;
-		sprintf(client_demux_string, "%lu", temp);
-		//if using a DTN2 implementation, al_bp_build_local_eid() wants ipn_local_number.service_number
-		if (al_bp_get_implementation() == BP_DTN)
-			sprintf(temp1, "%d.%s", perf_opt->ipn_local_num, client_demux_string);
-		else
-			strcpy(temp1, client_demux_string);
-		error = al_bp_build_local_eid(handle, &local_eid, temp1, CBHE_SCHEME);
-	}
-	//client will register with DTN scheme
-	else if(eid_format == 'D')
-	{
-		// append process id to the client demux string
-		client_demux_string = malloc (strlen(CLI_EP_STRING) + 10);
-		sprintf(client_demux_string, "%s_%d", CLI_EP_STRING, getpid());
-		error = al_bp_build_local_eid(handle, &local_eid, client_demux_string, DTN_SCHEME);
-	}
-
-	if(debug && debug_level > 0)
-		printf("done\n");
-	if (debug)
-		printf("Source     : %s\n", local_eid.uri);
-	if (create_log)
-		fprintf(log_file, "\nSource     : %s\n", local_eid.uri);
-	if (error != BP_SUCCESS)
-		{
-			fprintf(stderr, "[DTNperf fatal error] in building local EID: '%s'\n", al_bp_strerror(error));
-			if (create_log)
-				fprintf(log_file, "\n[DTNperf fatal error] in building local EID: '%s'", al_bp_strerror(error));
-			client_clean_exit(1);
-		}
+	al_bp_endpoint_id_t source = al_bp_extB_get_local_eid(registration_descriptor);
+	debug_print(DEBUG_OFF,"local_eid = %s\n", source.uri);
+	debug_print(DEBUG_L1, "[DEBUG_L1] Destination: %s\n", dest_eid.uri);
 
 	// parse REPLY-TO (if not specified, the same as the source)
-	if (strlen(perf_opt->mon_eid) == 0)
-	{
-		//if the scheme is "dtn" copy from local EID only the URI (not the demux string)
-		if(eid_format == 'D'){
-			perf_opt->eid_format_forced = 'D';
-			char * ptr;
-			ptr = strstr(local_eid.uri, CLI_EP_STRING);
-			// copy from local EID only the uri (not the demux string)
-			strncpy(perf_opt->mon_eid, local_eid.uri, ptr - local_eid.uri);
-		}
-		else
-		//if the scheme is "ipn"
-		{
-			perf_opt->eid_format_forced = 'I';
-			char * ptr, * temp;
-			temp = (char *) malloc(sizeof(char)*AL_BP_MAX_ENDPOINT_ID);
-			strcpy(temp, local_eid.uri);
-			ptr = strtok(temp , ".");
-			sprintf(temp, "%s.%s", ptr, MON_EP_NUM_SERVICE);
-			strncpy(perf_opt->mon_eid, temp, strlen(temp));
-			free(temp);
-		}
+	parse_monitor(&mon_eid);
 
-	}
-	// if the scheme is not "ipn" append monitor demux string to reply-to EID
-	if(strncmp(perf_opt->mon_eid, "ipn", 3) != 0)
-		strcat(perf_opt->mon_eid, MON_EP_STRING);
-
-	// parse
-	error = al_bp_parse_eid_string(&mon_eid, perf_opt->mon_eid);
-	if (error != BP_SUCCESS)
-	{
-		fprintf(stderr, "[DTNperf fatal error] in parsing BP EID: invalid eid string '%s'\n", perf_opt->dest_eid);
-		if (create_log)
-			fprintf(log_file, "\n[DTNperf fatal error] in parsing BP EID: invalid eid string '%s'", perf_opt->dest_eid);
-		client_clean_exit(1);
-	}
-
+	/**************** DELETED INTERNAL MONITOR *******************/
 	// checking if there is a running monitor on this endpoint
+	/*
 	if(perf_g_opt->mode == DTNPERF_CLIENT_MONITOR)
 	{
-		if(debug && debug_level > 0)
-			printf("[debug] checking for existing monitor on this endpoint...\n");
-		error = al_bp_find_registration(handle, &mon_eid, &regid);
-		if ( (error == BP_SUCCESS && perf_opt->bp_implementation == BP_DTN)
-					|| (perf_opt->bp_implementation == BP_ION && (error == BP_EBUSY || error == BP_EPARSEEID))
-					|| (perf_opt->bp_implementation == BP_IBR && error == BP_SUCCESS))
+		debug_print(DEBUG_L2,"[DEBUG_L2] checking for existing monitor on this endpoint...\n");
+		error = al_bp_extB_find_registration(registration_descriptor, &mon_eid);
+		if ((perf_opt->bp_implementation == BP_DTN && error == BP_SUCCESS) || //or
+				(perf_opt->bp_implementation == BP_ION && (error == BP_EBUSY || error == BP_EPARSEEID)) || //or
+				(perf_opt->bp_implementation == BP_IBR && error == BP_SUCCESS))
 		{
 			dedicated_monitor = FALSE;
 			printf("there is already a monitor on this endpoint.\n");
-			printf("regid 0x%x\n", (unsigned int) regid);
+			printf("regid 0x%x\n", (unsigned int) al_bp_extB_get_regid(registration_descriptor));
 		}
 		else
 		{
+			char temp1[256];
+			monitor_parameters_t mon_params;
 			dedicated_monitor = TRUE;
 			mon_params.client_id = getpid();
 			mon_params.perf_g_opt = perf_g_opt;
@@ -342,192 +238,73 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 				exit(0);
 			}
 			printf("dedicated (internal) monitor started\n");
+			strcpy(mon_eid.uri, temp1);
 		}
-		if ((debug) && (debug_level > 0))
-			printf(" done\n");
-	}
+		debug_print(DEBUG_L2," done\n");
+	}*/
 
-	if(dedicated_monitor == TRUE)
-		strcpy(mon_eid.uri, temp1);
-
-	if (debug)
-		printf("Reply-to   : %s\n\n", mon_eid.uri);
-
-	if (create_log)
-		fprintf(log_file, "Reply-to   : %s\n\n", mon_eid.uri);
-
-	if(create_log)
-		fflush(log_file);
+	debug_print(DEBUG_L1,"[DEBUG_L1] Reply-to   : %s\n\n", mon_eid.uri);
 
 	//create a new registration to the local router based on this eid
-	if(debug && debug_level > 0)
-		printf("[debug] registering to local BP daemon...");
-	memset(&reginfo, 0, sizeof(reginfo));
-	al_bp_copy_eid(&reginfo.endpoint, &local_eid);
-	reginfo.flags = BP_REG_DEFER;
-	reginfo.regid = BP_REGID_NONE;
-	reginfo.expiration = 0;
-	error = al_bp_register(&handle, &reginfo, &regid);
-	if ( (error != BP_SUCCESS && perf_opt->bp_implementation == BP_DTN)
-			|| (perf_opt->bp_implementation == BP_ION && (error == BP_EBUSY || error == BP_EPARSEEID))
-			|| (perf_opt->bp_implementation == BP_IBR && error != BP_SUCCESS))
-	{
-		fflush(stdout);
-		fprintf(stderr, "[DTNperf fatal error] in registering eid: %s (%s)\n",
-				reginfo.endpoint.uri, al_bp_strerror(al_bp_errno(handle)));
-		if (create_log)
-			fprintf(log_file, "[DTNperf fatal error] in registering eid: %s (%s)\n",
-					reginfo.endpoint.uri, al_bp_strerror(al_bp_errno(handle)));
-		client_clean_exit(1);
-	}
-	if ((debug) && (debug_level > 0))
-		printf(" done\n");
-	if (debug)
-		printf("regid 0x%x\n", (unsigned int) regid);
-	if (create_log)
-		fprintf(log_file, "regid 0x%x\n", (unsigned int) regid);
+	debug_print(DEBUG_L1,"[DEBUG_L1] regid 0x%x\n", (unsigned int) al_bp_extB_get_regid(registration_descriptor));
 
 	// if bundle payload > MAX_MEM_PAYLOAD, then memorize payload in file
 	if (!perf_opt->use_file && perf_opt->bundle_payload > MAX_MEM_PAYLOAD)
 	{
 		perf_opt->use_file = 1;
 		perf_opt->bundle_payload = BP_PAYLOAD_FILE;
-		if (verbose)
-			printf("[DTNperf warning] Payload %f > %d: using file instead of memory\n", perf_opt->bundle_payload, MAX_MEM_PAYLOAD);
-		if (create_log)
-			fprintf(log_file, "[DTNperf warning] Payload %f > %d: using file instead of memory\n", perf_opt->bundle_payload, MAX_MEM_PAYLOAD);
+		debug_print(DEBUG_L1,"[DTNperf warning] Payload %f > %d: using file instead of memory\n", perf_opt->bundle_payload, MAX_MEM_PAYLOAD);
 	}
 
 
 	u32_t header_size;
-	if(perf_opt->op_mode == 'F')
-		header_size = get_header_size(perf_opt->op_mode, strlen(perf_opt->F_arg), strlen(perf_opt->mon_eid) );
-	else
-		header_size = get_header_size(perf_opt->op_mode, 0, strlen(perf_opt->mon_eid) );
+	double dtnperf_payload;
+	get_header_payload(&header_size, &dtnperf_payload);
 
-	double dtnperf_payload = perf_opt->bundle_payload - header_size;
+	debug_print(DEBUG_L2,"[DEBUG_L2] dtnperf header length: %u\n", header_size);
+	debug_print(DEBUG_L2,"[DEBUG_L2] dtnperf payload length: %f\n", dtnperf_payload);
 
-	if( dtnperf_payload <= 0 )
-	{
-		fflush(stdout);
-		fprintf(stderr, "[DTNperf warning] bundle payload too small. Extended to %d bytes\n", DEFAULT_PAYLOAD);
-		if (create_log)
-			fprintf(stderr, "[DTNperf warning] bundle payload too small. Extended to %d bytes\n", DEFAULT_PAYLOAD);
-		perf_opt->bundle_payload = DEFAULT_PAYLOAD; //client_clean_exit(1);
-	}
-
-	if ((debug) && (debug_level > 0))
-	{
-		printf("[debug] dtnperf header length: %u\n", header_size);
-		printf("[debug] dtnperf payload length: %f\n", dtnperf_payload);
-	}
-	if (create_log)
-	{
-		printf("[debug] dtnperf header length: %u\n", header_size);
-		printf("[debug] dtnperf payload length: %f\n", dtnperf_payload);
-	}
 	/* ------------------------------------------------------------------------------
 	 * select the operative-mode (between Time_mode, Data_mode and File_mode)
 	 * ------------------------------------------------------------------------------ */
 
-	if (perf_opt->op_mode == 'T')	// Time mode
+	print_mode();
+
+	debug_print(DEBUG_L1,"[DEBUG_L1] Transmitting data using = %s\n", perf_opt->use_file ? "a file" : "memory");
+
+	debug_print(DEBUG_L1,"[DEBUG_L1] Congestion control = %s:\n", perf_opt->congestion_ctrl == 'W' ? "window" : "rate");
+
+	if(perf_opt->congestion_ctrl == 'W')
 	{
-
-		if (verbose)
-			printf("Working in Time_mode\n");
-
-		if (create_log)
-			fprintf(log_file, "Working in Time_mode\n");
-
-		if (verbose)
-			printf("requested Tx length %d (s) \n", perf_opt->transmission_time);
-
-		if (create_log)
-			fprintf(log_file, "requested Tx length %d (s)\n", perf_opt->transmission_time);
-	}
-	else if (perf_opt->op_mode == 'D') // Data mode
-	{
-		if (verbose)
-			printf("Working in Data_mode\n");
-
-		if (create_log)
-			fprintf(log_file, "Working in Data_mode\n");
-
-		if (verbose)
-			printf("requested Transmission of %f bytes of data\n", perf_opt->data_qty);
-
-		if (create_log)
-			fprintf(log_file, "requested Transmission of %f bytes of data\n", perf_opt->data_qty);
-	}
-	else if (perf_opt->op_mode == 'F') // File mode
-	{
-		if (verbose)
-			printf("Working in File_mode\n");
-
-		if (create_log)
-			fprintf(log_file, "Working in File_mode\n");
-
-		if (verbose)
-			printf("requested transmission of file %s\n", perf_opt->F_arg);
-
-		if (create_log)
-			fprintf(log_file, "requested transmission of file %s\n", perf_opt->F_arg);
-
-	}
-
-	if (verbose)
-		printf(" transmitting data %s\n", perf_opt->use_file ? "using a file" : "using memory");
-	if (create_log)
-		fprintf(log_file, " transmitting data %s\n", perf_opt->use_file ? "using a file" : "using memory");
-
-	if (verbose)
-		printf("%s based congestion control:\n", perf_opt->congestion_ctrl == 'w' ? "window" : "rate");
-
-	if (create_log)
-		fprintf(log_file, "%s based congestion control:\n", perf_opt->congestion_ctrl == 'w' ? "window" : "rate");
-	if(perf_opt->congestion_ctrl == 'w')
-	{
-		if (verbose)
-			printf("\twindow is %d bundle\n", perf_opt->window);
-		if (create_log)
-			fprintf(log_file, "\twindow is %d bundle\n", perf_opt->window);
+		debug_print(DEBUG_L1,"\twindow is %d bundle\n", perf_opt->window);
 	}
 	else
 	{
-		if (verbose)
-			printf("\trate is %f %c\n", perf_opt->rate, perf_opt->rate_unit);
-		if (create_log)
-			fprintf(log_file, "\trate is %f %c\n", perf_opt->rate, perf_opt->rate_unit);
+		debug_print(DEBUG_L1,"\trate is %f %c\n", perf_opt->rate, perf_opt->rate_unit);
 	}
-	if (verbose)
-		printf("payload is %f byte\n", perf_opt->bundle_payload);
-	if (create_log)
-		fprintf(log_file, "payload is %f byte\n", perf_opt->bundle_payload);
+	debug_print(DEBUG_L1,"[DEBUG_L1] Payload is %f byte\n", perf_opt->bundle_payload);
 
 
 	sent_bundles = 0;
 
 	if (perf_opt->op_mode == 'D' || perf_opt->op_mode == 'F') // Data or File mode
 	{
-		if ((debug) && (debug_level > 0))
-			printf("[debug] calculating how many bundles are needed...");
+		debug_print(DEBUG_L2,"[DEBUG_L1] calculating how many bundles are needed...");
 
 		if (perf_opt->op_mode == 'F') // File mode
 		{
 			struct stat file;
 			if (stat(perf_opt->F_arg, &file) < 0)
 			{
-				fprintf(stderr, "[DTNperf fatal error] in stat (linux) of file %s : %s", perf_opt->F_arg, strerror(errno));
-				if (create_log)
-					fprintf(log_file, "[DTNperf fatal error] in stat (linux) of file %s : %s", perf_opt->F_arg, strerror(errno));
+				error_print("[DTNperf fatal error] in stat (linux) of file %s : %s", perf_opt->F_arg, strerror(errno));
 				client_clean_exit(1);
 			}
 
-			// get transfer file basename
-			strcpy(temp1, perf_opt->F_arg);
-			strcpy(temp2, basename(temp1));
-			transfer_filename = malloc(strlen(temp2) + 1);
-			strcpy(transfer_filename, temp2);
+			{
+				char* namefile = basename(perf_opt->F_arg);
+				transfer_filename = malloc(strlen(namefile) + 1);
+				strcpy(transfer_filename, namefile);
+			}
 
 			transfer_filedim = file.st_size;
 			tot_bundles += bundles_needed(transfer_filedim, get_file_fragment_size(perf_opt->bundle_payload, strlen(transfer_filename), strlen(perf_opt->mon_eid)));
@@ -537,108 +314,37 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		else // Data mode
 			tot_bundles += bundles_needed(perf_opt->data_qty, perf_opt->bundle_payload);
 
-		if ((debug) && (debug_level > 0))
-			printf(" n_bundles = %ld\n", tot_bundles);
-
+		debug_print(DEBUG_L2," n_bundles = %ld\n", tot_bundles);
 	}
 
 	// Create the bundle object
-	if ((debug) && (debug_level > 0))
-		printf("[debug] creating the bundle object...");
-	error = al_bp_bundle_create(& bundle);
+	debug_print(DEBUG_L2,"[DEBUG_L2] creating the bundle object...");
+	error = al_bp_bundle_create(&bundle);
 	if (error != BP_SUCCESS)
 	{
-		fprintf(stderr, "[DTNperf fatal error] in creating bundle object\n");
-
-		if (create_log)
-			fprintf(log_file, "[DTNperf fatal error] in creating bundle object\n");
+		error_print("[DTNperf fatal error] in creating bundle object\n");
 		client_clean_exit(1);
 	}
-	if ((debug) && (debug_level > 0))
-		printf(" done\n");
+	debug_print(DEBUG_L2," done\n");
 
-	 if ((debug) && (debug_level > 0))
-		 printf("[debug] number of blocks: %d\n", perf_opt->num_blocks);
+	debug_print(DEBUG_L2,"[DEBUG_L2] number of blocks: %d\n", perf_opt->num_blocks);
 
 	// set extension block information
-	if (num_ext_blocks > 0)
-	{
-		ext_buf = malloc(num_ext_blocks * sizeof(al_bp_extension_block_t));
-		memset(ext_buf, 0, num_ext_blocks * sizeof(al_bp_extension_block_t));
-		int i=0;
-
-		ext_bp = (al_bp_extension_block_t *)ext_buf;
-		for (i = 0; i < num_ext_blocks; i++)
-		{
-			if (check_metadata(&ext_blocks[i]))
-			{
-				continue;
-			}
-			ext_bp->type = ext_blocks[i].block.type;
-			ext_bp->flags = ext_blocks[i].block.flags;
-			ext_bp->data.data_len = ext_blocks[i].block.data.data_len;
-			ext_bp->data.data_val = ext_blocks[i].block.data.data_val;;
-			ext_bp++;
-		}
-		bundle.spec->blocks.blocks_len = num_ext_blocks;
-		bundle.spec->blocks.blocks_val = (al_bp_extension_block_t *)ext_buf;
-	}
+	//ext_buf = set_extension_block_information(&bundle);
 
 	// set metadata block information
-	if (num_meta_blocks > 0)
-	{
-		meta_buf = malloc(num_meta_blocks * sizeof(al_bp_extension_block_t));
-		memset(meta_buf, 0, num_meta_blocks * sizeof(al_bp_extension_block_t));
-		int i=0;
+	//meta_buf = set_metadata_block_information(&bundle);
+	set_metadata_block_information(&bundle);
 
-		meta_bp = (al_bp_extension_block_t *)meta_buf;
-		for (i = 0; i < num_meta_blocks; i++)
-		{
-			if (!check_metadata(&ext_blocks[i]))
-			{
-				continue;
-			}
-			meta_bp->type = ext_blocks[i].block.type;
-			meta_bp->flags = ext_blocks[i].block.flags;
-			meta_bp->data.data_len = ext_blocks[i].block.data.data_len;
-			meta_bp->data.data_val = ext_blocks[i].block.data.data_val;;
-			meta_bp++;
-		}
-		bundle.spec->metadata.metadata_len = num_meta_blocks;
-		bundle.spec->metadata.metadata_val = (al_bp_extension_block_t *)meta_buf;
-	}
-/****** METADATA prints
-	if ((debug) && (debug_level > 0))
-	{
-		int i=0;
-		printf("==============================\n");
-		printf("[debug] number of metadata blocks: %lu\n", bundle.spec->metadata.metadata_len);
-		for (i = 0; i < num_meta_blocks; i++)
-		{
-			if (!check_metadata(&ext_blocks[i]))
-			{
-				continue;
-			}
-		//	printf("Metada Block[%d]\tmetadata_type [%L]\n", i, ext_blocks[i].metadata_type);
-			printf("---type: %lu\n", bundle.spec->metadata.metadata_val[i].type);
-			printf("---flags: %lu\n", bundle.spec->metadata.metadata_val[i].flags);
-			printf("---data_len: %lu\n", bundle.spec->metadata.metadata_val[i].data.data_len);
-			printf("---data_val: %s\n", bundle.spec->metadata.metadata_val[i].data.data_val);
-		}
-		printf("-------------------------------\n");
-	}
-*******/
 
 	// Create the array for the bundle send info (only for sliding window congestion control)
-	if (perf_opt->congestion_ctrl == 'w') {
-		if ((debug) && (debug_level > 0))
-			printf("[debug] creating structure for sending information...");
+	if (perf_opt->congestion_ctrl == 'W') {
+		debug_print(DEBUG_L2,"[DEBUG_L2] creating structure for sending information...");
 
 		send_info = (send_information_t*) malloc(perf_opt->window * sizeof(send_information_t));
 		init_info(send_info, perf_opt->window);
 
-		if ((debug) && (debug_level > 0))
-			printf(" done\n");
+		debug_print(DEBUG_L2," done\n");
 	}
 
 	// Open File Transferred
@@ -647,31 +353,27 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		// open file to transfer in read mode
 		if ((transfer_fd = open(perf_opt->F_arg, O_RDONLY)) < 0)
 		{
-			fprintf(stderr, "[DTNperf fatal error] in stat (linux) of file %s : %s", perf_opt->F_arg, strerror(errno));
-			if (create_log)
-				fprintf(log_file, "[DTNperf fatal error] in stat (linux) of file %s : %s", perf_opt->F_arg, strerror(errno));
+			error_print("[DTNperf fatal error] in stat (linux) of file %s : %s", perf_opt->F_arg, strerror(errno));
 			client_clean_exit(2);
 		}
 	}
 
-
 	// Setting the bundle options
-	al_bp_bundle_set_source(&bundle, local_eid);
-	al_bp_bundle_set_dest(&bundle, dest_eid);
-	al_bp_bundle_set_replyto(&bundle, mon_eid);
 	set_bp_options(&bundle, conn_opt);
 
 	// intialize stop bundle;
-	al_bp_bundle_create(&bundle_stop);
+	//al_bp_bundle_create(&bundle_stop);
 
-	if ((debug) && (debug_level > 0))
-		printf("[debug] entering in loop\n");
+	debug_print(DEBUG_L2,"[DEBUG_L2] entering in the transmission loop\n");
 
 	// Run threads
-	if (perf_opt->congestion_ctrl == 'w') // sliding window congestion control
+	if (perf_opt->congestion_ctrl == 'W') { // sliding window congestion control
 		sem_init(&window, 0, perf_opt->window);
-	else								// rate based congestion control
+		sem_init(&inflight, 0, 0); // no bundles on air at startup
+	} else {								// rate based congestion control
 		sem_init(&window, 0, 0);
+		sem_init(&inflight, 0, 0); // no bundles on air at startup
+	}
 
 
 	sigset_t sigset;
@@ -683,110 +385,104 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	sigaddset(&sigset, SIGUSR2);
 	pthread_sigmask(SIG_BLOCK, &sigset, NULL);
 
-
-	pthread_cond_init(&cond_ackreceiver, NULL);
-	pthread_mutex_init (&mutexdata, NULL);
+	pthread_mutex_init (&mutexclose, NULL);
 
 	pthread_create(&sender, NULL, send_bundles, (void*)perf_g_opt);
 	pthread_create(&cong_ctrl, NULL, congestion_control, (void*)perf_g_opt);
-	pthread_create(&wait_for_signal, NULL, wait_for_sigint, (void*) client_demux_string);
+	pthread_create(&wait_for_signal, NULL, wait_for_sigint, NULL);
 
-	pthread_join(cong_ctrl, (void**)&pthread_status);
+// this is the thread creating the problem
 	pthread_join(sender, (void**)&pthread_status);
+	//pthread_cancel(cong_ctrl); // terminate congestion control thread
+	pthread_join(cong_ctrl, (void**)&pthread_status);
 
-	pthread_mutex_destroy(&mutexdata);
+	pthread_cancel(cong_ctrl);
+	pthread_mutex_destroy(&mutexclose);
 	sem_destroy(&window);
-	pthread_cond_destroy(&cond_ackreceiver);
+	sem_destroy(&inflight);
+
+	if (perf_opt->congestion_ctrl == 'W')
+		destroy_info(send_info);
+
+	while (get_forced_close_client()) // waiting for client_clean_exit, something was wrong
+		/*pause()*/;
 
 	// if user sent Ctrl+C to the client,
 	// let the wait_for_signal thread to terminate the execution
 	if (process_interrupted)
 		pause();
 
-	if ((debug) && (debug_level > 0))
-		printf("[debug] out from loop\n");
+	debug_print(DEBUG_L2,"[DEBUG_L2] out from loop\n");
 
 	// Get the TOTAL end time
-	if ((debug) && (debug_level > 0))
-		printf("[debug] getting total end-time...");
+	debug_print(DEBUG_L2,"[DEBUG_L2] getting total end-time...");
 
 	gettimeofday(&end, NULL);
 
-	if ((debug) && (debug_level > 0))
-		printf(" end.tv_sec = %u s\n", (u_int)end.tv_sec);
+	debug_print(DEBUG_L2," end.tv_sec = %u s\n", (u_int)end.tv_sec);
 
 	// Print final report
-	print_final_report(NULL);
+	print_final_report(stdout);
 	if(perf_opt->create_log)
-		print_final_report(log_file);
+		print_final_report(get_log_fp());
 
-	if (!perf_opt->no_bundle_stop)
+	if (strncmp(mon_eid.uri, al_bp_get_none_endpoint_string(), strlen(al_bp_get_none_endpoint_string())) != 0)
 	{
-		// fill the stop bundle
-		prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority, sent_bundles);
-		al_bp_bundle_set_source(&bundle_stop, local_eid);
-
-		// send stop bundle to monitor
-		if (debug)
-			printf("sending the stop bundle to the monitor...");
-		if ((error = al_bp_bundle_send(handle, regid, &bundle_stop)) != 0)
+		if (!perf_opt->no_bundle_stop)
 		{
-			fprintf(stderr, "[DTNperf fatal error] in sending stop bundle: %d (%s)\n", error, al_bp_strerror(error));
-			if (create_log)
-				fprintf(log_file, "[DTNperf fatal error] in sending stop bundle: %d (%s)\n", error, al_bp_strerror(error));
-			client_clean_exit(1);
+			al_bp_bundle_create(&bundle_stop);
+			al_bp_endpoint_id_t none;
+			al_bp_get_none_endpoint(&none);
+			// fill the stop bundle
+			prepare_stop_bundle(&bundle_stop, mon_eid, conn_opt->expiration, conn_opt->priority, sent_bundles);
+			//debug_print(DEBUG_L2,"[DEBUG_L2] registration_descriptor: %d\n", registration_descriptor);
+			al_bp_endpoint_id_t local_eid = al_bp_extB_get_local_eid(registration_descriptor);
+			//debug_print(DEBUG_L1,"local_eid foud: %s\n", local_eid.uri);
+
+			if ((utility_error = al_bp_bundle_set_source(&bundle_stop, local_eid)) != BP_EXTB_SUCCESS )
+			{
+				debug_print(DEBUG_L1,"[DTNperf fatal error] in setting source in stop bundle: %d (%s)\n", al_bp_extB_get_error(registration_descriptor), al_bp_extB_strerror(registration_descriptor));
+				client_clean_exit(1);
+			}
+			print_bundle(&bundle_stop);
+//			 send stop bundle to monitor
+			debug_print(DEBUG_L1,"sending the stop bundle to the monitor...");
+			if ((utility_error = al_bp_extB_send(registration_descriptor, &bundle_stop, mon_eid, none)) != BP_EXTB_SUCCESS)
+			{
+				error_print("[DTNperf fatal error] in sending stop bundle: %d (%s)\n", al_bp_extB_get_error(registration_descriptor), al_bp_extB_strerror(registration_descriptor));
+				client_clean_exit(1);
+			}
+			debug_print(DEBUG_L1,"done.\n");
+			al_bp_bundle_free(&bundle_stop);
+		} else
+		{
+			debug_print(DEBUG_L1,"[DEBUG_L1] bundle stop disabled.\n");
 		}
-		if (debug)
-			printf("done.\n");
-	}
-
-	// waiting monitor stops
-	if (dedicated_monitor)
-	{
-		printf("\nWaiting for dedicated monitor to stop...\n");
-		wait(&monitor_status);
-	}
-
-	// Close the BP handle --
-	if ((debug) && (debug_level > 0))
-		printf("[debug] closing DTN handle...");
-
-	if (al_bp_close(handle) != BP_SUCCESS)
-	{
-		fprintf(stderr, "[DTNperf fatal error] in closing bp handle: %s\n", strerror(errno));
-		if (create_log)
-			fprintf(log_file, "[DTNperf fatal error] in closing bp handle: %s\n", strerror(errno));
-		client_clean_exit(1);
 	}
 	else
 	{
-		bp_handle_open = FALSE;
+		debug_print(DEBUG_L1,"[DEBUG_L1] Bundle stop not needed, mon_eid = %s\n", al_bp_get_none_endpoint_string());
 	}
 
-	// Unregister Local Eid only For ION
-	if(perf_opt->bp_implementation == BP_ION)
+	sleep(1);
+	// Close the BP handle --
+	debug_print(DEBUG_L2,"[DEBUG_L2] closing DTN handle...");
+	//debug_print(DEBUG_L2,"[DEBUG_L2] registration_descriptor: %d\n", registration_descriptor);
+	switch (al_bp_extB_unregister(registration_descriptor))
 	{
-		if (al_bp_unregister(handle, regid, local_eid) != BP_SUCCESS)
-		{
-			fprintf(stderr, "[DTNperf fatal error] unregisted endpoint: %s\n", strerror(errno));
-			if (create_log)
-				fprintf(log_file, "[DTNperf fatal error] unregisted endpoint: %s\n", strerror(errno));
-			client_clean_exit(1);
-		}
-		else
-		{
-			//bp_local_eid_register = FALSE;
-			bp_handle_open = FALSE;
-		}
+	case BP_EXTB_ERRCLOSE:
+		error_print("[DTNperf fatal error] in closing bp handle: %s\n", strerror(errno));
+		client_clean_exit(1);
+		break;
+	case BP_EXTB_ERRUNREGISTER:
+		error_print("[DTNperf fatal error] unregisted endpoint: %s\n", strerror(errno));
+		client_clean_exit(1);
+		break;
+	default:
+		break;
 	}
-	if ((debug) && (debug_level > 0))
-		printf(" done\n");
+	debug_print(DEBUG_L2," done\n");
 
-	if (create_log)
-	{
-		fclose(log_file);
-		log_open = FALSE;
-	}
 	// deallocate memory
 	if (perf_opt->op_mode == 'F')
 	{
@@ -794,18 +490,14 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	if (perf_opt->use_file)
 	{
-	//	remove(source_file);
+		//	remove(source_file);
 		source_file_created = FALSE;
 
-		if (debug && debug > 1)
-		{
-			printf("[debug] removed file %s\n", source_file);
-		}
+		debug_print(DEBUG_L2, "[DEBUG_L2] removed file %s\n", source_file);
 	}
 
 	// free resource
 	free((void*)buffer);
-	free(client_demux_string);
 	free(transfer_filename);
 	free(send_info);
 	if(perf_opt->op_mode == 'F')
@@ -818,8 +510,8 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		{
 			for (i = 0; i< tot_bundles ; i++ )
 			{
-			// The last bundle delivered is not deleted here
-			// Is deleted with the free(&bundle)
+				// The last bundle delivered is not deleted here
+				// Is deleted with the free(&bundle)
 				if( strcmp(bundle.payload->filename.filename_val, file_bundle_names[i]) != 0)
 				{
 					tmp_payload.filename.filename_len = strlen(file_bundle_names[i]);
@@ -840,13 +532,12 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 	}
 	//structure bundle is always free in every op mode
 	al_bp_bundle_free(&bundle);
-	al_bp_bundle_free(&bundle_stop);
 	if (perf_opt->num_blocks > 0)
 	{
 		/*free(ext_buf);
 		free(meta_buf);*/
-		meta_buf = NULL;
-		ext_buf = NULL;
+		//meta_buf = NULL;
+		//ext_buf = NULL;
 		int i;
 		for ( i=0; i<perf_opt->num_blocks; i++ )
 		{
@@ -858,6 +549,9 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 		ext_blocks = NULL;
 	}
 
+	//destroy prima del messaggio
+	debugger_destroy();
+	al_bp_extB_destroy();
 	if (perf_opt->create_log)
 		printf("\nClient log saved: %s\n", perf_opt->log_filename);
 
@@ -867,15 +561,195 @@ void run_dtnperf_client(dtnperf_global_options_t * perf_g_opt)
 }
 // end client code
 
+void set_metadata_block_information(al_bp_bundle_object_t *bundle)
+{
+	void * meta_buf = NULL;
+	if (num_meta_blocks > 0)
+	{
+		al_bp_extension_block_t * meta_bp;
+		meta_buf = malloc(num_meta_blocks * sizeof(al_bp_extension_block_t));
+		memset(meta_buf, 0, num_meta_blocks * sizeof(al_bp_extension_block_t));
+		int i=0;
+
+		meta_bp = (al_bp_extension_block_t *)meta_buf;
+		for (i = 0; i < num_meta_blocks; i++)
+		{
+			if (!check_metadata(&ext_blocks[i]))
+			{
+				continue;
+			}
+			meta_bp->type = ext_blocks[i].metadata_type;
+			meta_bp->flags = ext_blocks[i].block.flags;
+			meta_bp->data.data_len = ext_blocks[i].block.data.data_len;
+			meta_bp->data.data_val = ext_blocks[i].block.data.data_val;;
+			meta_bp++;
+		}
+		(*bundle).spec->metadata.metadata_len = num_meta_blocks;
+		(*bundle).spec->metadata.metadata_val = (al_bp_extension_block_t *)meta_buf;
+		print_ext_or_metadata_blocks(num_meta_blocks, (*bundle).spec->metadata.metadata_val);
+	}
+}
+
+void set_extension_block_information(al_bp_bundle_object_t *bundle)
+{
+	void *ext_buf = NULL;
+	if (num_ext_blocks > 0)
+	{
+		al_bp_extension_block_t * ext_bp;
+		ext_buf = malloc(num_ext_blocks * sizeof(al_bp_extension_block_t));
+		memset(ext_buf, 0, num_ext_blocks * sizeof(al_bp_extension_block_t));
+		int i=0;
+
+		ext_bp = (al_bp_extension_block_t *)ext_buf;
+		for (i = 0; i < num_ext_blocks; i++)
+		{
+			if (check_metadata(&ext_blocks[i]))
+			{
+				continue;
+			}
+			ext_bp->type = ext_blocks[i].block.type;
+			ext_bp->flags = ext_blocks[i].block.flags;
+			ext_bp->data.data_len = ext_blocks[i].block.data.data_len;
+			ext_bp->data.data_val = ext_blocks[i].block.data.data_val;;
+			ext_bp++;
+		}
+		(*bundle).spec->blocks.blocks_len = num_ext_blocks;
+		(*bundle).spec->blocks.blocks_val = (al_bp_extension_block_t *)ext_buf;
+		print_ext_or_metadata_blocks(num_meta_blocks, (*bundle).spec->metadata.metadata_val);
+	}
+}
+
+void print_mode()
+{
+	debug_print(DEBUG_L1,"[DEBUG_L1] Transmission mode = %c\n", perf_opt->op_mode);
+	switch (perf_opt->op_mode)
+	{
+	case 'T':	// Time mode
+		debug_print(DEBUG_L1,"\trequested Transmission interval %d (s)\n", perf_opt->transmission_time);
+		break;
+	case 'D': // Data mode
+		debug_print(DEBUG_L1,"\trequested Transmission of %f bytes of data\n", perf_opt->data_qty);
+		break;
+	case 'F': // File mode
+		debug_print(DEBUG_L1,"\trequested Transmission of file %s\n", perf_opt->F_arg);
+		break;
+	}
+}
+
+void get_header_payload(u32_t* header_size, double* dtnperf_payload)
+{
+	if(perf_opt->op_mode == 'F')
+		*header_size = get_header_size(perf_opt->op_mode, strlen(perf_opt->F_arg), strlen(perf_opt->mon_eid) );
+	else
+		*header_size = get_header_size(perf_opt->op_mode, 0, strlen(perf_opt->mon_eid) );
+
+	*dtnperf_payload = perf_opt->bundle_payload - *header_size;
+
+	if (*dtnperf_payload <= 0)
+	{
+		fflush(stdout);
+		error_print("[DTNperf warning] bundle payload too small. Extended to %d bytes\n", DEFAULT_PAYLOAD);
+		perf_opt->bundle_payload = DEFAULT_PAYLOAD; //client_clean_exit(1);
+	}
+}
+
+void parse_monitor(al_bp_endpoint_id_t* endpoint_pointer)
+{
+	al_bp_error_t error;
+	if (strlen(perf_opt->mon_eid) == 0)
+	{
+		char* ptr;
+		char* temp;
+		al_bp_endpoint_id_t temp_eid = al_bp_extB_get_local_eid(registration_descriptor);
+		switch (al_bp_extB_get_eid_format())
+		{
+		case 'D':
+			ptr = strstr(&(temp_eid.uri[0]), CLI_EP_STRING);
+			// copy from local EID only the uri (not the demux string)
+			strncpy(perf_opt->mon_eid, &(temp_eid.uri[0]), ptr - &(temp_eid.uri[0]));
+			break;
+		case 'I':
+
+			temp = (char *) malloc(sizeof(char)*AL_BP_MAX_ENDPOINT_ID);
+			strcpy(temp, &(temp_eid.uri[0]));
+			ptr = strtok(temp , ".");
+			sprintf(temp, "%s.%s", ptr, MON_EP_NUM_SERVICE);
+			strncpy(&(perf_opt->mon_eid[0]), temp, strlen(temp));
+			free(temp);
+			break;
+		}
+	}
+	if (strcmp(perf_opt->mon_eid, al_bp_get_none_endpoint_string()) == 0) // se mon_eid == dtn:none DO NOT append MON_EP_STRING
+		error = al_bp_parse_eid_string(&mon_eid, perf_opt->mon_eid);
+	else
+		error = parse_eid(&mon_eid, perf_opt->mon_eid, MON_EP_STRING);
+	if (error != BP_SUCCESS)
+	{
+		error_print("[DTNperf fatal error] in parsing BP EID: invalid eid string '%s'\n", perf_opt->dest_eid);
+		client_clean_exit(1);
+	}
+}
+
+void parse_server(al_bp_endpoint_id_t* endpoint_pointer)
+{
+	al_bp_error_t error;
+	error = parse_eid(&dest_eid, perf_opt->dest_eid, SERV_EP_STRING);
+	if (error != BP_SUCCESS)
+	{
+		error_print("[DTNperf fatal error] in parsing BP EID: invalid eid string '%s'\n", perf_opt->dest_eid);
+		client_clean_exit(1);
+	}
+}
+
+void open_bp_connection()
+{
+	al_bp_extB_error_t utility_error;
+	int pid = (int) getpid();
+	char* register_string_dtn;
+	// initialize the al_bp_extB
+	utility_error = al_bp_extB_init(perf_opt->eid_format_forced, perf_opt->ipn_local_num);
+	if (utility_error != BP_EXTB_SUCCESS)
+	{
+		error_print("[DTNperf fatal error] no BP protocol found.\n");
+		client_clean_exit(1);
+	}
+
+	register_string_dtn = malloc(strlen(CLI_EP_STRING) + 3 + ((int)log10(pid)));
+	sprintf(register_string_dtn, "%s_%d", CLI_EP_STRING, pid);
+	
+	// XXX No more supported
+	/*if (perf_opt->use_ip)
+		utility_error = al_bp_extB_register(&registration_descriptor, perf_opt->ip_addr, perf_opt->ip_port, perf_opt->ipn_local_num, pid + ((pid < 10000) ? 10000 : 0), register_string_dtn, perf_opt->bp_implementation);
+	else
+		utility_error = al_bp_extB_register(&registration_descriptor, NULL, 0, perf_opt->ipn_local_num, pid + ((pid < 10000) ? 10000 : 0), register_string_dtn, perf_opt->bp_implementation);*/
+		
+	utility_error = al_bp_extB_register(&registration_descriptor, register_string_dtn, pid + ((pid < 10000) ? 10000 : 0));
+
+	free(register_string_dtn);
+
+	if (utility_error != BP_EXTB_SUCCESS)
+	{
+		error_print("[DTNperf fatal error] in %s: %s\n",al_bp_extB_str_type_error(utility_error),  al_bp_extB_strerror(registration_descriptor));
+		client_clean_exit(1);
+	}
+}
+
+al_bp_error_t parse_eid(al_bp_endpoint_id_t* endpoint_pointer, char* eid, char* dtn_string)
+{
+	if(strncmp(eid, "ipn", 3) != 0)
+		strcat(eid, dtn_string);
+	return al_bp_parse_eid_string(endpoint_pointer, eid);
+}
+
 /**
  * Create and Fill Buffer File Payload
  **/
-void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_log,
-						int num_bundle){
+void create_fill_payload_buf(int num_bundle){
 	FILE * stream, *buf_stream;
 	char *buf;
 	boolean_t eof_reached;
 	int bytes_written;
+	al_bp_error_t error;
 
 	if(perf_opt->op_mode == 'F')// File mode
 		sprintf(source_file, "%s_%d_%d", SOURCE_FILE, getpid(), num_bundle);
@@ -886,18 +760,13 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	if (perf_opt->use_file)
 	{
 		// create the file
-		if ((debug) && (debug_level > 0))
-			printf("[debug] creating file %s...", source_file);
+		debug_print(DEBUG_L2,"[DEBUG_L2] creating file %s...", source_file);
 
 		stream = fopen(source_file, "wb");
 
 		if (stream == NULL)
 		{
-			fprintf(stderr, "[DTNperf fatal error] in creating file %s.\n \b Maybe you have not permissions\n", source_file);
-
-			if (create_log)
-				fprintf(log_file, "[DTNperf fatal error] in creating file %s.\n \b Maybe you have not permissions\n", source_file);
-
+			error_print("[DTNperf fatal error] in creating file %s.\n \b Maybe you have not permissions\n", source_file);
 			client_clean_exit(2);
 		}
 
@@ -905,13 +774,11 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 
 		fclose(stream);
 
-		if ((debug) && (debug_level > 0))
-			printf(" done\n");
+		debug_print(DEBUG_L2," done\n");
 	}
 
 	// Fill the payload
-	if ((debug) && (debug_level > 0))
-		printf("[debug] filling payload...");
+	debug_print(DEBUG_L2,"[DEBUG_L2] filling payload...");
 
 	if (perf_opt->use_file)
 		error = al_bp_bundle_set_payload_file(&bundle, source_file, strlen(source_file));
@@ -920,30 +787,21 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 
 	if (error != BP_SUCCESS)
 	{
-		fprintf(stderr, "[DTNperf fatal error] in setting bundle payload\n");
-
-		if (create_log)
-			fprintf(log_file, "[DTNperf fatal error] in setting bundle payload\n");
+		error_print("[DTNperf fatal error] in setting bundle payload\n");
 		client_clean_exit(1);
 	}
-	if ((debug) && (debug_level > 0))
-		printf(" done\n");
+	debug_print(DEBUG_L2," done\n");
 
 	// open payload stream in write mode
 	if (open_payload_stream_write(bundle, &stream) < 0)
 	{
-		fprintf(stderr, "[DTNperf fatal error] in opening payload stream write mode\n");
-
-		if (create_log)
-			fprintf(log_file, "[DTNperf fatal error] in opening payload stream write mode\n");
-
+		error_print("[DTNperf fatal error] in opening payload stream write mode\n");
 		client_clean_exit(2);
 	}
 
 	buf = (char *) malloc(perf_opt->bundle_payload);
 	double temp_bundle_payload = perf_opt->bundle_payload;
-        buf_stream = open_memstream(&buf, (size_t *) &temp_bundle_payload);
-//CC	buf_stream = open_memstream(&buf, (size_t *) &perf_opt->bundle_payload);
+	buf_stream = open_memstream(&buf, (size_t *) &temp_bundle_payload);
 
 	// prepare the payload
 	if(perf_opt->op_mode == 'F') // File mode
@@ -953,9 +811,7 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 				transfer_filename, transfer_filedim, conn_opt->expiration , &eof_reached, &bundle.payload->buf.buf_crc, &bytes_written);
 		if(error != BP_SUCCESS)
 		{
-			fprintf(stderr, "[DTNperf fatal error] in preparing file transfer payload\n");
-			if (create_log)
-				fprintf(log_file, "[DTNperf fatal error] in preparing file transfer payload");
+			error_print("[DTNperf fatal error] in preparing file transfer payload\n");
 			client_clean_exit(2);
 		}
 	}
@@ -964,17 +820,15 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		error = prepare_generic_payload(perf_opt, buf_stream, &bundle.payload->buf.buf_crc, &bytes_written);
 		if (error != BP_SUCCESS)
 		{
-			fprintf(stderr, "[DTNperf fatal error] in preparing payload: %s\n", al_bp_strerror(error));
-			if (create_log)
-				fprintf(log_file, "[DTNperf fatal error] in preparing payload: %s\n", al_bp_strerror(error));
+			error_print("[DTNperf fatal error] in preparing payload: %s\n", al_bp_strerror(error));
 			client_clean_exit(1);
 		}
 	}
 
 	fclose(buf_stream);
 
-	if (perf_opt->crc==TRUE && debug)
-		printf("[debug] CRC = %"PRIu32"\n", bundle.payload->buf.buf_crc);
+	if (perf_opt->crc==TRUE)
+		debug_print(DEBUG_L1,"[DEBUG_L1] CRC = %"PRIu32"\n", bundle.payload->buf.buf_crc);
 
 	memcpy(buf+HEADER_SIZE+BUNDLE_OPT_SIZE+sizeof(al_bp_timeval_t), &bundle.payload->buf.buf_crc, BUNDLE_CRC_SIZE);
 
@@ -983,9 +837,9 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 	// close the stream
 	close_payload_stream_write(&bundle, stream);
 
-	if(debug)
-		printf("[debug] payload prepared\n");
-/*	if((debug) && (debug_level > 0))
+	debug_print(DEBUG_L1,"[DEBUG_L1] Payload prepared\n");
+
+	/*	if((debug) && (debug_level > 0))
 	{
 		u32_t h_size;
 		uint16_t filename_len, monitor_eid_len;
@@ -1000,7 +854,25 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 		printf("[debug] dtnperf header size %lu byte\n", h_size);
 	}*/
 
+	free(buf);
+
 } // end create_fill_payload_buf
+
+void set_close_ack_receiver(int value)
+{
+	pthread_mutex_lock(&mutexclose);
+	close_ack_receiver = value;
+	pthread_mutex_unlock(&mutexclose);
+}
+
+int get_close_ack_receiver()
+{
+	int result;
+	pthread_mutex_lock(&mutexclose);
+	result = close_ack_receiver;
+	pthread_mutex_unlock(&mutexclose);
+	return result;
+}
 
 /**
  * Client Threads code
@@ -1008,47 +880,29 @@ void create_fill_payload_buf(boolean_t debug, int debug_level, boolean_t create_
 void * send_bundles(void * opt)
 {
 	dtnperf_options_t *perf_opt = ((dtnperf_global_options_t *)(opt))->perf_opt;
-	boolean_t debug = perf_opt->debug;
-	int debug_level = perf_opt->debug_level;
-	boolean_t create_log = perf_opt->create_log;
 	boolean_t condition;
 	u32_t actual_payload;
 
+	al_bp_extB_error_t utility_error;
+
 	// Initialize timer
-	if ((debug) && (debug_level > 0))
-		printf("[debug send thread] initializing timer...");
-	if (create_log)
-		fprintf(log_file, " initializing timer...");
+	debug_print(DEBUG_L2,"[DEBUG_L2 send thread] initializing timer...");
 
 	gettimeofday(&start, NULL);
 
-	if ((debug) && (debug_level > 0))
-		printf(" start.tv_sec = %d s\n", (u_int)start.tv_sec);
-	if (create_log)
-		fprintf(log_file, " start.tv_sec = %d s\n", (u_int)start.tv_sec);
+	debug_print(DEBUG_L2," start.tv_sec = %d s\n", (u_int)start.tv_sec);
 
 	if (perf_opt->op_mode == 'T')		// TIME MODE
 	{									// Calculate end-time
-		if ((debug) && (debug_level > 0))
-			printf("[debug send thread] calculating end-time...");
-
-		if (create_log)
-			fprintf(log_file, " calculating end-time...");
+		debug_print(DEBUG_L2,"[DEBUG_L2 send thread] calculating end-time...");
 
 		end = set (0);
 		end.tv_sec = start.tv_sec + perf_opt->transmission_time;
 
-		if ((debug) && (debug_level > 0))
-			printf(" end.tv_sec = %d s\n", (u_int)end.tv_sec);
-
-		if (create_log)
-			fprintf(log_file, " end.tv_sec = %d s\n", (u_int)end.tv_sec);
+		debug_print(DEBUG_L2," end.tv_sec = %d s\n", (u_int)end.tv_sec);
 	}
 
-	if ((debug) && (debug_level > 0))
-		printf("[debug send thread] entering loop...\n");
-	if (create_log)
-		fprintf(log_file, " entering loop...\n");
+	debug_print(DEBUG_L2,"[DEBUG_L2 send thread] entering loop...\n");
 
 	if (perf_opt->op_mode == 'T') 	// TIME MODE
 	{								// init variables for loop and setting condition
@@ -1063,19 +917,20 @@ void * send_bundles(void * opt)
 	//Only for DATA e TIME MODE is the payload is the same for all bundle
 	if (perf_opt->op_mode == 'T' || perf_opt->op_mode == 'D')
 	{
-		create_fill_payload_buf(debug, debug_level, create_log, 0);
+		create_fill_payload_buf(0);
 	}
 	else //For FILE MODE created all the payload necessary
 	{
 		int i=0;
 		for (i=0; i<tot_bundles; i++){
-			create_fill_payload_buf(debug, debug_level, create_log, i);
+			create_fill_payload_buf(i);
 		}
 	}
 
 	// send bundles loop
-	while (condition)				//LOOP
+	while (condition && !get_forced_close_client())				//LOOP
 	{
+		al_bp_error_t error;
 		// Set Payload FILE MODE
 		// Add in bundles_file_array the bundle to send for free at the end every bundle
 		if (perf_opt->op_mode == 'F')
@@ -1090,69 +945,51 @@ void * send_bundles(void * opt)
 			strcpy(file_bundle_names[sent_bundles], bundle.payload->filename.filename_val);
 		}
 		// window debug
-		if ((debug) && (debug_level > 1))
-		{
-			int cur;
-			sem_getvalue(&window, &cur);
-			printf("\t[debug send thread] window is %d\n", cur);
-		}
-		// wait for the semaphore
-		sem_wait(&window);
+		int cur;
+		sem_getvalue(&window, &cur);
+		debug_print(DEBUG_L2,"\t[DEBUG_L2 send thread] window = %d\n", cur);
+
+		sem_wait(&window); // wait to have a position on window
 		if (perf_opt->op_mode == 'T')	// TIME MODE
 		{								// update time and condition
 			gettimeofday(&now, NULL);
 			condition = now.tv_sec <= end.tv_sec;
 		}
-		if(!condition)
+		if(!condition) // semaphore is blocking --> can be timed out!
 			break;
 
+
+
 		// Send the bundle
-		if (debug)
-			printf("passing the bundle to BP...\n");
+		debug_print(DEBUG_L1,"passing the bundle to BP...\n");
 
-		if (perf_opt->congestion_ctrl == 'w')
-			pthread_mutex_lock(&mutexdata);
-
-		if ((error = al_bp_bundle_send(handle, regid, &bundle)) != 0)
+		if ((utility_error = al_bp_extB_send(registration_descriptor, &bundle, dest_eid, mon_eid)) != BP_EXTB_SUCCESS)
 		{
-			fprintf(stderr, "[DTNperf fatal error] in passing the bundle to BP: %d (%s)\n", error, al_bp_strerror(error));
-			if (create_log)
-				fprintf(log_file, "[DTNperf fatal error] in passing the bundle to BP: %d (%s)\n", error, al_bp_strerror(error));
+			error_print("[DTNperf fatal error] in passing the bundle to BP: %d (%s)\n", al_bp_extB_get_error(registration_descriptor), al_bp_extB_strerror(registration_descriptor));
 			client_clean_exit(1);
 		}
 
 		if ((error = al_bp_bundle_get_id(bundle, &bundle_id)) != 0)
 		{
-			fprintf(stderr, "[DTNperf fatal error] in getting bundle id: %s\n", al_bp_strerror(error));
-			if (create_log)
-				fprintf(log_file, "[DTNperf fatal error] in getting bundle id: %s\n", al_bp_strerror(error));
+			error_print("[DTNperf fatal error] in getting bundle id: %s\n", al_bp_strerror(error));
 			client_clean_exit(1);
 		}
-		if (debug)
-			printf("bundle passed to BP\n");
-		if ((debug) && (debug_level > 0))
-			printf("\t[debug send thread] ");
+		print_bundle(&bundle);
+		debug_print(DEBUG_L1,"bundle passed to BP\n");
+		debug_print(DEBUG_L2,"\t[DEBUG_L2 send thread] ");
 
 		printf("bundle timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
-		if (create_log)
-			fprintf(log_file, "\t bundle timestamp: %llu.%llu\n", (unsigned long long) bundle_id->creation_ts.secs, (unsigned long long) bundle_id->creation_ts.seqno);
 
 		// put bundle id in send_info (only windowed congestion control)
-		if (perf_opt->congestion_ctrl == 'w') {
+		if (perf_opt->congestion_ctrl == 'W') {
 			gettimeofday(&bundle_sent, NULL);
 			add_info(send_info, *bundle_id, bundle_sent, perf_opt->window);
-			if ((debug) && (debug_level > 0))
-				printf("\t[debug send thread] added info for bundle\n");
-			pthread_cond_signal(&cond_ackreceiver);
-			pthread_mutex_unlock(&mutexdata);
+			debug_print(DEBUG_L2,"\t[DEBUG_L2 send thread] added info for bundle\n");
 		}
 
 		// Increment sent_bundles
 		++sent_bundles;
-		if ((debug) && (debug_level > 0))
-			printf("\t[debug send thread] now bundle passed is %d\n", sent_bundles);
-		if (create_log)
-			fprintf(log_file, "\t now bundle passed is %d\n", sent_bundles);
+		debug_print(DEBUG_L2,"\t[DEBUG_L2 send thread] now bundle passed is %d\n", sent_bundles);
 		// Increment data_qty
 		al_bp_bundle_get_payload_size(bundle, &actual_payload);
 		sent_data += actual_payload;
@@ -1166,163 +1003,151 @@ void * send_bundles(void * opt)
 			condition = sent_bundles < tot_bundles;
 		}
 
+		if (!condition) // setted before the sem_post, so the cong_ctrl can avoid to enter on receive
+			set_close_ack_receiver(1);
+
+		if (perf_opt->congestion_ctrl == 'W')
+			sem_post(&inflight); // one bundles sent, increse semaphore of on air bundles
 	} // while
-	if ((debug) && (debug_level > 0))
-		printf("[debug send thread] ...out from sending loop\n");
-	if (create_log)
-		fprintf(log_file, " ...out from sending loop\n");
-	pthread_mutex_lock(&mutexdata);
-	close_ack_receiver = 1;
-	if (perf_opt->congestion_ctrl == 'r')
+
+	debug_print(DEBUG_L2,"[DEBUG_L2 send thread] ...out from sending loop\n");
+	set_close_ack_receiver(1); // to be sure, should be 1 yet
+	if (perf_opt->congestion_ctrl == 'R')
 	{
-		// terminate congestion control thread
-		pthread_cancel(cong_ctrl);
+		pthread_cancel(cong_ctrl); // terminate congestion control thread
 	}
-	else
-	{
-		pthread_cond_signal(&cond_ackreceiver);
-	}
-	pthread_mutex_unlock(&mutexdata);
+
+	sem_post(&inflight); // this allow the cong ctrl thead to exit from the sem_wait
+
 	// close thread
 	pthread_exit(NULL);
 
 } // end send_bundles
 
+static boolean_t receive_ack(dtnperf_options_t *perf_opt)
+{
+	uint32_t extension_ack;
+	al_bp_timestamp_t reported_timestamp;
+	//al_bp_endpoint_id_t ack_sender;
+	HEADER_TYPE ack_header;
+	int position = -1;
+	boolean_t receive_valid;
+	al_bp_extB_error_t utility_error;
+	al_bp_bundle_object_t ack;
+	al_bp_timeval_t timeout = 1; // in seconds (-1 for infinite)
+	static boolean_t printed_message = FALSE; // TRUE=message printed, FALSE=i should print the message
+
+	//al_bp_copy_eid(&ack_sender, &dest_eid);
+
+	al_bp_bundle_create(&ack);
+
+	// Wait for the reply
+	if (!printed_message)
+	{
+		debug_print(DEBUG_L2,"\t[DEBUG_L2 cong ctrl] waiting for the reply...\n");
+		printed_message = TRUE;
+	}
+
+	utility_error = al_bp_extB_receive(registration_descriptor, ack, BP_PAYLOAD_MEM, timeout);
+	if (utility_error == BP_EXTB_ERRTIMEOUT)
+	{
+		al_bp_bundle_free(&ack);
+		return FALSE; // timed out!
+	}
+
+	receive_valid = FALSE;
+	printed_message = FALSE;
+	switch (utility_error)
+	{
+	case BP_EXTB_SUCCESS:
+		receive_valid = TRUE;
+		break;
+	case BP_EXTB_ERRRECEIVE:
+		if(count_info(send_info, perf_opt->window) == 0 && get_close_ack_receiver() == 1) // send_bundles is terminated
+			return FALSE; // not found a valid ack (it will terminate outside!)
+		error_print("[DTNperf fatal error] in %s: %d (%s)\n", al_bp_extB_str_type_error(utility_error), al_bp_extB_get_error(registration_descriptor), al_bp_strerror(al_bp_extB_errno(registration_descriptor)));
+		client_clean_exit(1);
+		break;
+
+	default:
+		error_print("[DTNperf warning] %s \n", al_bp_extB_str_type_error(utility_error));
+		break;
+	}
+
+	if (receive_valid)
+	{
+		al_bp_error_t error;
+		// Check if is actually a server ack bundle
+		get_bundle_header_and_options(&ack, &ack_header, NULL);
+		if (ack_header != DSA_HEADER)
+		{
+			error_print("[DTNperf fatal error] in getting server ack: wrong bundle header\n");
+			return FALSE; // not a valid ack
+		}
+		gettimeofday(&ack_recvd, NULL);
+		debug_print(DEBUG_L2,"\t[DEBUG_L2 cong ctrl] ack received\n");
+		// Get ack infos
+		error = get_info_from_ack(&ack, NULL, &reported_timestamp, &extension_ack);
+		if (error != BP_SUCCESS)
+		{
+			error_print("[DTNperf fatal error] in getting info from ack: %s\n", al_bp_strerror(error));
+			client_clean_exit(1);
+		}
+
+		if (extension_ack & BO_CRC_ENABLED)
+			wrong_crc++;
+
+		debug_print(DEBUG_L2,"\t[DEBUG_L2 cong ctrl] ack received timestamp: %u %u\n", reported_timestamp.secs, reported_timestamp.seqno);
+
+		if (perf_opt->bp_implementation != BP_IBR)
+			position = is_in_info(send_info, reported_timestamp, perf_opt->window);
+		else {
+			position = is_in_info_timestamp(send_info, reported_timestamp, perf_opt->window);
+			debug_print(DEBUG_L2,"\t[DEBUG_L2 cong ctrl] ignoring ack sequence number\n");
+		}
+
+		if (position < 0)
+		{
+			error_print("[DTNperf warning] ack not validated\n");
+		} else {
+			int cur;
+			remove_from_info(send_info, position);
+			debug_print(DEBUG_L2,"\t[DEBUG_L2 cong ctrl] ack validated\n");
+			sem_getvalue(&window, &cur);
+			debug_print(DEBUG_L2,"\t[DEBUG_L2 cong ctrl] window = %d\n", cur+1);
+
+		}
+	} // if receive_valid
+	al_bp_bundle_free(&ack);
+	return (position >= 0);
+}
+
 void * congestion_control(void * opt)
 {
 	dtnperf_options_t *perf_opt = ((dtnperf_global_options_t *)(opt))->perf_opt;
-	boolean_t debug = perf_opt->debug;
-	int debug_level = perf_opt->debug_level;
-	boolean_t create_log = perf_opt->create_log;
-	uint32_t extension_ack;
 
-
-	al_bp_timestamp_t reported_timestamp;
-	al_bp_endpoint_id_t ack_sender;
-	HEADER_TYPE ack_header;
-	al_bp_copy_eid(&ack_sender, &dest_eid);
-
-	int position = -1;
-
-	if (debug && debug_level > 0)
-		printf("[debug cong ctrl] congestion control = %c\n", perf_opt->congestion_ctrl);
+	debug_print(DEBUG_L2,"[DEBUG_L2 cong ctrl] congestion control started, mode = %c\n", perf_opt->congestion_ctrl);
 
 	pthread_sleep(0.5);
 
-	if (perf_opt->congestion_ctrl == 'w') // window based congestion control
+	if (perf_opt->congestion_ctrl == 'W') // window based congestion control
 	{
-	//	gettimeofday(&temp, NULL);
+		//	gettimeofday(&temp, NULL);
 		pthread_create(&cong_expir_timer, NULL, congestion_window_expiration_timer, NULL);
-		while ((close_ack_receiver == 0) || count_info(send_info, perf_opt->window) != 0
-				/*|| (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit)*/)
+		while (((get_close_ack_receiver() == 0) || count_info(send_info, perf_opt->window) != 0) && !get_forced_close_client()
+		/*|| (gettimeofday(&temp, NULL) == 0 && ack_recvd.tv_sec - temp.tv_sec <= perf_opt->wait_before_exit)*/)
 		{
-			// if there are no bundles without ack, wait
-			pthread_mutex_lock(&mutexdata);
+			sem_wait(&inflight);
+			if (get_close_ack_receiver() == 1 && count_info(send_info, perf_opt->window) == 0 && get_forced_close_client())
+				break;
+			if (receive_ack(perf_opt)) // if the ack is valid --> window++
+				sem_post(&window);
+			else // if not valid --> inflight should remain the same as before (inflight++)
+				sem_post(&inflight);
 
-			al_bp_bundle_create(&ack);
-			if (close_ack_receiver == 0 && count_info(send_info, perf_opt->window) == 0)
-			{
-				pthread_cond_wait(&cond_ackreceiver, &mutexdata);
-				pthread_mutex_unlock(&mutexdata);
-				// pthread_yield();
-				sched_yield();
-				continue;
-			}
-			// Wait for the reply
-			if ((debug) && (debug_level > 0))
-				printf("\t[debug cong ctrl] waiting for the reply...\n");
-
-			error = al_bp_bundle_receive(handle, ack, BP_PAYLOAD_MEM, -1);
-			if(error == BP_ERECVINT || error == BP_ETIMEOUT)
-			{
-				if(error == BP_ERECVINT )
-				{
-					fprintf(stderr, "[DTNperf warning] bundle reception interrupted\n");
-					if (create_log)
-						fprintf(log_file, "[DTNperf warning] bundle reception interrupted\n");
-				}
-				if(error == BP_ETIMEOUT )
-				{
-					fprintf(stderr, "[DTNperf warning] bundle reception timeout expired\n");
-					if (create_log)
-						fprintf(log_file, "[DTNperf warning] bundle reception timeout expired\n");
-				}
-			}
-			else
-			{
-				if ( error != BP_SUCCESS)
-				{
-					if(count_info(send_info, perf_opt->window) == 0 && close_ack_receiver == 1) // send_bundles is terminated
-						break;
-					fprintf(stderr, "[DTNperf fatal error] in getting server ack: %d (%s)\n", error, al_bp_strerror(al_bp_errno(handle)));
-					if (create_log)
-						fprintf(log_file, "[DTNperf fatal error] in getting server ack: %d (%s)\n", error, al_bp_strerror(al_bp_errno(handle)));
-					client_clean_exit(1);
-				}
-				// Check if is actually a server ack bundle
-				get_bundle_header_and_options(&ack, &ack_header, NULL);
-				if (ack_header != DSA_HEADER)
-				{
-					fprintf(stderr, "[DTNperf fatal error] in getting server ack: wrong bundle header\n");
-					if (create_log)
-						fprintf(log_file, "[DTNperf fatal error] in getting server ack: wrong bundle header\n");
-					pthread_mutex_unlock(&mutexdata);
-					//pthread_yield();
-					sched_yield();
-					continue;
-				}
-				gettimeofday(&ack_recvd, NULL);
-				if ((debug) && (debug_level > 0))
-					printf("\t[debug cong ctrl] ack received\n");
-				// Get ack infos
-				error = get_info_from_ack(&ack, NULL, &reported_timestamp, &extension_ack);
-				if (error != BP_SUCCESS)
-				{
-					fprintf(stderr, "[DTNperf fatal error] in getting info from ack: %s\n", al_bp_strerror(error));
-					if (create_log)
-						fprintf(log_file, "[DTNperf fatal error] in getting info from ack: %s\n", al_bp_strerror(error));
-					client_clean_exit(1);
-				}
-
-				if (extension_ack & BO_CRC_ENABLED)
-					wrong_crc++;
-
-				if ((debug) && (debug_level > 0))
-					printf("\t[debug cong ctrl] ack received timestamp: %u %u\n", reported_timestamp.secs, reported_timestamp.seqno);
-
-				if (perf_opt->bp_implementation != BP_IBR)
-					position = is_in_info(send_info, reported_timestamp, perf_opt->window);
-				else {
-					position = is_in_info_timestamp(send_info, reported_timestamp, perf_opt->window);
-					if ((debug) && (debug_level > 0))
-						printf("\t[debug cong ctrl] ignoring ack sequence number\n");
-				}
-
-				if (position < 0)
-				{
-					fprintf(stderr, "[DTNperf warning] ack not validated\n");
-					if (create_log)
-						fprintf(log_file, "[DTNperf warning] ack not validated\n");
-				} else {
-					remove_from_info(send_info, position);
-					if ((debug) && (debug_level > 0))
-						printf("\t[debug cong ctrl] ack validated\n");
-					sem_post(&window);
-					if ((debug) && (debug_level > 1))
-					{
-						int cur;
-						sem_getvalue(&window, &cur);
-						printf("\t[debug cong ctrl] window is %d\n", cur);
-					}
-				}
-			}
-			al_bp_bundle_free(&ack);
-			pthread_mutex_unlock(&mutexdata);
-			//pthread_yield();
-			sched_yield();
 		} // end while
 	}
-	else if (perf_opt->congestion_ctrl == 'r') // Rate based congestion control
+	else if (perf_opt->congestion_ctrl == 'R') // Rate based congestion control
 	{
 		double interval_secs;
 
@@ -1343,20 +1168,15 @@ void * congestion_control(void * opt)
 			interval_secs = (double)perf_opt->bundle_payload * 8 / perf_opt->rate;
 		}
 
-		if (debug)
-			printf("[debug cong ctrl] wait time for each bundle: %.4f s\n", interval_secs);
+		debug_print(DEBUG_L1,"[DEBUG_L1 cong ctrl] wait time for each bundle: %.4f s\n", interval_secs);
 
-		pthread_mutex_lock(&mutexdata);
-		while(close_ack_receiver == 0)
+		while(get_close_ack_receiver() == 0 && !get_forced_close_client())
 		{
-			pthread_mutex_unlock(&mutexdata);
+			int cur;
 			sem_post(&window);
-			//pthread_yield();
-			sched_yield();
-			if (debug && debug_level > 0)
-				printf("[debug cong ctrl] increased window size\n");
+			sem_getvalue(&window, &cur);
+			debug_print(DEBUG_L2,"[DEBUG_L2 cong ctrl] increased free window size = %d\n", cur);
 			pthread_sleep(interval_secs);
-			pthread_mutex_lock(&mutexdata);
 		}
 	}
 	else // wrong char for congestion control
@@ -1378,7 +1198,7 @@ void * congestion_window_expiration_timer(void * opt)
 	if(ack_recvd.tv_sec == 0)
 		ack_recvd.tv_sec = current_time.tv_sec;
 
-	while(1)
+	while(!get_forced_close_client())
 	{
 		gettimeofday(&current_time, NULL);
 		if( current_time.tv_sec - ack_recvd.tv_sec >=  expiration)
@@ -1397,20 +1217,18 @@ void * congestion_window_expiration_timer(void * opt)
 	return NULL;
 } // end congestion_window_expiration_timer
 
-void * start_dedicated_monitor(void * params)
+/*void * start_dedicated_monitor(void * params)
 {
 	monitor_parameters_t * parameters = (monitor_parameters_t *) params;
-	parameters->dedicated_monitor = TRUE;
 	run_dtnperf_monitor(parameters);
 	pthread_exit(NULL);
 	return NULL;
-} // end start_dedicated_monitor
+} // end start_dedicated_monitor*/
 
 void * wait_for_sigint(void * arg)
 {
 	sigset_t sigset;
 	int signo;
-	al_bp_handle_t force_stop_handle;
 
 	sigemptyset(&sigset);
 	sigaddset(&sigset, SIGINT);
@@ -1420,95 +1238,96 @@ void * wait_for_sigint(void * arg)
 	if(expir_timer_cong_window)
 	{
 		printf("\nDTNperf client: Expired Timer to receive the Server's Ack\n");
-		if (perf_opt->create_log)
-			fprintf(log_file, "\nDTNperf client: Expired Timer to receive the Server's Ack\n");
 	}
 	else
 	{
 		printf("\nDTNperf client received SIGINT: Exiting\n");
-		if (perf_opt->create_log)
-			fprintf(log_file, "\nDTNperf client received SIGINT: Exiting\n");
 	}
 
-	// send a signal to the monitor to terminate it
-	if (dedicated_monitor)
-	{
-		kill(monitor_pid, SIGUSR1);
+	set_forced_close_client(TRUE);
 
-		// wait for monitor to terminate
-		wait(&monitor_status);
-	}
-	else if (!perf_opt->no_bundle_stop)
+	if (!perf_opt->no_bundle_stop)
 	{ // prepare and send bundle force-stop to the monitor
-
-		al_bp_bundle_object_t bundle_force_stop;
-
-		// Open a new connection to BP Daemon
-		if ((perf_opt->debug) && (perf_opt->debug_level > 0))
-			printf("[debug] opening a new connection to local BP daemon...");
-
-		if(perf_opt->bp_implementation == BP_DTN)
-		{
-			if (perf_opt->use_ip)
-				error = al_bp_open_with_ip(perf_opt->ip_addr, perf_opt->ip_port, &force_stop_handle);
-			else
-				error = al_bp_open(&force_stop_handle);
-		}
-
-		if (error != BP_SUCCESS)
-		{
-			fprintf(stderr, "[DTNperf fatal error] in opening a new bp handle: %s\n", al_bp_strerror(error));
-			if (perf_opt->create_log)
-				fprintf(log_file, "[DTNperf fatal error] in opening a new bp handle: %s\n", al_bp_strerror(error));
-			client_clean_exit(1);
-		}
-		if ((perf_opt->debug) && (perf_opt->debug_level > 0))
-			printf("done\n");
-
-		// create the bundle force stop
-		al_bp_bundle_create(&bundle_force_stop);
-
-		// fill the force stop bundle
-		prepare_force_stop_bundle(&bundle_force_stop, mon_eid, conn_opt->expiration, conn_opt->priority);
-		al_bp_bundle_set_source(&bundle_force_stop, local_eid);
-
-		// send force_stop bundle to monitor
-		printf("Sending the force stop bundle to the monitor...");
-		if(perf_opt->bp_implementation == BP_DTN)
-			error = al_bp_bundle_send(force_stop_handle, regid, &bundle_force_stop);
-		else if(perf_opt->bp_implementation == BP_ION)
-			error = al_bp_bundle_send(handle, regid, &bundle_force_stop);
-		else if(perf_opt->bp_implementation == BP_IBR)
-			error = al_bp_bundle_send(handle, regid, &bundle_force_stop);
-		if ((error) != BP_SUCCESS)
-		{
-			fprintf(stderr, "[DTNperf fatal error] in sending force stop bundle: %d (%s)\n", error, al_bp_strerror(error));
-			if (perf_opt->create_log)
-				fprintf(log_file, "[DTNperf fatal error] in sending force stop bundle: %d (%s)\n", error, al_bp_strerror(error));
-			al_bp_close(force_stop_handle);
-			exit(1);
-		}
-		printf("done.\n");
-
-		if (perf_opt->bp_implementation == BP_DTN)
-			al_bp_close(force_stop_handle);
-
-
-		al_bp_bundle_free(&bundle_force_stop);
+		send_force_stop_bundle();
 	}
 
 	process_interrupted = TRUE;
 
 	// terminate all child threads
-	pthread_cancel(sender);
-	pthread_cancel(cong_ctrl);
-	pthread_cancel(cong_expir_timer);
+	//pthread_cancel(sender);
+	//pthread_cancel(cong_ctrl);
+	//pthread_cancel(cong_expir_timer);
 
 	client_clean_exit(0);
 
-
 	return NULL;
 } // end wait_for_sigint
+
+void send_force_stop_bundle()
+{
+	al_bp_bundle_object_t bundle_force_stop;
+
+	if (strcmp(mon_eid.uri, al_bp_get_none_endpoint_string()) == 0) // not needed to send a force stop to dtn:none
+		return;
+
+	// create the bundle force stop
+	al_bp_bundle_create(&bundle_force_stop);
+
+	// fill the force stop bundle
+	prepare_force_stop_bundle(&bundle_force_stop, mon_eid, conn_opt->expiration, conn_opt->priority);
+
+	if(perf_opt->bp_implementation == BP_DTN)
+	{
+		al_bp_error_t error;
+		al_bp_handle_t force_stop_handle;
+		// Open a new connection to BP Daemon
+		debug_print(DEBUG_L2,"[DEBUG_L2] opening a new connection to local BP daemon...");
+		if (perf_opt->use_ip)
+			error = al_bp_open_with_ip(perf_opt->ip_addr, perf_opt->ip_port, &force_stop_handle);
+		else
+			error = al_bp_open(&force_stop_handle);
+
+		if (error != BP_SUCCESS)
+		{
+			error_print("[DTNperf fatal error] in opening a new bp handle: %s\n", al_bp_strerror(error));
+			client_clean_exit(1);
+		}
+		debug_print(DEBUG_L2,"done\n");
+
+		al_bp_bundle_set_source(&bundle_force_stop, al_bp_extB_get_local_eid(registration_descriptor));
+
+		printf("Sending the force stop bundle to the monitor...");
+		error = al_bp_bundle_send(force_stop_handle, al_bp_extB_get_regid(registration_descriptor), &bundle_force_stop);
+		if (error != BP_SUCCESS)
+		{
+			error_print("[DTNperf fatal error] in sending force stop bundle: %d (%s)\n", error, al_bp_strerror(error));
+			al_bp_close(force_stop_handle);
+
+			debugger_destroy();
+			al_bp_extB_destroy();
+			exit(1);
+		}
+
+		al_bp_close(force_stop_handle);
+
+	}
+	else
+	{ // not DTN implementation
+		al_bp_endpoint_id_t none;
+		al_bp_extB_error_t utility_error;
+		al_bp_get_none_endpoint(&none);
+		utility_error = al_bp_extB_send(registration_descriptor, &bundle_force_stop, mon_eid, none);
+		if (utility_error != BP_EXTB_SUCCESS && utility_error != BP_EXTB_ERRRECEIVER) {
+			error_print("[DTNperf fatal error] in sending force stop bundle: %d (%s)\n", al_bp_extB_get_error(registration_descriptor), al_bp_extB_strerror(registration_descriptor));
+			debugger_destroy();
+			al_bp_extB_destroy();
+			exit(1);
+		}
+	}
+
+	printf("done.\n");
+	al_bp_bundle_free(&bundle_force_stop);
+}
 
 void print_final_report(FILE * f)
 {
@@ -1516,8 +1335,8 @@ void print_final_report(FILE * f)
 	struct timeval total;
 	double total_secs;
 	char * gput_unit, * sent_unit;
-	if (f == NULL)
-		f = stdout;
+	// check param
+	if (f == NULL) return;
 	timersub(&end, &start, &total);
 	total_secs = (((double)total.tv_sec * 1000 *1000) + (double)total.tv_usec) / (1000 * 1000);
 
@@ -1549,11 +1368,11 @@ void print_final_report(FILE * f)
 		gput_unit = "bit/s";
 
 	fprintf(f, "\nBundles sent = %d ", sent_bundles);
-	if (perf_opt->crc==TRUE && perf_opt->congestion_ctrl == 'w')
+	if (perf_opt->crc==TRUE && perf_opt->congestion_ctrl == 'W')
 		fprintf(f, "(Wrong CRC = %ld) ", wrong_crc);
 	fprintf(f, "total data sent = %.3f %s\n", sent, sent_unit);
 	fprintf(f, "Total execution time = %.1f\n", total_secs);
-	if(perf_opt->congestion_ctrl == 'w')
+	if(perf_opt->congestion_ctrl == 'W')
 		fprintf(f, "Goodput = %.3f %s\n", goodput, gput_unit);
 	else
 		fprintf(f, "Throughput = %.3f %s\n", goodput, gput_unit);
@@ -1561,11 +1380,11 @@ void print_final_report(FILE * f)
 
 void print_client_usage(char* progname)
 {
-	fprintf(stderr, "\n");
-	fprintf(stderr, "dtnperf client mode\n");
-	fprintf(stderr, "SYNTAX: %s %s -d <dest_eid> <[-T <s> | -D <num> | -F <filename>]> [-W <size> | -R <rate>] [options]\n", progname, CLIENT_STRING);
-	fprintf(stderr, "\n");
-	fprintf(stderr, "options:\n"
+	error_print("\n");
+	error_print("dtnperf client mode\n");
+	error_print("SYNTAX: %s %s -d <dest_eid> <[-T <s> | -D <num> | -F <filename>]> [-W <size> | -R <rate>] [options]\n", progname, CLIENT_STRING);
+	error_print("\n");
+	error_print("options:\n"
 			" -d, --destination <eid>     Destination EID (i.e. server EID).\n"
 			" -T, --time <seconds>        Time-mode: seconds of transmission.\n"
 			" -D, --data <num[B|k|M]>     Data-mode: amount data to transmit; B = Byte, k = kByte, M = MByte. Default 'M' (MB). According to the SI and the IEEE standards 1 MB=10^6 bytes\n"
@@ -1583,15 +1402,16 @@ void print_client_usage(char* progname)
 			" -M, --memory                Store the bundle into memory instead of file (if payload < 50KB).\n"
 			" -L, --log[=log_filename]    Create a log file. Default log filename is %s.\n"
 			"     --log-dir <dir>         Directory where the client and the internal monitor save log and the csv files. Default \"%s\"\n"
-			"     --ip-addr <addr>        IP address of the BP daemon api. Default is 127.0.0.1 (DTN2 and IBR-DTN only).\n"
-			"     --ip-port <port>        IP port of the BP daemon api. Default is 5010 (DTN2 and IBR-DTN only).\n"
+			// XXX no more supported
+			//"     --ip-addr <addr>        IP address of the BP daemon api. Default is 127.0.0.1 (DTN2 and IBR-DTN only).\n"
+			//"     --ip-port <port>        IP port of the BP daemon api. Default is 5010 (DTN2 and IBR-DTN only).\n"
 			"     --debug[=level]         Debug messages [1-2]; if level is not indicated level = 2.\n"
 			" -l, --lifetime <time>       Bundle lifetime (s). Default is 60 s.\n"
 			" -p, --priority <val>        Bundle  priority [bulk|normal|expedited|reserved]. Default is normal.\n"
 			"     --ack-to-mon            Force server to send ACKs in cc to the monitor (independently of server settings).\n"
 			"     --no-ack-to-mon         Force server not to send  ACKs in cc to the monitor (independently of server settings).\n"
 			"     --ack-lifetime <time>   ACK lifetime (value given to the server). Default is the same as bundle lifetime\n"
-            "     --ack-priority <val>    ACK priority (value given to the server) [bulk|normal|expedited|reserved]. Default is the same as bundle priority\n"
+			"     --ack-priority <val>    ACK priority (value given to the server) [bulk|normal|expedited|reserved]. Default is the same as bundle priority\n"
 			"     --no-bundle-stop        Do not send bundles stop and force-stop to the monitor. Use it only if you know what you are doing\n"
 			"     --force-eid <[DTN|IPN]> Force scheme of registration EID.\n"
 			"     --ipn-local <num>       Set ipn local number (Use only on DTN2)\n"
@@ -1599,14 +1419,17 @@ void print_client_usage(char* progname)
 			"     --unreliable            Set ECOS \"unreliable flag\" to True. Default: False (ION Only).\n"
 			"     --critical              Set ECOS \"critical flag\" to True. Default: False (ION Only).\n"
 			"     --flow <num>            ECOS \"flow\" number. Default: 0 (ION Only).\n"
-//			" -n  --num-ext-blocks <val>  Number of extension/metadata blocks\n"
-			"     --mb-type <type>        Include metadata block and specify type (DTN2 Only).\n"
-			"     --mb-string <string>    Extension/metadata block content (DTN2 Only).\n"
+			//			" -n  --num-ext-blocks <val>  Number of extension/metadata blocks\n"
+			"     --mb-type <type>        Include metadata block and specify type.\n"
+			"     --mb-string <string>    Extension/metadata block content.\n"
 			"     --crc                   Calculate (and check on the Server) CRC of bundles.\n"
-			" -v, --verbose               Print some information messages during execution.\n"
 			" -h, --help                  This help.\n",
 			LOG_FILENAME, LOGS_DIR_DEFAULT);
-	fprintf(stderr, "\n");
+	error_print("\n");
+
+	debugger_destroy();
+	al_bp_extB_destroy();
+
 	exit(1);
 } // end print_client_usage
 
@@ -1626,13 +1449,12 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		static struct option long_options[] =
 		{
 				{"help", no_argument, 0, 'h'},
-				{"verbose", no_argument, 0, 'v'},
 				{"memory", no_argument, 0, 'M'},
 				{"custody", no_argument, 0, 'C'},
 				{"window", required_argument, 0, 'W'},
 				{"destination", required_argument, 0, 'd'},
 				{"monitor", required_argument, 0, 'm'},
-		//		{"exitinterval", required_argument, 0, 'i'},			// interval before exit
+				//		{"exitinterval", required_argument, 0, 'i'},			// interval before exit
 				{"time", required_argument, 0, 'T'},			// time mode
 				{"data", required_argument, 0, 'D'},			// data mode
 				{"file", required_argument, 0, 'F'},			// file mode
@@ -1675,12 +1497,10 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		{
 		case 'h':
 			print_client_usage(argv[0]);
+			debugger_destroy();
+			al_bp_extB_destroy();
 			exit(0);
 			return ;
-
-		case 'v':
-			perf_opt->verbose = TRUE;
-			break;
 
 		case 'M':
 			perf_opt->use_file = 0;
@@ -1693,7 +1513,7 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 			break;
 
 		case 'W':
-			perf_opt->congestion_ctrl = 'w';
+			perf_opt->congestion_ctrl = 'W';
 			perf_opt->window = atoi(optarg);
 			w = TRUE;
 			break;
@@ -1705,11 +1525,11 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 		case 'm':
 			strncpy(perf_opt->mon_eid, optarg, AL_BP_MAX_ENDPOINT_ID);
 			break;
-/*
+			/*
 		case 'i':
 			perf_opt->wait_before_exit = atoi(optarg)*1000;
 			break;
-*/
+			 */
 		case 'T':
 			perf_opt->op_mode = 'T';
 			perf_opt->transmission_time = atoi(optarg);
@@ -1733,336 +1553,387 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 				break;
 			default:
 				printf("\n[DTNperf syntax error] (-D option) invalid data unit\n");
+				debugger_destroy();
+				al_bp_extB_destroy();
 				exit(1);
-//				printf("\nWARNING: (-D option) invalid data unit, assuming 'M' (MBytes)\n\n");
-//				perf_opt->data_qty = mega2byte(atof(perf_opt->D_arg));
-//				break;
+				//				printf("\nWARNING: (-D option) invalid data unit, assuming 'M' (MBytes)\n\n");
+				//				perf_opt->data_qty = mega2byte(atof(perf_opt->D_arg));
+				//				break;
 			}
 			break;
 
-		case 'F':
-			perf_opt->op_mode = 'F';
-			perf_opt->F_arg = strdup(optarg);
-			if(!file_exists(perf_opt->F_arg))
-			{
-				fprintf(stderr, "[DTNperf syntax error] Unable to open file %s: %s\n", perf_opt->F_arg, strerror(errno));
-				exit(1);
-			}
-			break;
-
-		case 'P':
-			perf_opt->P_arg = optarg;
-			if(perf_opt->P_arg <= 0)
-			{
-				printf("\n[DTNperf syntax error] (-P option) invalid data value\n");
-				exit(1);
-			}
-			perf_opt->data_unit = find_data_unit(perf_opt->P_arg);
-			switch (perf_opt->data_unit)
-			{
-			case 'B':
-				perf_opt->bundle_payload = atof(perf_opt->P_arg);
-				break;
-			case 'k':
-				perf_opt->bundle_payload = kilo2byte(atof(perf_opt->P_arg));
-				break;
-			case 'M':
-				perf_opt->bundle_payload = mega2byte(atof(perf_opt->P_arg));
-
-				break;
-			default:
-				printf("\n[DTNperf syntax error] (-P option) invalid data unit\n");
-				exit(1);
-//				printf("\nWARNING: (-p option) invalid data unit, assuming 'K' (KBytes)\n\n");
-//				perf_opt->bundle_payload = kilo2byte(atof(perf_opt->p_arg));
-//				break;
-			}
-			break;
-
-		case 'l':
-			conn_opt->expiration = atoi(optarg);
-			break;
-
-		case 'R':
-			perf_opt->rate_arg = strdup(optarg);
-			perf_opt->rate_unit = find_rate_unit(perf_opt->rate_arg);
-			perf_opt->rate = atof(perf_opt->rate_arg);
-			perf_opt->congestion_ctrl = 'r';
-			r = TRUE;
-			break;
-
-		case 'p':
-			if (!strcasecmp(optarg, "bulk"))   {
-				conn_opt->priority.priority = BP_PRIORITY_BULK;
-			} else if (!strcasecmp(optarg, "normal")) {
-				conn_opt->priority.priority = BP_PRIORITY_NORMAL;
-			} else if (!strcasecmp(optarg, "expedited")) {
-				conn_opt->priority.priority = BP_PRIORITY_EXPEDITED;
-			} else if (!strcasecmp(optarg, "reserved")) {
-				conn_opt->priority.priority = BP_PRIORITY_RESERVED;
-			} else {
-				fprintf(stderr, "[DTNperf syntax error] Invalid priority value %s\n", optarg);
-				exit(1);
-			}
-			break;
-
-		case 'N':
-			conn_opt->disable_fragmentation = TRUE;
-			break;
-
-		case 'f':
-			conn_opt->forwarding_receipts = TRUE;
-			break;
-
-		case 'r':
-			conn_opt->receive_receipts = TRUE;
-			break;
-
-		case 'L':
-			perf_opt->create_log = TRUE;
-			if (optarg != NULL)
-				perf_opt->log_filename = strdup(optarg);
-			break;
-
-		case 40:
-			perf_opt->logs_dir = strdup(optarg);
-			break;
-
-		case 33: // debug
-			perf_opt->debug = TRUE;
-			if (optarg){
-				int debug_level = atoi(optarg);
-				if (debug_level >= 1 && debug_level <= 2)
-					perf_opt->debug_level = atoi(optarg) - 1;
-				else {
-					fprintf(stderr, "[DTNperf syntax error] wrong --debug argument\n");
+			case 'F':
+				perf_opt->op_mode = 'F';
+				perf_opt->F_arg = strdup(optarg);
+				if(!file_exists(perf_opt->F_arg))
+				{
+					error_print("[DTNperf syntax error] Unable to open file %s: %s\n", perf_opt->F_arg, strerror(errno));
+					debugger_destroy();
+					al_bp_extB_destroy();
 					exit(1);
-					return;
 				}
-			}
-			else
-				perf_opt->debug_level = 2;
-			break;
-
-		case 34: // incoming bundle destination directory
-			perf_opt->dest_dir = strdup(optarg);
-			break;
-
-		case 37:
-			if(perf_opt->bp_implementation != BP_DTN && perf_opt->bp_implementation != BP_IBR)
-			{
-				fprintf(stderr, "[DTNperf error] --ip-addr supported only in DTN2 and IBR-DTN\n");
-				exit(1);
-				return;
-			}
-			perf_opt->ip_addr = strdup(optarg);
-			perf_opt->use_ip = TRUE;
-			break;
-
-		case 38:
-			if(perf_opt->bp_implementation != BP_DTN && perf_opt->bp_implementation != BP_IBR)
-			{
-				fprintf(stderr, "[DTNperf error] --ip-port supported only in DTN2 and IBR-DTN\n");
-				exit(1);
-				return;
-			}
-			perf_opt->ip_port = atoi(optarg);
-			perf_opt->use_ip = TRUE;
-			break;
-
-
-		case 44:
-			perf_opt->bundle_ack_options.ack_to_mon = ATM_FORCE_YES;
-			break;
-
-		case 45:
-			perf_opt->bundle_ack_options.ack_to_mon = ATM_FORCE_NO;
-			break;
-
-		case 46:
-			set_ack_expiration_as_bundle = FALSE;
-			perf_opt->bundle_ack_options.set_ack_expiration = TRUE;
-			perf_opt->bundle_ack_options.ack_expiration = atoi(optarg);
-			break;
-
-		case 47:
-			set_ack_priority_as_bundle = FALSE;
-			perf_opt->bundle_ack_options.set_ack_priority = TRUE;
-			perf_opt->bundle_ack_options.ack_priority.ordinal = 0;
-			if (!strcasecmp(optarg, "bulk"))   {
-				perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_BULK;
-			} else if (!strcasecmp(optarg, "normal")) {
-				perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_NORMAL;
-			} else if (!strcasecmp(optarg, "expedited")) {
-				perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_EXPEDITED;
-			} else if (!strcasecmp(optarg, "reserved")) {
-				perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_RESERVED;
-			} else {
-				fprintf(stderr, "[DTNperf syntax error] Invalid ack priority value %s\n", optarg);
-				exit(1);
-			}
-			printf("OK\n");
-			break;
-
-		case 48:
-			conn_opt->deleted_receipts = TRUE;
-			break;
-
-		case 49:
-			perf_opt->no_bundle_stop = TRUE;
-			break;
-
-		case 50:
-			switch( find_forced_eid(strdup(optarg)) )
-			{
-			case 'D':
-				perf_opt->eid_format_forced = 'D';
 				break;
-			case 'I':
-				perf_opt->eid_format_forced = 'I';
+
+			case 'P':
+				perf_opt->P_arg = optarg;
+				if(perf_opt->P_arg <= 0)
+				{
+					printf("\n[DTNperf syntax error] (-P option) invalid data value\n");
+					debugger_destroy();
+					al_bp_extB_destroy();
+					exit(1);
+				}
+				perf_opt->data_unit = find_data_unit(perf_opt->P_arg);
+				switch (perf_opt->data_unit)
+				{
+				case 'B':
+					perf_opt->bundle_payload = atof(perf_opt->P_arg);
+					break;
+				case 'k':
+					perf_opt->bundle_payload = kilo2byte(atof(perf_opt->P_arg));
+					break;
+				case 'M':
+					perf_opt->bundle_payload = mega2byte(atof(perf_opt->P_arg));
+
+					break;
+				default:
+					printf("\n[DTNperf syntax error] (-P option) invalid data unit\n");
+					debugger_destroy();
+					al_bp_extB_destroy();
+					exit(1);
+					//				printf("\nWARNING: (-p option) invalid data unit, assuming 'K' (KBytes)\n\n");
+					//				perf_opt->bundle_payload = kilo2byte(atof(perf_opt->p_arg));
+					//				break;
+				}
 				break;
-			case '?':
-				fprintf(stderr, "[DTNperf syntax error] wrong --force-eid argument\n");
-				exit(1);
-			}
-			break;
 
-		case 51:
-			perf_opt->ipn_local_num = atoi(optarg);
-			if (perf_opt->ipn_local_num <= 0)
-			{
-				fprintf(stderr, "[DTNperf syntax error] wrong --ipn_local argument\n");
-				exit(1);
-			}
-			break;
+				case 'l':
+					conn_opt->expiration = atoi(optarg);
+					break;
 
-		case 52:
-			if( perf_opt->bp_implementation != BP_ION){
-				fprintf(stderr, "[DTNperf error] --ordinal supported only in ION\n");
-				exit(1);
-				return;
-			}
-			conn_opt->priority.ordinal = atoi(optarg);
-			if(conn_opt->priority.ordinal > 254)
-			{
-				fprintf(stderr, "[DTNperf syntax error] Invalid ordinal number %u\n", conn_opt->priority.ordinal);
-				exit(1);
-				return;
-			}
-			break;
+				case 'R':
+					perf_opt->rate_arg = strdup(optarg);
+					perf_opt->rate_unit = find_rate_unit(perf_opt->rate_arg);
+					perf_opt->rate = atof(perf_opt->rate_arg);
+					perf_opt->congestion_ctrl = 'R';
+					r = TRUE;
+					break;
 
-		case 53:
-			if( perf_opt->bp_implementation != BP_ION){
-				fprintf(stderr, "[DTNperf error] --unreliable supported only in ION\n");
-				exit(1);
-				return;
-			}
-			conn_opt->unreliable = TRUE;
-			break;
+				case 'p':
+					if (!strcasecmp(optarg, "bulk"))   {
+						conn_opt->priority.priority = BP_PRIORITY_BULK;
+					} else if (!strcasecmp(optarg, "normal")) {
+						conn_opt->priority.priority = BP_PRIORITY_NORMAL;
+					} else if (!strcasecmp(optarg, "expedited")) {
+						conn_opt->priority.priority = BP_PRIORITY_EXPEDITED;
+					} else if (!strcasecmp(optarg, "reserved")) {
+						conn_opt->priority.priority = BP_PRIORITY_RESERVED;
+					} else {
+						error_print("[DTNperf syntax error] Invalid priority value %s\n", optarg);
+						debugger_destroy();
+						al_bp_extB_destroy();
+						exit(1);
+					}
+					break;
 
-		case 54:
-			if( perf_opt->bp_implementation != BP_ION){
-				fprintf(stderr, "[DTNperf error] --critical supported only in ION\n");
-				exit(1);
-				return;
-			}
-			conn_opt->critical = TRUE;
-			break;
+				case 'N':
+					conn_opt->disable_fragmentation = TRUE;
+					break;
 
-		case 55:
-			if( perf_opt->bp_implementation != BP_ION){
-				fprintf(stderr, "[DTNperf syntax error] --flow supported only in ION\n");
-				exit(1);
-				return;
-			}
-			conn_opt->flow_label = atoi(optarg);
-			break;
-/*		 case 'n':
+				case 'f':
+					conn_opt->forwarding_receipts = TRUE;
+					break;
+
+				case 'r':
+					conn_opt->receive_receipts = TRUE;
+					break;
+
+				case 'L':
+					perf_opt->create_log = TRUE;
+					if (optarg != NULL)
+						perf_opt->log_filename = strdup(optarg);
+					break;
+
+				case 40:
+					perf_opt->logs_dir = strdup(optarg);
+					break;
+
+				case 33: // debug
+					if (optarg){
+						int debug = atoi(optarg);
+						if(!(debug >=1 && debug <=2)){
+							error_print("[DTNperf syntax error] wrong --debug argument\n");
+							debugger_destroy();
+							al_bp_extB_destroy();
+							exit(1);
+							return;
+						}
+						else
+							perf_opt->debug=debug;
+					}
+					else
+						perf_opt->debug = 2;
+					break;
+
+				case 34: // incoming bundle destination directory
+					perf_opt->dest_dir = strdup(optarg);
+					break;
+
+				case 37:
+					if(perf_opt->bp_implementation != BP_DTN && perf_opt->bp_implementation != BP_IBR)
+					{
+						error_print("[DTNperf error] --ip-addr supported only in DTN2 and IBR-DTN\n");
+						debugger_destroy();
+						al_bp_extB_destroy();
+						exit(1);
+						return;
+					}
+					perf_opt->ip_addr = strdup(optarg);
+					perf_opt->use_ip = TRUE;
+					break;
+
+				case 38:
+					if(perf_opt->bp_implementation != BP_DTN && perf_opt->bp_implementation != BP_IBR)
+					{
+						error_print("[DTNperf error] --ip-port supported only in DTN2 and IBR-DTN\n");
+						debugger_destroy();
+						al_bp_extB_destroy();
+						exit(1);
+						return;
+					}
+					perf_opt->ip_port = atoi(optarg);
+					perf_opt->use_ip = TRUE;
+					break;
+
+
+				case 44:
+					perf_opt->bundle_ack_options.ack_to_mon = ATM_FORCE_YES;
+					break;
+
+				case 45:
+					perf_opt->bundle_ack_options.ack_to_mon = ATM_FORCE_NO;
+					break;
+
+				case 46:
+					set_ack_expiration_as_bundle = FALSE;
+					perf_opt->bundle_ack_options.set_ack_expiration = TRUE;
+					perf_opt->bundle_ack_options.ack_expiration = atoi(optarg);
+					break;
+
+				case 47:
+					set_ack_priority_as_bundle = FALSE;
+					perf_opt->bundle_ack_options.set_ack_priority = TRUE;
+					perf_opt->bundle_ack_options.ack_priority.ordinal = 0;
+					if (!strcasecmp(optarg, "bulk"))   {
+						perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_BULK;
+					} else if (!strcasecmp(optarg, "normal")) {
+						perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_NORMAL;
+					} else if (!strcasecmp(optarg, "expedited")) {
+						perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_EXPEDITED;
+					} else if (!strcasecmp(optarg, "reserved")) {
+						perf_opt->bundle_ack_options.ack_priority.priority = BP_PRIORITY_RESERVED;
+					} else {
+						error_print("[DTNperf syntax error] Invalid ack priority value %s\n", optarg);
+						debugger_destroy();
+						al_bp_extB_destroy();
+						exit(1);
+					}
+					printf("OK\n");
+					break;
+
+				case 48:
+					conn_opt->deleted_receipts = TRUE;
+					break;
+
+				case 49:
+					perf_opt->no_bundle_stop = TRUE;
+					break;
+
+				case 50:
+					switch( find_forced_eid(strdup(optarg)) )
+					{
+					case 'D':
+						perf_opt->eid_format_forced = 'D';
+						break;
+					case 'I':
+						perf_opt->eid_format_forced = 'I';
+						break;
+					case '?':
+						error_print("[DTNperf syntax error] wrong --force-eid argument\n");
+						debugger_destroy();
+						al_bp_extB_destroy();
+						exit(1);
+					}
+					break;
+
+					case 51:
+						perf_opt->ipn_local_num = atoi(optarg);
+						if (perf_opt->ipn_local_num <= 0)
+						{
+							error_print("[DTNperf syntax error] wrong --ipn_local argument\n");
+							debugger_destroy();
+							al_bp_extB_destroy();
+							exit(1);
+						}
+						break;
+
+					case 52:
+						if( perf_opt->bp_implementation != BP_ION){
+							error_print("[DTNperf error] --ordinal supported only in ION\n");
+							debugger_destroy();
+							al_bp_extB_destroy();
+							exit(1);
+							return;
+						}
+						conn_opt->priority.ordinal = atoi(optarg);
+						if(conn_opt->priority.ordinal > 254)
+						{
+							error_print("[DTNperf syntax error] Invalid ordinal number %u\n", conn_opt->priority.ordinal);
+							debugger_destroy();
+							al_bp_extB_destroy();
+							exit(1);
+							return;
+						}
+						break;
+
+					case 53:
+						if( perf_opt->bp_implementation != BP_ION){
+							error_print("[DTNperf error] --unreliable supported only in ION\n");
+							debugger_destroy();
+							al_bp_extB_destroy();
+							exit(1);
+							return;
+						}
+						conn_opt->unreliable = TRUE;
+						break;
+
+					case 54:
+						if( perf_opt->bp_implementation != BP_ION){
+							error_print("[DTNperf error] --critical supported only in ION\n");
+							debugger_destroy();
+							al_bp_extB_destroy();
+							exit(1);
+							return;
+						}
+						conn_opt->critical = TRUE;
+						break;
+
+					case 55:
+						if( perf_opt->bp_implementation != BP_ION){
+							error_print("[DTNperf syntax error] --flow supported only in ION\n");
+							debugger_destroy();
+							al_bp_extB_destroy();
+							exit(1);
+							return;
+						}
+						conn_opt->flow_label = atoi(optarg);
+						break;
+						/*		 case 'n':
 		                        perf_opt->num_blocks = atoi(optarg);
 		                        ext_blocks = malloc(perf_opt->num_blocks * sizeof(extension_block_info_t));
 		                        break;*/
-		case 56:
-			if(perf_opt->bp_implementation != BP_DTN)
-			{
-				fprintf(stderr, "[DTNperf syntax error] --mb-type supported only in DTN2\n");
-				exit(1);
-				return;
-			}
-			perf_opt->num_blocks = 1;
-			ext_blocks = malloc(perf_opt->num_blocks * sizeof(extension_block_info_t));
-			perf_opt->metadata_type = atoi(optarg);
-			if((num_meta_blocks + 1) > perf_opt->num_blocks)
-			{
-				fprintf(stderr, "[DTNperf error] Specified only %d extension/metadata blocks\n",
-						perf_opt->num_blocks);
-				exit(1);
-			}
-			if (!((perf_opt->metadata_type == METADATA_TYPE_URI) ||
-					((perf_opt->metadata_type >= METADATA_TYPE_EXPT_MIN) &&
-					 (perf_opt->metadata_type <= METADATA_TYPE_EXPT_MAX))))
-			{
-				fprintf(stderr, "-M - metadata type code is not in use - available 1, 192-255\n");
-				exit(1);
-			}
-			ext_blocks[num_meta_blocks].block.type = METADATA_BLOCK;
-			set_metadata_type(&ext_blocks[num_meta_blocks], perf_opt->metadata_type);
-			num_meta_blocks++;
-			data_set = false;
-			break;
+					case 56:
+						if(perf_opt->bp_implementation != BP_DTN
+								&& perf_opt->bp_implementation != BP_ION)
+						{
+							error_print("[DTNperf syntax error] --mb-type supported only in DTN2 and ION\n");
+							debugger_destroy();
+							al_bp_extB_destroy();
+							exit(1);
+							return;
+						}
+						perf_opt->num_blocks = 1;
+						ext_blocks = malloc(perf_opt->num_blocks * sizeof(extension_block_info_t));
+						perf_opt->metadata_type = atoi(optarg);
 
-		case 57:
-			if(perf_opt->bp_implementation != BP_DTN)
-			{
-				fprintf(stderr, "[DTNperf syntax error] --mb-string supported only in DTN2\n");
-				exit(1);
-				return;
-			}
-			if ((perf_opt->num_blocks > 0) && !data_set)
-			{
-				block_buf = strdup(optarg);
-				set_block_buf(&ext_blocks[(num_meta_blocks + num_ext_blocks) - 1],
-						block_buf, strlen(block_buf));
-				data_set = true;
-			}
-			else if (data_set)
-			{
-				fprintf(stderr, "[DTNperf warning] Ignoring duplicate data setting\n");
-			}
-			else
-			{
-				fprintf(stderr, "[DTNperf error] No extension or metadata block defined to receive data\n");
-                exit(1);
-			}
-			break;
+						if((num_meta_blocks + 1) > perf_opt->num_blocks)
+						{
+							error_print("[DTNperf error] Specified only %d extension/metadata blocks\n",
+									perf_opt->num_blocks);
+							debugger_destroy();
+							al_bp_extB_destroy();
+							exit(1);
+						}
+						if (!((perf_opt->metadata_type == METADATA_TYPE_URI) ||
+								((perf_opt->metadata_type >= METADATA_TYPE_EXPT_MIN) &&
+										(perf_opt->metadata_type <= METADATA_TYPE_EXPT_MAX))))
+						{
+							error_print("-M - metadata type code is not in use - available 1, 192-255\n");
+							debugger_destroy();
+							al_bp_extB_destroy();
+							exit(1);
+						}
+						ext_blocks[num_meta_blocks].block.type = METADATA_BLOCK;
+						set_metadata_type(&ext_blocks[num_meta_blocks], perf_opt->metadata_type);
+						//the flags refer to the bundle protocol flags and should be defined with a proper command
+						ext_blocks[num_meta_blocks].block.flags=0;
+						ext_blocks[num_meta_blocks].block.data.data_len=0;
+						num_meta_blocks++;
+						data_set = false;
+						break;
 
-		case 58:
-			perf_opt->crc=TRUE;
-			break;
+					case 57:
+						if(perf_opt->bp_implementation != BP_DTN
+							&& perf_opt->bp_implementation != BP_ION)
+						{
+							error_print("[DTNperf syntax error] --mb-string supported only in DTN2 and ION\n");
+							debugger_destroy();
+							al_bp_extB_destroy();
+							exit(1);
+							return;
+						}
+						if ((perf_opt->num_blocks > 0) && !data_set)
+						{
+							block_buf = strdup(optarg);
+							set_block_buf(&ext_blocks[(num_meta_blocks + num_ext_blocks) - 1],
+									block_buf, strlen(block_buf));
+							data_set = true;
+						}
+						else if (data_set)
+						{
+							error_print("[DTNperf warning] Ignoring duplicate data setting\n");
+						}
+						else
+						{
+							error_print("[DTNperf error] No extension or metadata block defined to receive data\n");
+							debugger_destroy();
+							al_bp_extB_destroy();
+							exit(1);
+						}
+						break;
 
-		case '?':
-			fprintf(stderr, "[DTNperf error] Unknown option: %c\n", optopt);
-			exit(1);
-			break;
+					case 58:
+						perf_opt->crc=TRUE;
+						break;
 
-		case (char)(-1):
-			done = 1;
-			break;
+					case '?':
+						error_print("[DTNperf error] Unknown option: %c\n", optopt);
+						debugger_destroy();
+						al_bp_extB_destroy();
+						exit(1);
+						break;
 
-		default:
-			// getopt already prints an error message for unknown option characters
-			print_client_usage(argv[0]);
-			exit(1);
+					case (char)(-1):
+																																																																																	done = 1;
+					break;
+
+					default:
+						// getopt already prints an error message for unknown option characters
+						print_client_usage(argv[0]);
+						debugger_destroy();
+						al_bp_extB_destroy();
+						exit(1);
 		} // --switch
 	} // -- while
 
 	// if mode is client and monitor eid is not specified, client node must be also monitor.
-	if(perf_g_opt->mode == DTNPERF_CLIENT && perf_opt->mon_eid == NULL)
+	/*if(perf_g_opt->mode == DTNPERF_CLIENT && perf_opt->mon_eid == NULL)
 	{
 		perf_g_opt->mode = DTNPERF_CLIENT_MONITOR;
-	}
+	}*/
 
 	// set ack-to-client request
-	if (perf_opt->congestion_ctrl == 'w')
+	if (perf_opt->congestion_ctrl == 'W')
 		perf_opt->bundle_ack_options.ack_to_client = TRUE;
 	else
 		perf_opt->bundle_ack_options.ack_to_client = FALSE;
@@ -2077,11 +1948,13 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 	// TEMP: ordinal = 0
 	perf_opt->bundle_ack_options.ack_priority.ordinal = conn_opt->priority.ordinal;
 
-#define CHECK_SET(_arg, _what)                                          	\
-		if (_arg == 0) {                                                    	\
-			fprintf(stderr, "\n[DTNperf syntax error] %s must be specified\n", _what);   \
-			print_client_usage(argv[0]);                                               \
-			exit(1);                                                        	\
+#define CHECK_SET(_arg, _what)                                          				\
+		if (_arg == 0) {                                                    	 		\
+			error_print("\n[DTNperf syntax error] %s must be specified\n", _what);   	\
+			print_client_usage(argv[0]);                                                \
+			debugger_destroy(); 														\
+			al_bp_extB_destroy(); 													\
+			exit(1);                                                        			\
 		}
 
 	CHECK_SET(perf_opt->dest_eid[0], "destination eid");
@@ -2089,8 +1962,10 @@ void parse_client_options(int argc, char ** argv, dtnperf_global_options_t * per
 
 	if (w && r)
 	{
-		fprintf(stderr, "\n[DTNperf syntax error] -w and -r options are mutually exclusive\n");   \
-		print_client_usage(argv[0]);                                               \
+		error_print("\n[DTNperf syntax error] -w and -r options are mutually exclusive\n");   	\
+		print_client_usage(argv[0]);                                               				\
+		debugger_destroy();																		\
+		al_bp_extB_destroy();																\
 		exit(1);
 	}
 
@@ -2111,13 +1986,17 @@ void check_options(dtnperf_global_options_t * global_options)
 	// checks on values
 	if ((perf_opt->op_mode == 'D') && (perf_opt->data_qty <= 0))
 	{
-		fprintf(stderr, "\n[DTNperf syntax error] (-D option) you should send a positive number of MBytes (%f)\n\n",
+		error_print("\n[DTNperf syntax error] (-D option) you should send a positive number of MBytes (%f)\n\n",
 				perf_opt->data_qty);
+		debugger_destroy();
+		al_bp_extB_destroy();
 		exit(2);
 	}
 	if ((perf_opt->op_mode == 'T') && (perf_opt->transmission_time <= 0))
 	{
-		fprintf(stderr, "\n[DTNperf syntax error] (-T option) you should specify a positive time\n\n");
+		error_print("\n[DTNperf syntax error] (-T option) you should specify a positive time\n\n");
+		debugger_destroy();
+		al_bp_extB_destroy();
 		exit(2);
 	}
 
@@ -2127,8 +2006,8 @@ void check_options(dtnperf_global_options_t * global_options)
 		if (perf_opt->bundle_payload <= ILLEGAL_PAYLOAD)
 		{
 			perf_opt->bundle_payload = DEFAULT_PAYLOAD;
-			fprintf(stderr, "\n[DTNperf warning] (a): bundle payload set to %f bytes\n", perf_opt->bundle_payload);
-			fprintf(stderr, "(use_file && op_mode=='T' + payload <= %d)\n\n", ILLEGAL_PAYLOAD);
+			error_print("\n[DTNperf warning] (a): bundle payload set to %f bytes\n", perf_opt->bundle_payload);
+			error_print("(use_file && op_mode=='T' + payload <= %d)\n\n", ILLEGAL_PAYLOAD);
 		}
 	}
 	if ((perf_opt->use_file) && (perf_opt->op_mode == 'D'))
@@ -2137,21 +2016,21 @@ void check_options(dtnperf_global_options_t * global_options)
 				|| ((perf_opt->bundle_payload > perf_opt->data_qty)	&& (perf_opt->data_qty > 0)))
 		{
 			perf_opt->bundle_payload = perf_opt->data_qty;
-			fprintf(stderr, "\n[DTNperf warning] (b): bundle payload set to %f bytes\n", perf_opt->bundle_payload);
-			fprintf(stderr, "(use_file && op_mode=='D' + payload <= %d or > %f)\n\n", ILLEGAL_PAYLOAD, perf_opt->data_qty);
+			error_print("\n[DTNperf warning] (b): bundle payload set to %f bytes\n", perf_opt->bundle_payload);
+			error_print("(use_file && op_mode=='D' + payload <= %d or > %f)\n\n", ILLEGAL_PAYLOAD, perf_opt->data_qty);
 		}
 	}
 
 	if (perf_opt->bundle_payload <= ILLEGAL_PAYLOAD)
 	{
 		perf_opt->bundle_payload = DEFAULT_PAYLOAD;
-		fprintf(stderr, "\n[DTNperf warning]: bundle payload set to %f bytes\n\n", perf_opt->bundle_payload);
+		error_print("\n[DTNperf warning]: bundle payload set to %f bytes\n\n", perf_opt->bundle_payload);
 
 	}
 	if ((!perf_opt->use_file) && (perf_opt->bundle_payload > MAX_MEM_PAYLOAD))
 	{
 		perf_opt->bundle_payload = MAX_MEM_PAYLOAD;
-		fprintf(stderr, "\n[DTNperf warning]: MAX_MEM_PAYLOAD = %d\nbundle payload set to max: %f bytes\n", MAX_MEM_PAYLOAD, perf_opt->bundle_payload);
+		error_print("\n[DTNperf warning]: MAX_MEM_PAYLOAD = %d\nbundle payload set to max: %f bytes\n", MAX_MEM_PAYLOAD, perf_opt->bundle_payload);
 	}
 
 	if ((!perf_opt->use_file) && (perf_opt->op_mode == 'D'))
@@ -2159,75 +2038,188 @@ void check_options(dtnperf_global_options_t * global_options)
 		if (perf_opt->data_qty <= MAX_MEM_PAYLOAD)
 		{
 			perf_opt->bundle_payload = perf_opt->data_qty;
-			fprintf(stderr, "\n[DTNperf warning] (c1): bundle payload set to %f bytes\n", perf_opt->bundle_payload);
-			fprintf(stderr, "(!use_file + payload <= %d + data_qty <= %d + op_mode=='D')\n\n",
+			error_print("\n[DTNperf warning] (c1): bundle payload set to %f bytes\n", perf_opt->bundle_payload);
+			error_print("(!use_file + payload <= %d + data_qty <= %d + op_mode=='D')\n\n",
 					ILLEGAL_PAYLOAD, MAX_MEM_PAYLOAD);
 		}
 		if (perf_opt->data_qty > MAX_MEM_PAYLOAD)
 		{
 			perf_opt->bundle_payload = MAX_MEM_PAYLOAD;
-			fprintf(stderr, "(!use_file + payload <= %d + data_qty > %d + op_mode=='D')\n",
+			error_print("(!use_file + payload <= %d + data_qty > %d + op_mode=='D')\n",
 					ILLEGAL_PAYLOAD, MAX_MEM_PAYLOAD);
-			fprintf(stderr, "\n[DTNperf warning] (c2): bundle payload set to %f bytes\n\n", perf_opt->bundle_payload);
+			error_print("\n[DTNperf warning] (c2): bundle payload set to %f bytes\n\n", perf_opt->bundle_payload);
 		}
 	}
 
 	if (perf_opt->window <= 0)
 	{
-		fprintf(stderr, "\n[DTNperf syntax error] (-W option) the window must be set to a posotive integer value \n\n");
+		error_print("\n[DTNperf syntax error] (-W option) the window must be set to a posotive integer value \n\n");
+		debugger_destroy();
+		al_bp_extB_destroy();
 		exit(2);
 	}
 
 	//if underlying implementation is DTN2 and forced scheme is "ipn", ipn-local must be set
-	if (al_bp_get_implementation() == BP_DTN && perf_opt->eid_format_forced == 'I'
-			&& perf_opt->ipn_local_num <= 0)
+	if (al_bp_get_implementation() == BP_DTN && perf_opt->eid_format_forced == 'I' && perf_opt->ipn_local_num <= 0)
 	{
-		fprintf(stderr, "\n[DTNperf syntax error] (--force-eid option) To use ipn registration in DTN2 implementation,"
+		error_print("\n[DTNperf syntax error] (--force-eid option) To use ipn registration in DTN2 implementation,"
 				"you must set the local ipn number with the option --ipn-local\n\n");
+		debugger_destroy();
+		al_bp_extB_destroy();
 		exit(2);
 	}
 
 } // end check_options
 
-void client_handler(int sig)
+#ifdef mingw
+BOOL WINAPI ConsoleHandlerFirst(DWORD dwType)
 {
-	printf("\nDTNperf client received SIGINT: exiting\n");
-	if (perf_opt->create_log)
-		fprintf(log_file, "\nDTNperf client received SIGINT: exiting\n");
+	switch(dwType) {
+	case CTRL_C_EVENT:
+		printf("\nDTNperf client received SIGINT: exiting\n");
+		client_clean_exit(0);
+		break;
+	case CTRL_BREAK_EVENT:
+		printf("\nDTNperf client received SIGINT: exiting\n");
+		client_clean_exit(0);
+		break;
+	default:
+		break;
+	}
+	return TRUE;
+}
 
-	client_clean_exit(0);
-} // end client_handler
+void ctrlc_win_handler () {
+	al_bp_handle_t force_stop_handle;
 
-void client_clean_exit(int status)
-{
-	printf("Dtnperf client: exit\n");
+	printf("\nDTNperf client received SIGINT: Exiting\n");
+
+	// send a foce stop to the monitor to terminate it
+	if (!perf_opt->no_bundle_stop)
+	{ // prepare and send bundle force-stop to the monitor
+
+		al_bp_bundle_object_t bundle_force_stop;
+		// Open a new connection to BP Daemon
+		debug_print(DEBUG_L1,"[debug] opening a new connection to local BP daemon...");
+
+		if(perf_opt->bp_implementation == BP_DTN)
+		{
+			if (perf_opt->use_ip)
+				error = al_bp_open_with_ip(perf_opt->ip_addr, perf_opt->ip_port, &force_stop_handle);
+			else
+				error = al_bp_open(&force_stop_handle);
+		}
+
+		if (error != BP_SUCCESS)
+		{
+			fprintf(stderr, "[DTNperf fatal error] in opening a new bp handle: %s\n", al_bp_strerror(error));
+			client_clean_exit(1);
+		}
+		debug_print(DEBUG_L1,"done\n");
+
+		// create the bundle force stop
+		al_bp_bundle_create(&bundle_force_stop);
+		// fill the force stop bundle
+		prepare_force_stop_bundle(&bundle_force_stop, mon_eid, conn_opt->expiration, conn_opt->priority);
+		al_bp_bundle_set_source(&bundle_force_stop, local_eid);
+		// send force_stop bundle to monitor
+		printf("Sending the force stop bundle to the monitor...");
+		if(perf_opt->bp_implementation == BP_DTN)
+			error = al_bp_bundle_send(force_stop_handle, regid, &bundle_force_stop);
+		else if(perf_opt->bp_implementation == BP_ION)
+			error = al_bp_bundle_send(handle, regid, &bundle_force_stop);
+		else if(perf_opt->bp_implementation == BP_IBR)
+			error = al_bp_bundle_send(handle, regid, &bundle_force_stop);
+		if ((error) != BP_SUCCESS)
+		{
+			fprintf(stderr, "[DTNperf fatal error] in sending force stop bundle: %d (%s)\n", error, al_bp_strerror(error));
+			al_bp_close(force_stop_handle);
+			exit(1);
+		}
+		printf("done.\n");
+
+		if (perf_opt->bp_implementation == BP_DTN)
+			al_bp_close(force_stop_handle);
+
+
+		al_bp_bundle_free(&bundle_force_stop);
+	}
+
+	process_interrupted = TRUE;
 
 	// terminate all child threads
 	pthread_cancel(sender);
 	pthread_cancel(cong_ctrl);
 	pthread_cancel(cong_expir_timer);
 
-	if (perf_opt->create_log)
-		printf("\nClient log saved: %s\n", perf_opt->log_filename);
-	if (log_open)
-		fclose(log_file);
+	client_clean_exit(0);
+}
+BOOL WINAPI ConsoleHandlerSecond(DWORD dwType)
+{
+	switch(dwType) {
+	case CTRL_C_EVENT:
+		ctrlc_win_handler();
+		break;
+	case CTRL_BREAK_EVENT:
+		ctrlc_win_handler();
+		break;
+	default:
+		break;
+	}
+	return TRUE;
+}
+#else
+void client_handler(int sig)
+{
+	printf("\nDTNperf client received SIGINT: exiting\n");
+
+	client_clean_exit(0);
+} // end client_handler
+#endif
+
+static void set_forced_close_client(boolean_t value)
+{
+	pthread_mutex_lock(&mutex_forced_close);
+	forced_close = value;
+	pthread_mutex_unlock(&mutex_forced_close);
+}
+
+static boolean_t get_forced_close_client()
+{
+	int result;
+	pthread_mutex_lock(&mutex_forced_close);
+	result = forced_close;
+	pthread_mutex_unlock(&mutex_forced_close);
+	return result;
+}
+
+void client_clean_exit(int status)
+{
+	printf("Dtnperf client: exit\n");
+
+	// terminate all child threads
+	//pthread_cancel(sender);
+	//pthread_cancel(cong_ctrl);
+	//pthread_cancel(cong_expir_timer);
+
+	set_forced_close_client(TRUE);
+
 	if(source_file_created)
 	{
 		remove(source_file);
-		if (perf_opt->debug && perf_opt->debug > 1)
-		{
-			printf("[debug] removed file %s\n", source_file);
-		}
+		debug_print(DEBUG_L2, "[DEBUG_L2] removed file %s\n", source_file);
 	}
 
-	if (perf_opt->bp_implementation == BP_IBR)
+	debugger_destroy();
+
+	//al_bp_extB_unregister(registration_descriptor);
+	al_bp_extB_destroy();
+
+//	al_bp_bundle_free(&bundle);
+	/*if (perf_opt->bp_implementation == BP_IBR)
 		//with IBR-DTN, al_bp_close from a signal handler is blocking,
 		//and not needed since the process is being terminated
-		exit(status);
+		exit(status);*/
 
-	if (bp_handle_open)
-		al_bp_close(handle);
-	if (perf_opt->bp_implementation == BP_ION)
-		al_bp_unregister(handle, regid, local_eid);
 	exit(status);
 } // end client_clean_exit

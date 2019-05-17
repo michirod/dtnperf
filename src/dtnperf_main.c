@@ -1,6 +1,8 @@
 /********************************************************
  **  Authors: Michele Rodolfi, michele.rodolfi@studio.unibo.it
  **           Anna d'Amico, anna.damico@studio.unibo.it
+ **           Marco Bertolazzi, marco.bertolazzi3@studio.unibo.it
+ **           Andrea Bisacchi, andrea.bisacchi5@studio.unibo.it
  **           Carlo Caini (DTNperf_3 project supervisor), carlo.caini@unibo.it
  **
  **
@@ -12,6 +14,7 @@
  * dtnperf_main.c
  */
 
+#include "dtnperf_debugger.h"
 #include "includes.h"
 #include "utils.h"
 #include "dtnperf_types.h"
@@ -49,10 +52,23 @@ int main(int argc, char ** argv)
 	dtnperf_options_t perf_opt;
 	dtnperf_connection_options_t conn_opt;
 	monitor_parameters_t mon_params;
-	int fd, pid;
-
+	//int fd, pid;
 	// init options
 	init_dtnperf_global_options(&global_options, &perf_opt, &conn_opt);
+
+	switch (perf_opt.bp_implementation) {
+	case BP_IBR:
+		printf("IBR-DTN found.\n");
+		break;
+	case BP_DTN:
+		printf("DTN2 found.\n");
+		break;
+	case BP_ION:
+		printf("ION found.\n");
+		break;
+	default:
+		break;
+	}
 
 	// parse command line options
 	parse_options(argc, argv, &global_options);
@@ -60,7 +76,7 @@ int main(int argc, char ** argv)
 	switch (global_options.mode)
 	{
 	case DTNPERF_SERVER:
-		if (perf_opt.daemon)
+		/*if (perf_opt.daemon)
 		{
 			if ((fd = open(perf_opt.server_output_file,O_WRONLY | O_CREAT | O_TRUNC, 0644)) > 0)
 			{
@@ -91,58 +107,52 @@ int main(int argc, char ** argv)
 				printf("ERROR: failed to open output file %s: %s\n", perf_opt.server_output_file, strerror(errno));
 				exit(1);
 			}
-		}
-		else
-		{
-			run_dtnperf_server(&global_options);
-		}
+		}*/
+
+		run_dtnperf_server(&global_options);
 		break;
 
-	case DTNPERF_CLIENT_MONITOR:
+		//case DTNPERF_CLIENT_MONITOR:
 	case DTNPERF_CLIENT:
 		run_dtnperf_client(&global_options);
 		break;
 
 	case DTNPERF_MONITOR:
 		mon_params.client_id = 0;
-		mon_params.dedicated_monitor = FALSE;
 		mon_params.perf_g_opt = &global_options;
-		if (perf_opt.daemon)
+		/*if (perf_opt.daemon)
+		{
+			if ((fd = open(perf_opt.monitor_output_file,O_WRONLY | O_CREAT | O_TRUNC, 0644)) > 0)
+			{
+				pid = fork();
+				if (pid == 0)
 				{
-					if ((fd = open(perf_opt.monitor_output_file,O_WRONLY | O_CREAT | O_TRUNC, 0644)) > 0)
-					{
-						pid = fork();
-						if (pid == 0)
-						{
-							close(1);
-							close(2);
-							dup2(fd,1);
-							dup2(fd,2);
-							run_dtnperf_monitor(&mon_params);
-							close(1);
-							close(2);
-							close(fd);
-						}
-						else
-						{
-							close(fd);
-							printf("Started dtnperf monitor in daemon mode.\n");
-							printf("Pid = %d\n", pid);
-							printf("To terminate the daemon use:\n");
-							printf("\t%s %s --stop\n", argv[0], MONITOR_STRING);
-							printf("See log at %s\n", perf_opt.monitor_output_file);
-						}
-					}
-					else
-					{
-						printf("ERROR: failed to open output file %s: %s\n", perf_opt.monitor_output_file, strerror(errno));
-						exit(1);
-					}
+					close(1);
+					close(2);
+					dup2(fd,1);
+					dup2(fd,2);
+					run_dtnperf_monitor(&mon_params);
+					close(1);
+					close(2);
+					close(fd);
 				}
 				else
 				{
-					run_dtnperf_monitor(&mon_params);
+					close(fd);
+					printf("Started dtnperf monitor in daemon mode.\n");
+					printf("Pid = %d\n", pid);
+					printf("To terminate the daemon use:\n");
+					printf("\t%s %s --stop\n", argv[0], MONITOR_STRING);
+					printf("See log at %s\n", perf_opt.monitor_output_file);
 				}
+			}
+			else
+			{
+				printf("ERROR: failed to open output file %s: %s\n", perf_opt.monitor_output_file, strerror(errno));
+				exit(1);
+			}
+		}*/
+		run_dtnperf_monitor(&mon_params);
 		break;
 
 	default:
@@ -163,9 +173,9 @@ void print_usage(char* progname){
 	fprintf(stderr, " %s\n", CLIENT_STRING);
 	fprintf(stderr, " %s\n", MONITOR_STRING);
 	fprintf(stderr, "\n");
-	fprintf(stderr, "For more options see\n %s <operative mode> --help\n", progname);
-	fprintf(stderr, " %s --help\tPrint this screen.\n", progname);
-	fprintf(stderr, " %s --Version\tShow version information.\n", progname);
+	fprintf(stderr, "For more options see\n %s <operative mode> \t--help\n", progname);
+	fprintf(stderr, " %s --help\t\t\tPrint this screen.\n", progname);
+	fprintf(stderr, " %s --version\t\tShow version information.\n", progname);
 	fprintf(stderr, "\n");
 	exit(1);
 }
@@ -174,7 +184,6 @@ void parse_options(int argc, char**argv, dtnperf_global_options_t * global_opt)
 {
 	int i;
 	dtnperf_mode_t perf_mode = 0;
-
 
 	// find dtnperf mode (server, client or monitor)
 	if (argc < 2)
@@ -223,8 +232,12 @@ void parse_options(int argc, char**argv, dtnperf_global_options_t * global_opt)
 	{
 	case DTNPERF_CLIENT:
 		parse_client_options(argc, argv, global_opt);
-		if (global_opt->perf_opt->mon_eid[0] == '\0')
-			perf_mode = DTNPERF_CLIENT_MONITOR;
+		if (global_opt->perf_opt->mon_eid[0] == '\0') {
+			al_bp_endpoint_id_t none;
+			al_bp_get_none_endpoint(&none);
+			strcpy(global_opt->perf_opt->mon_eid, none.uri);
+		}
+		//perf_mode = DTNPERF_CLIENT_MONITOR;
 		break;
 	case DTNPERF_SERVER:
 		parse_server_options(argc, argv, global_opt);
@@ -255,16 +268,14 @@ void init_dtnperf_global_options(dtnperf_global_options_t *opt, dtnperf_options_
 
 void init_dtnperf_options(dtnperf_options_t *opt)
 {
-	opt->bp_implementation = al_bp_get_implementation();
-	opt->verbose = FALSE;
-	opt->debug = FALSE;
-	opt->debug_level = 0;
+	opt->bp_implementation = al_bp_get_implementation(); // XXX da togliere implementation
+	opt->debug = DEBUG_OFF;
 	opt->use_ip = FALSE;
 	opt->ip_addr = "127.0.0.1";
 	opt->ip_port = 5010;
 	opt->eid_format_forced = 'N';
 	opt->ipn_local_num = 0;
-	opt->daemon = FALSE;
+	//opt->daemon = FALSE;
 	opt->server_output_file = SERVER_OUTPUT_FILE;
 	opt->monitor_output_file = MONITOR_OUTPUT_FILE;
 	memset(opt->dest_eid, 0, AL_BP_MAX_ENDPOINT_ID);
@@ -277,7 +288,7 @@ void init_dtnperf_options(dtnperf_options_t *opt)
 	opt->use_file = 1;
 	opt->data_unit = 'M';
 	opt->transmission_time = 0;
-	opt->congestion_ctrl = 'w';
+	opt->congestion_ctrl = 'W';
 	opt->window = 1;
 	opt->rate_arg = NULL;
 	opt->rate = 0;

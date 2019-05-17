@@ -63,20 +63,19 @@ double byte2kilo(long n)
 char find_data_unit(const char *inarg)
 {
     // units are B (Bytes), K (KBytes) and M (MBytes)
-    const char unitArray[] =
-        {'B', 'k', 'K', 'M'
-        };
-    char * unit = malloc(sizeof(char));
+    const char unitArray[] = "BkKM";
+    char * unit;
 
     if ((unit = strpbrk(inarg, unitArray)) == NULL)
     {
-    	unit = "Z";
+    	return 'Z';
     }
 
     if (unit[0] == 'K')
     	return 'k';
 
     return unit[0];
+    //return unit[0];
 } // end find_data_unit
 
 /* ------------------------------------------
@@ -88,9 +87,7 @@ char find_data_unit(const char *inarg)
 char find_rate_unit(const char *inarg)
 {
     // units are b (bundles/sec), K (Kbit/sec), and M (Mbit/sec)
-    const char unitArray[] =
-        {'k', 'K', 'M', 'b'
-        };
+    const char unitArray[] = "kKMb";
     char * ptr;
     char unit;
 
@@ -111,9 +108,9 @@ char find_rate_unit(const char *inarg)
 char find_forced_eid(const char *inarg)
 {
 	// value of forced unit are CBHE or URI
-	if(strcmp("DTN", inarg) == 0)
+	if(strcmp("DTN", inarg) == 0 || strcmp("dtn", inarg) == 0)
 		return 'D';
-	else if(strcmp("IPN", inarg) == 0)
+	else if(strcmp("IPN", inarg) == 0 || strcmp("ipn", inarg) == 0)
 		return 'I';
 	else
 		return '?';
@@ -362,7 +359,7 @@ int find_proc(char * cmd)
 {
 	DIR * proc;
 	struct dirent * item;
-	char cmdline_file[100];
+	char cmdline_file[280];
 	char buf[256], cmdline[256];
 	char cmd_exe[256], cmdline_exe[256];
 	char cmd_args[256], cmdline_args[256];
