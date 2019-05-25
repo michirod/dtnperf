@@ -31,9 +31,9 @@ all:
     variables:
         pkg_name: package-${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}
     script:
-        - make AL_BP_DIR=blabla ION_DIR=foo
-        - make AL_BP_DIR=blabla DTN2_DIR=bar
-        - make AL_BP_DIR=blabla ION_DIR=foo DTN2_DIR=bar
+        - make AL_BP_DIR=/usr/local/lib ION_DIR=foo
+        - make AL_BP_DIR=/usr/local/lib DTN2_DIR=bar
+        - make AL_BP_DIR=/usr/local/lib ION_DIR=foo DTN2_DIR=bar
         #create the installation package
         - mkdir ${pkg_name}
         - install -d ${pkg_name}/usr/local/bin
