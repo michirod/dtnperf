@@ -19,7 +19,7 @@ before_script:
     # download dtn2-build artifacts
     - curl --location -o dtn2-${DTN2_VERSION}.zip ${dtn2_build_url}/-/jobs/artifacts/${DTN2_VERSION}/download?job=build
     # download al_bp artifacts
-    - curl --location -o al_bp.zip ${al_bp_build_url}/-/jobs/artifacts/${AL_BP_VERSION}/download?job=build
+    - curl --location -o al_bp.zip ${al_bp_build_url}/-/jobs/artifacts/${AL_BP_VERSION}/download?job=all
     - unzip ion-${ION_VERSION}.zip
     - unzip dtn2-${DTN2_VERSION}.zip
     - unzip al_bp.zip
