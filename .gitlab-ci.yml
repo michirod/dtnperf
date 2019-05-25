@@ -1,0 +1,100 @@
+image: gcc:6
+#image: debian:stretch
+
+stages:
+    - build
+
+variables:
+    ION_VERSION: '3.6.2'
+    DTN2_VERSION: '2.9.0'
+    OASYS_VERSION: '1.6.0'
+    AL_BP_VERSION: ${CI_COMMIT_REF_NAME} 
+    ion_build_url: 'https://gitlab.com/michirod/ion-build'
+    dtn2_build_url: 'https://gitlab.com/michirod/dtn2-build'
+    al_bp_build_url: 'https://gitlab.com/michirod/bp-abstraction-layer'
+
+before_script:
+    # download ion-build artifacts
+    - curl --location -o ion-${ION_VERSION}.zip ${ion_build_url}/-/jobs/artifacts/${ION_VERSION}/download?job=build
+    # download dtn2-build artifacts
+    - curl --location -o dtn2-${DTN2_VERSION}.zip ${dtn2_build_url}/-/jobs/artifacts/${DTN2_VERSION}/download?job=build
+    # download al_bp artifacts
+    - curl --location -o al_bp-${DTN2_VERSION}.zip ${al_bp_build_url}/-/jobs/artifacts/${AL_BP_VERSION}/download?job=build
+    - unzip ion-${ION_VERSION}.zip
+    - unzip dtn2-${DTN2_VERSION}.zip
+    # unzip al_bp
+    - unzip package*.zip
+    # install the build artifacts
+    - cp -rv package-*/* /
+
+all:
+    stage: build
+    variables:
+        pkg_name: package-${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}
+    script:
+        - make AL_BP_DIR=blabla ION_DIR=foo
+        - make AL_BP_DIR=blabla DTN2_DIR=bar
+        - make AL_BP_DIR=blabla ION_DIR=foo DTN2_DIR=bar
+        #create the installation package
+        - mkdir ${pkg_name}
+        - install -d ${pkg_name}/usr/local/bin
+        - install dtnperf* ${pkg_name}/usr/local/bin/
+    artifacts:
+        name: ${pkg_name}
+        paths:
+            - ${pkg_name}
+
+
+# Test compilation for ION only
+#ion:
+#    stage: build
+#    variables:
+#        pkg_name: package-${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}-${CI_JOB_NAME}
+#    script:
+#        - make ION_DIR=foo
+#        #create the installation package
+#        - mkdir ${pkg_name}
+#        - install -d ${pkg_name}/usr/local/lib
+#        - install -d ${pkg_name}/usr/local/include
+#        - install libal_bp* ${pkg_name}/usr/local/lib/
+#        - install src/*.h ${pkg_name}/usr/local/include/
+#    artifacts:
+#        name: ${pkg_name}
+#        paths:
+#            - ${pkg_name}
+#
+## Test compilation for DTN2 only
+#dtn2:
+#    stage: build
+#    variables:
+#        pkg_name: package-${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}-${CI_JOB_NAME}
+#    script:
+#        - make DTN2_DIR=bar
+#        #create the installation package
+#        - mkdir ${pkg_name}
+#        - install -d ${pkg_name}/usr/local/lib
+#        - install -d ${pkg_name}/usr/local/include
+#        - install libal_bp* ${pkg_name}/usr/local/lib/
+#        - install src/*.h ${pkg_name}/usr/local/include/
+#    artifacts:
+#        name: ${pkg_name}
+#        paths:
+#            - ${pkg_name}
+#
+## Test compilation for ION and DTN2
+#ion-dtn2:
+#    stage: build
+#    variables:
+#        pkg_name: package-${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}-${CI_JOB_NAME}
+#    script:
+#        - make ION_DIR=foo DTN2_DIR=bar
+#        #create the installation package
+#        - mkdir ${pkg_name}
+#        - install -d ${pkg_name}/usr/local/lib
+#        - install -d ${pkg_name}/usr/local/include
+#        - install libal_bp* ${pkg_name}/usr/local/lib/
+#        - install src/*.h ${pkg_name}/usr/local/include/
+#    artifacts:
+#        name: ${pkg_name}
+#        paths:
+#            - ${pkg_name}
