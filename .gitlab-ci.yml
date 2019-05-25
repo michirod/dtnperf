@@ -37,6 +37,7 @@ all:
         #create the installation package
         - mkdir ${pkg_name}
         - install -d ${pkg_name}/usr/local/bin
+        - rm *.o
         - install dtnperf* ${pkg_name}/usr/local/bin/
     artifacts:
         name: ${pkg_name}
